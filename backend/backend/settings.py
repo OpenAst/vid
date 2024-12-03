@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'djoser',
     'accounts',
     'corsheaders',
+    'channels',
     'rest_framework',
     'social_django',
     'rest_framework_simplejwt',
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -179,10 +181,6 @@ DJOSER = {
     }
 }
 
-GOOGLE_OAUTH2_KEY = config('GOOGLE_OAUTH2_KEY ')
-GOOGLE_OAUTH2_SECRET = config('GOOGLE_OAUTH2_SECRET')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = config('SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE')
-SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = config('SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA')
 
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
