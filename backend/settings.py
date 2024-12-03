@@ -132,7 +132,7 @@ LOGGING = {
 }
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000","http://localhost:3001",]
-AUTH_USER_MODEL = 'accounts.CustomUser'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
