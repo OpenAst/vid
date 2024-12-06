@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from .permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -15,7 +16,7 @@ def check_email_exists(request):
     if not request.data.get('email'):
         return Response({'error': 'Bad_request'}, status=status.HTTP_400_BAD_REQUEST)
 
-    username = request.data.get('email')
+    email = request.data.get('email')
     try:
         User.objects.get(email=email)
         return Response({'email_exists': True}, status=status.HTTP_200_OK)
@@ -40,7 +41,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return super().post(request, *args, **kwargs)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminUser])
 def home(request):
     return Response({'detail': 'Welcome home'}, status=status.HTTP_200_OK)
 
