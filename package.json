@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.8",
+    "utf-8-validate": "^6.0.5"
+  }
+}
