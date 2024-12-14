@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from .permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
+from django.db import models
+from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import CustomTokenObtainPairSerializer
 
@@ -58,3 +60,15 @@ def total_users(request):
         "total_users": total_count,
         "user_details": list(users)
     })
+
+# # Video model
+# class Video(models.Model):
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='videos')
+#     title = models.CharField(max_length=255)
+#     description = models.TextField(blank=True)
+#     video_file = models.FileField(upload_to='videos/')
+#     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return self.title
+
