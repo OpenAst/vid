@@ -9,6 +9,7 @@ export const authApi = createApi({
       const token = localStorage.getItem('ACCESS_TOKEN');
       if (token) {
         headers.set('Authorization', `JWT ${token}`);
+        console.log('Token from localStorage:', localStorage.getItem('ACCESS_TOKEN'));
       }
       return headers;
     },
@@ -33,6 +34,13 @@ export const authApi = createApi({
     register: builder.mutation({
       query: (data) => ({
         url: 'auth/users/',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    verify: builder.mutation({
+      query: (data) => ({
+        url: 'auth/activation/',
         method: 'POST',
         body: data,
       }),
@@ -78,6 +86,7 @@ export const authApi = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useVerifyMutation,
   useGoogleLoginMutation,
   useGetUserDetailsQuery,
   usePasswordResetMutation,
