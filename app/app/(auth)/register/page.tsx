@@ -135,7 +135,7 @@ const RegisterPage = () => {
 
         {/* Error Message */}
         {isError && (
-          <div className="text-red-500 text-sm lg:col-span-2">
+          <div className="bg-accent-green text-sm lg:col-span-2">
             <p>An error occurred. Please try again.</p>
           </div>
         )}
@@ -144,7 +144,9 @@ const RegisterPage = () => {
         <div className="lg:col-span-2">
           <button
             type="submit"
-            className={`btn btn-primary w-full ${isLoading ? 'loading' : ''}`}
+            className={`btn bg-primary-blue w-full
+               flex items-center justify-center ${isLoading ? 
+               'loading w-6 h-6 justify-center' : ''}`}
           >
             Register
           </button>
@@ -154,7 +156,7 @@ const RegisterPage = () => {
       {/* Footer Link */}
       <p className="text-center mt-4 text-sm">
         Already have an account?{' '}
-        <Link href="/" className="text-blue-500 hover:underline">
+        <Link href="/login" className="text-blue-500 hover:underline">
           Login
         </Link>
       </p>

@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import daisyui from 'daisyui';
 
 export default {
   content: [
@@ -11,8 +12,17 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        primary: {
+          blue: "#0078FF",
+        },
+        accent: {
+          green: "#00FF40",
+        },
       },
     },
   },
-  plugins: [],
+  plugins: [daisyui],
+  daisyui: {
+    themes: ["light", "dark", "cupcake"],
+  },
 } satisfies Config;

@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'djoser',
     'accounts',
+    'post',
     'corsheaders',
     'rest_framework',
     'social_django',
