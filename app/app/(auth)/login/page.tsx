@@ -21,7 +21,7 @@ const LoginPage = () => {
     try {
       const result = await login({ email, password }).unwrap();
       console.log('Login successful:', result);
-      setTimeout(() => router.push('/dashboard'), 3000); // Navigate to dashboard after successful login
+      setTimeout(() => router.push('/'), 3000); // Navigate to home after successful login
     } catch (error) {
       console.log(isError);
     }
@@ -36,7 +36,7 @@ const LoginPage = () => {
       try {
         await googleLogin({ token }).unwrap();
         console.log('Google login successful');
-        router.push('/dashboard');
+        router.push('/');
       } catch (error) {
         console.error('Error with Google login:', error);
       }
