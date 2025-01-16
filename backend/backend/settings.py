@@ -16,10 +16,9 @@ SECRET_KEY = 'django-insecure-*0q1pwh9o8h&-pbk49kl6q==kr6-^4h&l*)a@z1nd7w$=*4hkb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
-
-
-# Application definition
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000","http://localhost:3001",]
+SESSION_COOKIE_SECURE = True
 
 INSTALLED_APPS = [
     'daphne',
@@ -131,7 +130,6 @@ LOGGING = {
     },
 }
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000","http://localhost:3001",]
 
 
 REST_FRAMEWORK = {
@@ -156,7 +154,11 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=15),
     'AUTH_TOKEN_CLASSES': (
         'rest_framework_simplejwt.tokens.AccessToken',
-    )
+    ),
+    'AUTH_COOKIE': 'ACCESS_TOKEN',
+    'AUTH_COOKIE_SECURE': False,
+    'AUTH_COOKIE_HTTP_ONLY': True,
+    'AUTH_COOKIE_SAMESITE': None,
 }
 
 DJOSER = {

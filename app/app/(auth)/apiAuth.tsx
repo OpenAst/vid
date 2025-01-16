@@ -1,36 +1,44 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-// Create the API slice
+interface AuthResponse {
+  access: string;
+  refresh: string;
+  first_name: string;
+  last_name: string;
+}
+
 export const authApi = createApi({
   reducerPath: 'authApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL, // Ensure this is set in your environment variables
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem('ACCESS_TOKEN');
-      if (token) {
-        headers.set('Authorization', `JWT ${token}`);
-        console.log('Token from localStorage:', localStorage.getItem('ACCESS_TOKEN'));
-      }
-      return headers;
-    },
+      baseUrl: process.env.NEXT_PUBLIC_API_URL,
+      credentials: 'include',
+      prepareHeaders: (headers) => {
+        const accessToken = localStorage.getItem('ACCESS_TOKEN');
+    
+        if (accessToken  ) {
+          headers.set('Authorization', `JWT ${accessToken}`);
+          console.log('Access token', accessToken);
+        }
+        return headers;
+      },
   }),
   endpoints: (builder) => ({
-    login: builder.mutation({
+    login: builder.mutation<AuthResponse, {email: string; password: string }>({
       query: (credentials) => ({
         url: 'auth/jwt/create',
         method: 'POST',
         body: credentials,
       }),
-      async onQueryStarted(args, { queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          localStorage.setItem('ACCESS_TOKEN', data.access); // Save access token dynamically
-          console.info('Login successful!');
-        } catch (error) {
-          console.error('Login failed:', error);
-        }
-      },
     }),
+    
+    refresh: builder.mutation({
+      query: (refreshToken) => ({
+        url: 'auth/jwt/refresh',
+        method: 'POST',
+        body: { refresh: refreshToken },
+      })
+    }),
+
     register: builder.mutation({
       query: (data) => ({
         url: 'auth/users/',
@@ -65,6 +73,21 @@ export const authApi = createApi({
         body: email,
       }),
     }),
+    posts: builder.mutation({
+      query: (data) => ({
+        url: 'posts/',
+        method: 'POST',
+        body: data,
+      })
+    }),
+    post: builder.mutation({
+      query: ({ slug, ...data} ) => ({
+        url: `posts/${slug}/`,
+        method: 'POST',
+        body: data,
+      })
+    }),
+    
     logout: builder.mutation({
       query: () => ({
         url: 'auth/logout/',
@@ -83,12 +106,16 @@ export const authApi = createApi({
   }),
 });
 
+
 export const {
-  useLoginMutation,
-  useRegisterMutation,
-  useVerifyMutation,
-  useGoogleLoginMutation,
-  useGetUserDetailsQuery,
-  usePasswordResetMutation,
-  useLogoutMutation,
+    useLoginMutation,
+    useRegisterMutation,
+    useRefreshMutation,
+    useVerifyMutation,
+    useGoogleLoginMutation,
+    useGetUserDetailsQuery,
+    usePasswordResetMutation,
+    useLogoutMutation,
+    usePostMutation,
+    usePostsMutation
 } = authApi;

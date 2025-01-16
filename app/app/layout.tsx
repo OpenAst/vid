@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import "./globals.css";
 import Fonts from "./fonts"; // Optional: Manage fonts in a separate client component
 import ClientProvider from "./clientlayout"; // Client-side logic
-import Sidebar from './components/Sidebar';
+import Providers from './providers';
 
 export const metadata: Metadata = {
   title: "VidChat",
@@ -13,9 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <Sidebar />
-        <Fonts /> 
-        <ClientProvider>{children}</ClientProvider>
+        <Providers>
+          <Fonts /> 
+          <ClientProvider>{children}</ClientProvider>
+        </Providers>
       </body>
     </html>
   );

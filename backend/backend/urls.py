@@ -12,5 +12,6 @@ urlpatterns = [
     path('auth/', include('djoser.social.urls')),
     path('home/', home, name='home'),
     path('users/', total_users, name='total_users'),
+    path('posts/', include('post.urls'))
 ] 
 

@@ -1,60 +1,47 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useLoginMutation, useRefreshMutation } from '../apiAuth'
+import { useGoogleLoginMutation, useLoginMutation } from '../(auth)/apiAuth';
 import { useRouter } from 'next/navigation'; // Next.js 15's router hook
 import Link from 'next/link'; // Next.js's Link component
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import AuthLayout from '../../components/AuthLayout';
+import AuthLayout from './AuthLayout';
 
 const LoginPage = () => {
-  
-  interface ApiError {
-    status?: number;
-    message?: string;
-  }
+  const [login, { isLoading, isError }] = useLoginMutation();
+  const [googleLogin, { isLoading: isGoogleLoading, error: googleError }] = useGoogleLoginMutation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter(); // Using Next.js router for navigation
   const [showPassword, setShowPassword] = useState(false);
-  const [login, { isError, isLoading}] = useLoginMutation();
-  const [refresh] = useRefreshMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      
-
-      const res = await login({ email, password }).unwrap();
-
-      localStorage.setItem('ACCESS_TOKEN', res.access);
-      localStorage.setItem('REFRESH_TOKEN', res.refresh);
-      
-      console.log('Login successful:', res);
-      console.log('First name', res.first_name);
-      
-      setTimeout(() => router.push('/'), 3000);
-    } catch (e: unknown) {
-      console.log("Error working with login", e);
-
-      if ((e as ApiError).status === 401) {
-        const refreshToken = localStorage.getItem('REFRESH_TOKEN');
-        if (refreshToken) {
-          try {
-            const refreshRes = await refresh({ refresh: refreshToken }).unwrap();
-            localStorage.setItem('ACCESS_TOKEN', refreshRes.access);
-
-            console.log('Token refreshed successfully');
-          } catch (refreshError) {
-              console.error('Error during token refresh:', refreshError);
-          }
-        }
-      }
+      const result = await login({ email, password }).unwrap();
+      console.log('Login successful:', result);
+      setTimeout(() => router.push('/'), 3000); // Navigate to home after successful login
+    } catch (error) {
+      console.log(isError);
     }
   };
 
-  
+  const continueWithGoogle = async () => {
+    const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=YOUR_GOOGLE_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=token&scope=email%20profile`;
+    window.location.href = authUrl;
+
+    const token = new URLSearchParams(window.location.hash.substring(1)).get('access_token');
+    if (token) {
+      try {
+        await googleLogin({ token }).unwrap();
+        console.log('Google login successful');
+        router.push('/');
+      } catch (error) {
+        console.error('Error with Google login:', error);
+      }
+    }
+  };
 
   const togglePassword = () => setShowPassword(!showPassword);
 
@@ -94,23 +81,23 @@ const LoginPage = () => {
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
             </span>
         </div>
-         {isError && (
-        <div className='bg-accent-green text-sm lg:col-span-2'>
-            <p>An error occurred.</p>
-        </div>)}
+
         <button
           type="submit"
-           className={`btn bg-primary-blue w-full
-             flex items-center justify-center ${isLoading ? 
-             'loading w-6 h-6 justify-center' : ''}`}
+          className="w-full bg-primary-blue text-white p-2 rounded-lg hover:bg-blue-600"
         >
           Login
         </button>
       </form>
 
+      <button
+        className="w-full bg-accent-green text-white p-2 rounded-lg mt-4 hover:bg-green-400"
+      >
+        Continue with Google
+      </button>
 
       <p className="text-center mt-4">
-        Don&apos:t have an account?{' '}
+        Don't have an account?{' '}
         <Link className="text-primary-blue hover:underline" href="/register">
           Sign Up
         </Link>
