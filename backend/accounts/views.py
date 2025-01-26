@@ -49,31 +49,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
 
         response = super().post(request, *args, **kwargs)
-        data = response.data
-        access_token = data.get("access")
-        refresh_token = data.get("refresh")
-
-        response.set_cookie(
-            key="ACCESS_TOKEN",
-            value=access_token,
-            httponly=True,
-            secure=False,
-            samesite="None"
-        )
-
-        print(f"Set REFRESH_TOKEN cookie: {refresh_token}")
-
-        response.set_cookie(
-            key="REFRESH_TOKEN",
-            value=refresh_token,
-            httponly=True,
-            secure=False,
-            samesite="None"
-        )
-        print(f"Set ACCESS_TOKEN cookie: {access_token}")
-
-        return response 
-    
+        return response
+        
 
 @api_view(['GET'])  
 @permission_classes([IsAdminUser])

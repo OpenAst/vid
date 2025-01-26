@@ -3,21 +3,25 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useRegisterMutation } from '../apiAuth';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '@/app/store/store';
+import { register } from '@/app/store/authSlice';
 import Link from 'next/link';
 import AuthLayout from '../../components/AuthLayout';
 
 const RegisterPage = () => {
-  const [register, { isLoading, isError }] = useRegisterMutation();
   const router = useRouter();
-
+  const dispatch = useDispatch<AppDispatch>();
+  
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
+  
+  const { isLoading, isError } = useSelector((state: RootState) => state.auth);
+  
   const togglePassword = () => setShowPassword(!showPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,13 +33,15 @@ const RegisterPage = () => {
     }
 
     try {
-      await register({
-        first_name: firstname,
-        last_name: lastname,
-        email,
-        password,
-        re_password: confirmPassword,
-      }).unwrap();
+      await dispatch(
+        register({
+          first_name: firstname,
+          last_name: lastname,
+          email,
+          password,
+          re_password: confirmPassword,
+        })
+      ).unwrap();
 
       alert('Registration successful!');
       router.push('/verify'); // Redirect to verify page
@@ -50,7 +56,7 @@ const RegisterPage = () => {
         onSubmit={handleSubmit}
         className="grid gap-3 w-full max-w-lg mx-auto"
       >
-        {/* Firstname */}
+        
         <div className="form-control">
           <label className="label">
             <span className="label-text">Firstname</span>
@@ -65,7 +71,6 @@ const RegisterPage = () => {
           />
         </div>
 
-        {/* Lastname */}
         <div className="form-control">
           <label className="label">
             <span className="label-text">Lastname</span>
@@ -80,7 +85,6 @@ const RegisterPage = () => {
           />
         </div>
 
-        {/* Email */}
         <div className="form-control lg:col-span-2">
           <label className="label">
             <span className="label-text">Email</span>
@@ -95,7 +99,6 @@ const RegisterPage = () => {
           />
         </div>
 
-        {/* Password */}
         <div className="form-control relative">
           <label className="label">
             <span className="label-text">Password</span>
@@ -117,7 +120,7 @@ const RegisterPage = () => {
           </span>
         </div>
 
-        {/* Confirm Password */}
+
         <div className="form-control relative">
           <label className="label">
             <span className="label-text">Confirm Password</span>
@@ -133,14 +136,12 @@ const RegisterPage = () => {
           />
         </div>
 
-        {/* Error Message */}
         {isError && (
           <div className="bg-accent-green text-sm lg:col-span-2">
             <p>An error occurred. Please try again.</p>
           </div>
         )}
 
-        {/* Submit Button */}
         <div className="lg:col-span-2">
           <button
             type="submit"
@@ -153,7 +154,6 @@ const RegisterPage = () => {
         </div>
       </form>
 
-      {/* Footer Link */}
       <p className="text-center mt-4 text-sm">
         Already have an account?{' '}
         <Link href="/login" className="text-blue-500 hover:underline">

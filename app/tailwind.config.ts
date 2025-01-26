@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import daisyui from 'daisyui';
+import { fontFamily } from "tailwindcss/defaultTheme";
 
 export default {
   content: [
@@ -18,6 +19,11 @@ export default {
         accent: {
           green: "#00FF40",
         },
+      },
+      fontFamily: {
+        sans: ['var(--font-geist-sans)', ...fontFamily.sans],
+        mono: ['var(--font-geist-mono)', ...fontFamily.mono],
+        gtSuper: ['var(--font-gt-super)', 'sans-serif'],
       },
     },
   },

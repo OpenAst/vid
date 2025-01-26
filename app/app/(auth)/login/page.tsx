@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useLoginMutation, useRefreshMutation } from '../apiAuth'
-import { useRouter } from 'next/navigation'; // Next.js 15's router hook
-import Link from 'next/link'; // Next.js's Link component
+import { login } from '@/app/store/authSlice';
+import { useRouter } from 'next/navigation'; 
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/app/store/store';
+import Link from 'next/link';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import AuthLayout from '../../components/AuthLayout';
 
@@ -13,42 +15,41 @@ const LoginPage = () => {
     status?: number;
     message?: string;
   }
-
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter(); // Using Next.js router for navigation
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [login, { isError, isLoading}] = useLoginMutation();
-  const [refresh] = useRefreshMutation();
+  
+  const dispatch = useDispatch<AppDispatch>();
+  const { isLoading, isError } = useSelector((state: RootState) => state.auth);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       
-
-      const res = await login({ email, password }).unwrap();
-
-      localStorage.setItem('ACCESS_TOKEN', res.access);
-      localStorage.setItem('REFRESH_TOKEN', res.refresh);
-      
+      const res = await dispatch(login( {email, password} )).unwrap();
       console.log('Login successful:', res);
-      console.log('First name', res.first_name);
-      
-      setTimeout(() => router.push('/'), 3000);
+
+      router.push('/');
     } catch (e: unknown) {
       console.log("Error working with login", e);
 
       if ((e as ApiError).status === 401) {
-        const refreshToken = localStorage.getItem('REFRESH_TOKEN');
-        if (refreshToken) {
-          try {
-            const refreshRes = await refresh({ refresh: refreshToken }).unwrap();
-            localStorage.setItem('ACCESS_TOKEN', refreshRes.access);
+        try {
+          console.log('Attempting token refresh...');
+          const res = await fetch('api/auth/refresh', {
+            method: 'POST',
+            credentials: 'include',
+          })
 
-            console.log('Token refreshed successfully');
-          } catch (refreshError) {
-              console.error('Error during token refresh:', refreshError);
+          if (res.ok) {
+            const data = await res.json();
+            console.log('Token refresh successful', data);
           }
+        } catch (e: unknown) {
+          console.log('Token refresh failed:', e);
         }
       }
     }
@@ -102,7 +103,7 @@ const LoginPage = () => {
           type="submit"
            className={`btn bg-primary-blue w-full
              flex items-center justify-center ${isLoading ? 
-             'loading w-6 h-6 justify-center' : ''}`}
+             'loading w-4 h-4 justify-center' : ''}`}
         >
           Login
         </button>
@@ -110,7 +111,7 @@ const LoginPage = () => {
 
 
       <p className="text-center mt-4">
-        Don&apos:t have an account?{' '}
+        Dont have an account?{' '}
         <Link className="text-primary-blue hover:underline" href="/register">
           Sign Up
         </Link>

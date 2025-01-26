@@ -9,3 +9,4 @@ export interface Post {
   likesCount: number;
   commentsCount: number;
 }
+

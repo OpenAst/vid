@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import "./globals.css";
 import Fonts from "./fonts"; // Optional: Manage fonts in a separate client component
 import ClientProvider from "./clientlayout"; // Client-side logic
-import Providers from './providers';
+import Providers from './store/providers';
 
 export const metadata: Metadata = {
   title: "VidChat",

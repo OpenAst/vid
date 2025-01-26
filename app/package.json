@@ -13,6 +13,8 @@
     "@tanstack/react-query": "^5.62.7",
     "@types/socket.io": "^3.0.1",
     "axios": "^1.7.9",
+    "cookie": "^1.0.2",
+    "cookies": "^0.9.1",
     "daisyui": "^4.12.22",
     "jsonwebtoken": "^9.0.2",
     "next": "15.1.0",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/cookies": "^0.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
