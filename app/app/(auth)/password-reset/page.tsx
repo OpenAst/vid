@@ -2,32 +2,42 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePasswordResetMutation } from '../apiAuth';
 import Link from 'next/link';
+
 
 const PasswordResetPage = () => {
   const [ email, setEmail ] = useState('');
   const [isLoading, setIsLoading ] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError ] = useState(false);
-
+  const [message, setMessage ] = useState('');
   const router = useRouter();
-  const [resetPassword] = usePasswordResetMutation();
-
+  
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await resetPassword({ email }).unwrap();
-      setMessage("Password reset link has been sent to your email.");
-      setIsLoading(false);
-      setTimeout(() => router.push('/login'), 3000)
+      const response = await fetch("api/auth/change_password", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      if (response.ok) {
+        console.log('Password reset successful', response);
+        setIsLoading(false);
+        setMessage('Password reset successful. Redirecting to login page');
+        setTimeout(() => router.push('/password-confirm'), 3000);
+      } else {
+        const data = await response.json();
+        setIsError(data.error || 'Failed to send password reset link');
+      }
     } catch (error) {
       setIsLoading(false);
       setIsError(true);
-      setMessage('An error occurred. Please try again.');
-
+      setMessage('Error working with password reset')
+      console.error('Error working with password reset', error);
     };
   };
 

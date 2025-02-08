@@ -18,9 +18,9 @@ const LoginPage = () => {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   
+  const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, isError } = useSelector((state: RootState) => state.auth);
 

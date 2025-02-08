@@ -2,14 +2,13 @@
 
 import React from 'react'
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useVerifyMutation } from '../apiAuth';
+import { useRouter } from 'next/navigation'; 
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/app/store/store';
+import { verify } from '@/app/store/authSlice';
 
 const VerifyPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const uid = searchParams.get('uid');
-  const token = searchParams.get('token');
 
   const [verify, { isLoading, isError, isSuccess }] = useVerifyMutation();
 

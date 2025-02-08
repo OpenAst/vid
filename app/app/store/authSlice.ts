@@ -55,13 +55,13 @@ export const register = createAsyncThunk(
   );
   
   export const refresh = createAsyncThunk(
-    'auth/verify', 
-    async (refreshToken: string, { rejectWithValue }) => {
+    'auth/refresh', 
+    async (_, { rejectWithValue }) => {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: refreshToken }),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -78,6 +78,30 @@ export const register = createAsyncThunk(
     }
   }
 );
+
+export const verify = createAsyncThunk(
+  'auth/verify',
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await fetch('api/auth/verify',{
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json'},
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return rejectWithValue(data.error || 'Verification failed');
+      }
+      return data;
+      
+    } catch (error) {
+      return rejectWithValue(error || 'Verification failed');
+    }
+  }
+)
+
 
 export const fetchUser = createAsyncThunk(
   'auth/fetchUser',
@@ -101,6 +125,8 @@ export const fetchUser = createAsyncThunk(
     }
   );
 
+  
+
 interface AuthState {
   isAuthenticated: boolean;
   user: string | null;
@@ -108,6 +134,7 @@ interface AuthState {
   registerSuccess: boolean;
   logged_out: boolean;
   isError: boolean;
+  errorMessage?: string;
 }
 
 const initialState: AuthState = {
@@ -182,7 +209,20 @@ const authSlice = createSlice({
       .addCase(fetchUser.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
-      });
+      })
+      .addCase(verify.pending, (state) => { 
+        state.isLoading = true;
+        state.isError = false;
+      })
+      .addCase(verify.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(verify.rejected, (state) => {
+        state.isLoading = false;
+        state.isError = true;
+      })
   }
 });
 

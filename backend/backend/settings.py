@@ -180,7 +180,10 @@ DJOSER = {
         'user': 'accounts.serializers.UserCreateSerializer',
         'current_user': 'accounts.serializers.UserCreateSerializer',
         'user_delete': 'djoser.serializers.UserDeleteSerializer',
-    }
+    },
+    'PERMISSIONS': {
+        'set_password': ["rest_framework.permissions.IsAuthenticated"],
+    },
 }
 
 

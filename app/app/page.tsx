@@ -8,9 +8,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 
 function HomePage() {
-  const { isAuthenticated, isLoading, isError } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { isAuthenticated, isLoading, isError } = useSelector((state: RootState) => state.auth);
   const dispatch: AppDispatch = useDispatch();
 
   const [userDetails, setUserDetails] = useState({
@@ -39,12 +37,12 @@ function HomePage() {
     fetchData();
   }, [dispatch]);
 
-  if (isLoading) return <p>Loading...</p>;
+  if (isLoading) return <p className='loading-sm'>Loading...</p>;
 
   if (isError) {
     return (
       <div>
-        <p className="text-red-500">Error loading user details</p>
+        <p className="text-red-500 text-center">Error loading user details</p>
         <LoginPage />
       </div>
     );
@@ -52,23 +50,6 @@ function HomePage() {
 
   return (
     <div className="flex flex-col items-center justify-start h-screen pt-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-4">Home Page</h1>
-      <p className="text-lg mb-4 font-gtSuper">Welcome to the home page!</p>
-      
-      <div className="mb-6 space-y-2">
-        <Link href="/about" className="text-blue-500">About</Link>
-        <br />
-        <Link href="/contact" className="text-blue-500">Contact</Link>
-        <br />
-        <Link href="/dashboard" className="text-blue-500">Dashboard</Link>
-        <br />
-        <Link href="/profile" className="text-blue-500">Profile</Link>
-        <br />
-        <Link href="/login" className="text-blue-500">Login</Link>
-        <br />
-        <Link href="/register" className="text-blue-500">Register</Link>
-      </div>
-
       {isAuthenticated ? (
         <div className="text-center">
           <p>
@@ -79,11 +60,25 @@ function HomePage() {
           </p>
           <p>Email: {userDetails.email}</p>
         </div>
-      ) : (
-        <p className="text-center">
-          Please log in to view your profile.
-        </p>
-      )}
+        ) : (
+          <p className="text-center">
+            Please log in to view your profile.
+          </p>
+        )}
+      <div className="mb-6 space-y-2 justify-start items-start">
+        <nav className='space-y-2'>
+          <Link href="/about" className="text-blue-500">About</Link>
+          <br />
+          <Link href="/dashboard" className="text-blue-500">Dashboard</Link>
+          <br />
+          <Link href="/profile" className="text-blue-500">Profile</Link>
+          <br />
+          <Link href="/login" className="text-blue-500">Login</Link>
+          <br />
+          <Link href="/register" className="text-blue-500">Register</Link>
+        </nav>
+      </div>
+
     </div>
   );
 }
