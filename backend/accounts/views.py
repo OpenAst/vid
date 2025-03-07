@@ -4,11 +4,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .permissions import IsAdminUser
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics, permissions
 from django.db import models
+from .models import UserAccount, Profile
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import CustomTokenObtainPairSerializer
+from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer
+
 
 User = get_user_model()
 
@@ -51,7 +53,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
         return response
         
+class ProfileUpdateView(generics.UpdateAPIView):
+    serializer_class = ProfileUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_object(self):
+        return self.request.user.profile
+    
 @api_view(['GET'])  
 @permission_classes([IsAdminUser])
 def home(request):
@@ -71,6 +79,8 @@ def total_users(request):
         "user_details": list(users)
     })
 
+
+
 # # Video model
 # class Video(models.Model):
 #     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='videos')
@@ -81,4 +91,3 @@ def total_users(request):
 
 #     def __str__(self):
 #         return self.title
-

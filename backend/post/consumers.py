@@ -33,4 +33,3 @@ class PostConsumer(AsyncWebsocketConsumer):
       'type': 'new_post',
       'post': event['post'],
     }))    
-
