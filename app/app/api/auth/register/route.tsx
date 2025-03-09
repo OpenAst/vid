@@ -2,11 +2,12 @@ import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
   
-  const { first_name, last_name, email, password, re_password } = await req.json();
+  const { first_name, last_name, username, email, password, re_password } = await req.json();
 
   const body = JSON.stringify({
       first_name,
       last_name,
+      username,
       email,
       password,
       re_password,

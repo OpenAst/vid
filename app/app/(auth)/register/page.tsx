@@ -15,6 +15,7 @@ const RegisterPage = () => {
   
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -38,13 +39,14 @@ const RegisterPage = () => {
           first_name: firstname,
           last_name: lastname,
           email,
+          username,
           password,
           re_password: confirmPassword,
         })
       ).unwrap();
 
       alert('Registration successful!');
-      router.push('/verify'); // Redirect to verify page
+      router.push('/check-email'); 
     } catch (error) {
       console.error('Registration failed:', error);
     }
@@ -94,6 +96,20 @@ const RegisterPage = () => {
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="input input-bordered"
+            required
+          />
+        </div>
+
+        <div className="form-control lg:col-span-2">
+          <label className="label">
+            <span className="label-text">Username</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Enter your username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="input input-bordered"
             required
           />

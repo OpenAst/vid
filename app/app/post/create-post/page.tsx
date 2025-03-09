@@ -1,6 +1,5 @@
 'use client';
 
-
 import { usePostsMutation } from '@/app/(auth)/apiAuth';
 export default function CreatePostPage () {
   const [post, { isLoading, isError }] = usePostsMutation();

@@ -1,47 +1,43 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation'; 
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import { verify } from '@/app/store/authSlice';
 
-const VerifyPage = () => {
+const VerifyPage: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dispatch: AppDispatch = useDispatch();
+  const { isLoading, isError } = useSelector((state: RootState) => state.auth);
+  const [isVerified, setIsVerified] = useState(false);
 
-  const [verify, { isLoading, isError, isSuccess }] = useVerifyMutation();
+  const uid = searchParams.get('uid');
+  const token = searchParams.get('token');
 
-  const handleVerification = async () => {
-    if (!uid || !token) {
-      alert("Invalid verification link!");
-      return;
+  useEffect(() => {
+    if (uid && token) {
+      dispatch(verify({ uid, token }))
+        .unwrap()
+        .then(() => {
+          setIsVerified(true);
+          setTimeout(() => router.push('/login'), 2000);
+        })
+        .catch(() => setIsVerified(false));
     }
-
-    try {
-      await verify({ uid, token }).unwrap();
-      alert("Account activated successfully !");
-      
-      router.push('/login');
-    } catch (error) {
-      console.error('Verification failed:', error);
-      alert('Activation failed. Please try again later.');
-    }
-  };
+  }, [uid, token, dispatch, router]);
 
   return (
-    <div>
-      <h1>Verify Your Account</h1>
-      {isLoading ? (
-        <p>Verifying...</p>
-      ) : isSuccess ? (
-        <p>Account successfully activated! Redirecting...</p>
-      ) : (
-        <button onClick={handleVerification}>Activate Account</button>
+    <div className="flex flex-col items-center justify-start min-h-screen mt-4">
+      <h2 className="text-xl font-semibold mb-4 justify-start ">Account Verification</h2>
+      {isLoading && <p>Verifying...</p>}
+      {!isLoading && isError && <p className="text-red-500">Verification failed. Try again.</p>}
+      {!isLoading && !isError && isVerified && (
+        <p className="text-green-600">Verification successful! Redirecting...</p>
       )}
-      {isError && <p>There was an error activating your account.</p>}
     </div>
-  )
-}
+  );
+};
 
 export default VerifyPage;

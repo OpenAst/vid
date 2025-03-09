@@ -1,10 +1,11 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import axios from 'axios';
 
 
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: {
-    email: string, password: string
+    email: string, password: string, username: string
   }, {rejectWithValue }) => {
     try {
       const res = await fetch('/api/auth/login', {
@@ -32,7 +33,7 @@ export const register = createAsyncThunk(
   'auth/register',
   async (credentials: {
     email: string, password: string, re_password: string,
-    first_name: string, last_name: string,
+    first_name: string, last_name: string, username: string
   }, { rejectWithValue }) => {
     try {
       const res = await fetch('api/auth/register', {
@@ -81,11 +82,12 @@ export const register = createAsyncThunk(
 
 export const verify = createAsyncThunk(
   'auth/verify',
-  async (_, { rejectWithValue }) => {
+  async (credentials: { uid: string, token: string }, { rejectWithValue }) => {
     try {
       const res = await fetch('api/auth/verify',{
         method: 'POST',
         headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify(credentials),
         credentials: "include",
       });
 
@@ -125,11 +127,48 @@ export const fetchUser = createAsyncThunk(
     }
   );
 
-  
+export const fetchPublicUser = createAsyncThunk(
+  "auth/fetchPublicUser",
+  async (username: string, thunkAPI) => {
+    try {
+      if (!username) throw new Error("Username is required");
+      const response = await axios.get(`api/auth/profile?username=${username}`);
+      return response.data;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.response?.data || "Error fetching user profile")
+    }
+  }
+)
+
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (formData: FormData, { rejectWithValue }) => {
+    try {
+      const res = await fetch('/api/auth/profile_update/', {
+        method: 'PUT',
+        body: formData,
+        credentials: 'include',
+      });
+      return await res.json();
+
+    } catch (err) {
+      return rejectWithValue(err || 'Failed to update profile');
+    }
+  }
+)
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile_picture?: string;
+}
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: string | null;
+  user: User | null;
   isLoading: boolean;
   registerSuccess: boolean;
   logged_out: boolean;
@@ -151,10 +190,10 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setAuthenticated(state, action) {
-      state.isAuthenticated = action.payload;
+      state.isAuthenticated = action.payload.user;
     },
     setUser(state, action) {
-      state.user = action.payload;
+      state.user = action.payload.user;
     },
     logout: (state) => {
       state.isAuthenticated = false;
@@ -169,7 +208,7 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;
       })
       .addCase(login.rejected, (state) => {
         state.isLoading = false;
@@ -190,7 +229,7 @@ const authSlice = createSlice({
       })
       .addCase(refresh.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.isAuthenticated = action.payload;
+        state.isAuthenticated = action.payload.user;
         state.isError = false;
       })
       .addCase(refresh.rejected, (state) => {
@@ -203,10 +242,23 @@ const authSlice = createSlice({
       })
       .addCase(fetchUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;
         state.isAuthenticated = true;
       })
       .addCase(fetchUser.rejected, (state) => {
+        state.isLoading = false;
+        state.isError = true;
+      })
+      .addCase(fetchPublicUser.pending, (state) => { 
+        state.isLoading = true;
+        state.isError = false;
+      })
+      .addCase(fetchPublicUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+      })
+      .addCase(fetchPublicUser.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
       })
@@ -216,10 +268,19 @@ const authSlice = createSlice({
       })
       .addCase(verify.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;
         state.isAuthenticated = true;
       })
       .addCase(verify.rejected, (state) => {
+        state.isLoading = false;
+        state.isError = true;
+      })
+      .addCase(updateProfile.pending, (state) => {
+        state.isLoading = true;
+        state.isError = false;
+      })
+       
+      .addCase(updateProfile.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
       })

@@ -1,10 +1,8 @@
-import ProtectedRoute from "../components/ProtectedRoute";
+'use client';
 
 const Dashboard = () => {
   return (
-    <ProtectedRoute>
-      <h1>Welcome to the Dashboard!</h1>
-    </ProtectedRoute>
+      <h1 className="text-center">Welcome to the Dashboard!</h1>
   )
 };
 

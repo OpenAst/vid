@@ -18,6 +18,7 @@ const LoginPage = () => {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
   const router = useRouter();
@@ -29,7 +30,7 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       
-      const res = await dispatch(login( {email, password} )).unwrap();
+      const res = await dispatch(login( {email, password, username} )).unwrap();
       console.log('Login successful:', res);
 
       router.push('/');
@@ -76,7 +77,18 @@ const LoginPage = () => {
             required
           />
         </div>
-
+        <div className="form-control">
+          <input
+            className="input input-bordered w-full"
+            type="text"
+            placeholder="Username"
+            name="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+        </div>
+        
         <div className="form-control relative">
           <input
             className="input input-bordered w-full"
@@ -96,14 +108,14 @@ const LoginPage = () => {
             </span>
         </div>
          {isError && (
-        <div className='bg-accent-green text-sm lg:col-span-2'>
+        <div className='bg-accent-green text-sm lg:col-span-2 text-center'>
             <p>An error occurred.</p>
         </div>)}
         <button
           type="submit"
            className={`btn bg-primary-blue w-full
              flex items-center justify-center ${isLoading ? 
-             'loading w-4 h-4 justify-center' : ''}`}
+             'loading w-1 h-2 items-center justify-center' : ''}`}
         >
           Login
         </button>

@@ -2,20 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchPublicUser, updateProfile } from '@/app/store/authSlice';
+import { fetchUser, updateProfile } from '@/app/store/authSlice';
 import { RootState, AppDispatch } from '@/app/store/store';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 function ProfilePage() {
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
-  const { username } = useParams(); 
-  const safeUsername = Array.isArray(username) ? username[0]: username || '';
-
-  const { isAuthenticated, isLoading, isError, user } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { user, isAuthenticated, isLoading, isError } = useSelector((state: RootState) => state.auth);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -23,8 +18,7 @@ function ProfilePage() {
     firstName: '',
     lastName: '',
     email: '',
-    username: '',
-    profile_picture: '',
+    profile_picture: ''
   });
 
   useEffect(() => {
@@ -33,29 +27,20 @@ function ProfilePage() {
       return;
     }
 
-    if (user && typeof user !== 'string') {
-      setUserDetails({
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        email: user.email || '',
-        username: user.username || '',
-        profile_picture: user.profile_picture || '',
-      });
-    } else if (safeUsername) {
-      dispatch(fetchPublicUser(safeUsername))
-        .unwrap()
-        .then((userData) => {
-          setUserDetails({
-            firstName: userData.first_name || '',
-            lastName: userData.last_name || '',
-            email: userData.email || '',
-            username: userData.username || '',
-            profile_picture: userData.profile_picture || '',
-          });
-        })
-        .catch((error) => console.error('Error fetching user:', error));
-    }
-  }, [dispatch, isAuthenticated, router, user, safeUsername ]);
+    if (!user) {
+      dispatch(fetchUser())
+      .unwrap()
+      .then((userData) => {
+        setUserDetails({
+          firstName: userData.first_name || '',
+          lastName: userData.last_name || '',
+          email: userData.email || '',
+          profile_picture: userData.profile_picture || ''
+        });
+      })
+      .catch((error) => console.error('Error fetching user:', error));
+  }
+}, [dispatch, isAuthenticated, router, user]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -64,9 +49,14 @@ function ProfilePage() {
     }
   };
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setUserDetails((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleUpload = async () => {
     if (!selectedFile && !userDetails.firstName && !userDetails.lastName) return;
-
+    
     const formData = new FormData();
     if (selectedFile) {
       formData.append('profile_picture', selectedFile);
@@ -85,33 +75,45 @@ function ProfilePage() {
 
   return (
     <div className='flex flex-col items-center mt-10'>
+      
       <div className='relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-300'>
         <Image
-          src={previewImage || userDetails.profile_picture || '/default-avatar.png'}
+          src={previewImage || user?.profile_picture || '/dog5.jpg'}
           alt='Profile'
           width={128}
           height={128}
           className='w-full h-full object-cover'
         />
       </div>
+      <input 
+        type="file" 
+        accept="image/*" 
+        onChange={handleFileChange} 
+        className="mt-4"
+      />
+      <input 
+        type="text" 
+        name="firstName" 
+        placeholder="First Name" 
+        value={userDetails.firstName} 
+        onChange={handleInputChange} 
+        className="mt-4 p-2 border border-gray-300 rounded"
+      />
+      <input 
+        type="text" 
+        name="lastName" 
+        placeholder="Last Name" 
+        value={userDetails.lastName} 
+        onChange={handleInputChange} 
+        className="mt-2 p-2 border border-gray-300 rounded"
+      />
 
-      {isAuthenticated && (
-        <>
-          <input type='file' accept='image/*' onChange={handleFileChange} className='mt-4' />
-          <button
-            onClick={handleUpload}
-            className='mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600'
-          >
-            Upload Picture
-          </button>
-        </>
-      )}
-
-      <div className='mt-6 text-center'>
-        <p className='text-xl font-bold'>{userDetails.firstName} {userDetails.lastName}</p>
-        <p className='text-gray-600'>{userDetails.email}</p>
-        <p className='text-gray-600'>{userDetails.username}</p>
-      </div>
+      <button 
+        onClick={handleUpload} 
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        Update Profile
+      </button>
     </div>
   );
 }

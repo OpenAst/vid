@@ -9,8 +9,9 @@ from django.db import models
 from .models import UserAccount, Profile
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer
-
+from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer 
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
 
 User = get_user_model()
 
@@ -58,8 +59,21 @@ class ProfileUpdateView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        return self.request.user.profile
+        profile, created = Profile.objects.get_or_create(user=self.request.user)
+        return profile
     
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            print("Update error", str(e))
+            return Response({
+                "error": "Profile update failed"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+def get_csrf_token(request):
+    return JsonResponse({ "csrftoken": get_token(request)})
+
 @api_view(['GET'])  
 @permission_classes([IsAdminUser])
 def home(request):

@@ -54,5 +54,5 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['bio', 'image']      
+        fields = ['bio', 'avatar']      
       

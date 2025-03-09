@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const { email, password } = await req.json();
+  const { email, password, username } = await req.json();
 
   const body = JSON.stringify({
     email,
     password,
+    username,
   });
 
   try {
@@ -33,6 +34,19 @@ export async function POST(req: NextRequest) {
         'Set-Cookie',
         `refresh=${data.refresh}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=${60 * 60 * 24 * 5}; SameSite=Strict; Path=/`
       );
+
+      const csrfRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/csrf/`, {
+        method: 'GET', 
+        credentials: 'include',
+      });
+
+      const csrfToken = csrfRes.headers.get('X-CSRFToken');
+      if (csrfToken) {
+        headers.append(
+          'Set-Cookie',
+          `csrftoken=${csrfToken}; Secure=${process.env.NODE_ENV !== 'development'}; SameSite=Strict; Path=/`
+        );
+      }
 
       headers.append('Content-Type', 'application/json');
 
