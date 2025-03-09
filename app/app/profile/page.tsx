@@ -18,7 +18,9 @@ function ProfilePage() {
     firstName: '',
     lastName: '',
     email: '',
-    profile_picture: ''
+    profile_picture: '',
+    bio: '',
+    followers: ''
   });
 
   useEffect(() => {
@@ -35,7 +37,9 @@ function ProfilePage() {
           firstName: userData.first_name || '',
           lastName: userData.last_name || '',
           email: userData.email || '',
-          profile_picture: userData.profile_picture || ''
+          profile_picture: userData.profile_picture || '',
+          bio: userData.bio || '',
+          followers: userData.followers || '',
         });
       })
       .catch((error) => console.error('Error fetching user:', error));
@@ -99,6 +103,15 @@ function ProfilePage() {
         onChange={handleInputChange} 
         className="mt-4 p-2 border border-gray-300 rounded"
       />
+      <input 
+        type="text" 
+        name="lastName" 
+        placeholder="Last Name" 
+        value={userDetails.lastName} 
+        onChange={handleInputChange} 
+        className="mt-2 p-2 border border-gray-300 rounded"
+      />
+
       <input 
         type="text" 
         name="lastName" 

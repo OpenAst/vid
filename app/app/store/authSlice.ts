@@ -219,6 +219,10 @@ const authSlice = createSlice({
         state.isError = false;
         state.isLoading = true;
       })
+      .addCase(register.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+      })
       .addCase(register.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
@@ -279,7 +283,11 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.isError = false;
       })
-       
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+      }) 
       .addCase(updateProfile.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
