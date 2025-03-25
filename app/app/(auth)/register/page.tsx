@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import { register } from '@/app/store/authSlice';
 import Link from 'next/link';
-import AuthLayout from '../../components/AuthLayout';
+import AuthLayout from '../../components/layout/AuthLayout';
 
 const RegisterPage = () => {
   const router = useRouter();

@@ -7,7 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Link from 'next/link';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import AuthLayout from '../../components/AuthLayout';
+import AuthLayout from '../../components/layout/AuthLayout';
 
 const LoginPage = () => {
   

@@ -53,7 +53,7 @@ function ProfilePage() {
     }
   };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = event.target;
     setUserDetails((prev) => ({ ...prev, [name]: value }));
   };
@@ -67,6 +67,7 @@ function ProfilePage() {
     }
     formData.append('first_name', userDetails.firstName);
     formData.append('last_name', userDetails.lastName);
+    formData.append('bio', userDetails.bio)
 
     dispatch(updateProfile(formData))
       .unwrap()
@@ -112,14 +113,19 @@ function ProfilePage() {
         className="mt-2 p-2 border border-gray-300 rounded"
       />
 
-      <input 
-        type="text" 
-        name="lastName" 
-        placeholder="Last Name" 
-        value={userDetails.lastName} 
-        onChange={handleInputChange} 
-        className="mt-2 p-2 border border-gray-300 rounded"
+      <textarea
+        name='bio'
+        placeholder='Bio'
+        value={userDetails.bio}
+        onChange={handleInputChange}
+        className='mt-2 p-2 border 
+        border-gray-300 rounded w-64 
+        h-32 resize-none' 
       />
+
+      <div className="mt-4">
+        <p className="text-gray-600">Followers: {userDetails.followers}</p>
+      </div>
 
       <button 
         onClick={handleUpload} 

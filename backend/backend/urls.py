@@ -18,7 +18,7 @@ urlpatterns = [
     path('users/profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
     path('home/', home, name='home'),
     path('users/', total_users, name='total_users'),
-    path('posts/', include('post.urls'))
+    path('api/', include('video.urls')),
 ] 
 
 if settings.DEBUG:

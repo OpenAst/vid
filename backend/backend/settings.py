@@ -16,12 +16,6 @@ SECRET_KEY = 'django-insecure-*0q1pwh9o8h&-pbk49kl6q==kr6-^4h&l*)a@z1nd7w$=*4hkb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000","http://localhost:3001",]
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SECURE = False  # Set to True in production
-CSRF_USE_SESSIONS = False
-
 INSTALLED_APPS = [
     'daphne',
     'channels',
@@ -32,13 +26,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'djoser',
-    'accounts',
-    'post',
     'corsheaders',
     'rest_framework',
     'social_django',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
+    
+    'accounts',
+    'video',
 ]
 
 MIDDLEWARE = [
@@ -72,6 +67,18 @@ TEMPLATES = [
 
 ROOT_URLCONF = 'backend.urls'
 
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = ["http://localhost:3000","http://localhost:3001",]
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SECURE = False  # Set to True in production
+CSRF_USE_SESSIONS = False
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000 
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
@@ -113,10 +120,17 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',  # Use the 'verbose' formatter
         },
     },
     'root': {
@@ -129,9 +143,13 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
     },
 }
-
 
 
 REST_FRAMEWORK = {

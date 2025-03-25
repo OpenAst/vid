@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-// import LoginPage from '@/app/(auth)/login/page';
 import { fetchUser } from '@/app/store/authSlice';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
+import Feed from './components/video/Feed';
 
 function HomePage() {
   const { isAuthenticated, isLoading, isError } = useSelector((state: RootState) => state.auth);
@@ -60,8 +60,9 @@ function HomePage() {
               <Link href="/register" className="block text-sm">Register</Link>
             </>
           )}
+          <Link href="/" className="block text-sm">Home</Link>
           <Link href="/about" className="block text-sm">About</Link>
-          <Link href="/dashboard" className="block text-sm">Dashboard</Link>
+          <Link href="/upload" className="block text-sm">Upload</Link>
           <Link href="/profile" className="block text-sm">Profile</Link>
         </nav>
       </div>
@@ -69,15 +70,18 @@ function HomePage() {
       
       <div className="flex-1 flex items-start justify-center">
         {isAuthenticated ? (
-          <div className="text-center">
-            <p>
-              Hello,{' '}
-              <span className="font-bold">
-                {userDetails.firstName}, {userDetails.lastName}
-              </span> !
-            </p>
-            <p className="text-center">You are welcome to this amazing platform!</p>
-          </div>
+          <>
+            <div className="text-center">
+              <p>
+                Hello,{' '}
+                <span className="font-bold">
+                  {userDetails.firstName}, {userDetails.lastName}
+                </span> !
+              </p>
+              <p className="text-center">You are welcome to this amazing platform!</p>
+            </div>
+            <Feed />
+          </>
         ) : (
           <p>Please log in to view your profile.</p>
         )}

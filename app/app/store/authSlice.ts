@@ -157,6 +157,7 @@ export const updateProfile = createAsyncThunk(
   }
 )
 
+
 interface User {
   id: number;
   username: string;
@@ -292,6 +293,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isError = true;
       })
+      
   }
 });
 
