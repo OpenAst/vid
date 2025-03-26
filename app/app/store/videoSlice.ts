@@ -26,7 +26,7 @@ export const fetchVideos = createAsyncThunk(
   "videos/fetch",
   async ({ page = 1, limit = 10 }: { page?: number; limit?: number }, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/api/videos/?page=${page}&limit=${limit}`);
+      const res = await fetch(`/api/video/fetch/?page=${page}&limit=${limit}/`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => "Failed to fetch videos");
         return rejectWithValue(errorData.message || "Failed to fetch videos")
