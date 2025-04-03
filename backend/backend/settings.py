@@ -3,17 +3,13 @@ from pathlib import Path
 import os
 from decouple import config
 from datetime import timedelta
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-*0q1pwh9o8h&-pbk49kl6q==kr6-^4h&l*)a@z1nd7w$=*4hkb'
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 INSTALLED_APPS = [
@@ -77,8 +73,8 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000 
-FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000 
+DATA_UPLOAD_MAX_MEMORY_SIZE =  300 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE =  300 * 1024 * 1024
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
@@ -237,9 +233,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
 

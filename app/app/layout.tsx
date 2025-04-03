@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import "./globals.css";
-import Fonts from "./fonts"; // Optional: Manage fonts in a separate client component
-import ClientProvider from "./clientlayout"; // Client-side logic
+import Fonts from "./fonts"; 
+import ClientProvider from "./clientlayout"; 
 import Providers from './store/providers';
 
 export const metadata: Metadata = {

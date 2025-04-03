@@ -7,7 +7,7 @@ const CheckEmailPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    setTimeout(() => router.push('/login'), 5000);
+    setTimeout(() => router.replace('/login'), 5000);
   }, [router]);
 
   return (

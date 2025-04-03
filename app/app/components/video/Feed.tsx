@@ -21,29 +21,31 @@ const Feed = () => {
   }, [dispatch]);
 
   return (
-    <div>
+    <div className="flex justify-center">
       {isLoading && (
-      <p className="flex justify-center items-center h-screen">
-        🔄 Loading...
-      </p>
+        <p className="flex justify-center items-center h-32"> 
+          🔄 Loading...
+        </p>
       )}
-      {isError && <p>{isError}</p>}
-      <ul className='grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4'>
+      {isError && <p className="text-red-500 text-center">{isError}</p>}
+      <div className="flex flex-col items-center gap-4"> 
         {videos?.results?.map((video: any) => (
-          <VideoCard
-           key={video.id}
-           id={video.id}
-           title={video.title}
-           thumbnail={video.thumbnail}
-           file_url={video.file_url}
-           description={video.description}
-           uploader={video.uploader}
-           views={video.views}
-           timestamp={video.timestamp}/>
+          <div key={video.id} className="w-full max-w-2xl">
+            <VideoCard
+              key={video.id}
+              id={video.id}
+              title={video.title}
+              thumbnail={video.thumbnail}
+              file_url={video.file_url}
+              views={video.views}
+              timestamp={video.timestamp}
+            />
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
-  )
-}
+  );
+};
+
 export default Feed;
 

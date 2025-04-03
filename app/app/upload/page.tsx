@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { uploadVideo } from "@/app/store/videoSlice";
 import { AppDispatch } from "@/app/store/store";
 import { useRouter } from "next/navigation";
+import { RootState } from "@/app/store/store";
+
 
 const UploadVideo = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -18,6 +20,8 @@ const UploadVideo = () => {
     timestamp: Date.now(),
     uploader: "Anonymous",
   });
+
+  const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -56,45 +60,93 @@ const UploadVideo = () => {
     }
   };
 
+  if (isLoading) return <div className="flex justify-center items-center h-screen">🔄 Loading...</div>;
+
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-2xl font-semibold mb-4">Upload a Video</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          name="title"
-          placeholder="Video Title"
-          value={formData.title}
-          onChange={handleInputChange}
-          className="border p-2 w-full rounded"
-          required
-        />
-        <textarea
-          name="description"
-          placeholder="Video Description (optional)"
-          value={formData.description}
-          onChange={handleInputChange}
-          className="border p-2 w-full rounded"
-        />
-        <input
-          type="file"
-          accept="video/*"
-          onChange={handleFileChange}
-          className="border p-2 w-full"
-          required
-        />
-        {preview && (
-          <video src={preview} controls className="w-full h-64 mt-2 rounded-md" />
-        )}
-        <button
-          type="submit"
-          className="bg-blue-500 text-white p-2 rounded w-full"
-        >
-          Upload Video
-        </button>
-      </form>
-    </div>
+  <>
+    {isAuthenticated && 
+      <div className="min-h-screen bg-gray-50 max-w-2xl min-w-5">
+        <div className="mx-auto px-4 py-6 sm:px-10 lg:px-8">
+          <h2 className="text-2xl font-semibold text-center mb-6">Upload a Video</h2>
+          <form onSubmit={handleSubmit} className="space-y-4 bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                Video Title
+              </label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                placeholder="Enter video title"
+                value={formData.title}
+                onChange={handleInputChange}
+                className="border border-gray-300 p-2 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                Description (optional)
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                placeholder="Enter video description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="border border-gray-300 p-2 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="video-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                Video File
+              </label>
+              <input
+                id="video-upload"
+                type="file"
+                accept="video/*"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+                required
+              />
+            </div>
+
+            {preview && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Video Preview
+                </label>
+                <div className="aspect-w-16 aspect-h-9">
+                  <video
+                    src={preview}
+                    controls
+                    className="w-full rounded-md border border-gray-200"
+                  />
+                </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+            >
+              Upload Video
+            </button>
+          </form>
+        </div>
+      </div>
+    }
+    
+  </>
   );
-};
+}
 
 export default UploadVideo;

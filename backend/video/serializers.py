@@ -8,7 +8,11 @@ class VideoSerializer(serializers.ModelSerializer):
   file_url = serializers.SerializerMethodField()
 
   def get_file_url(self, obj):
-    return settings.MEDIA_URL + str(obj.file)
+    request = self.context.get('request')
+    if obj.file:
+      return request.build_absolute_uri(obj.file.url)
+    
+    return None
   
   class Meta:
     model = Video

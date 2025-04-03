@@ -7,6 +7,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Feed from './components/video/Feed';
 
+
+
 function HomePage() {
   const { isAuthenticated, isLoading, isError } = useSelector((state: RootState) => state.auth);
   const dispatch: AppDispatch = useDispatch();
@@ -17,7 +19,6 @@ function HomePage() {
     lastName: '',
     email: '',
   });
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,53 +43,37 @@ function HomePage() {
 
   if (isError) {
     return (
-      <div className="text-center">
-        <p className="text-red-500">Error loading user details</p>
+      <div className="flex flex-col h-screen items-center justify-center">
+        <p className="text-red-500 text-lg font-semibold mb-5">Unauthorized !</p>
         <p>Please login or sign up</p>
-        <Link  href="/login">Login</Link>
+        <Link href="/login" className="text-blue-500 underline mt-5">Login</Link>
       </div>
     );
   }
 
   return (
     <div className="flex h-screen">
-      <div className="w-1/8 pt-4 border-r">
-        <nav className="space-y-2 p-2">
-          {!isAuthenticated && (
-            <>
-              <Link href="/login" className="block text-sm">Login</Link>
-              <Link href="/register" className="block text-sm">Register</Link>
-            </>
-          )}
-          <Link href="/" className="block text-sm">Home</Link>
-          <Link href="/about" className="block text-sm">About</Link>
-          <Link href="/upload" className="block text-sm">Upload</Link>
-          <Link href="/profile" className="block text-sm">Profile</Link>
-        </nav>
-      </div>
-  
-      
-      <div className="flex-1 flex items-start justify-center">
-        {isAuthenticated ? (
-          <>
-            <div className="text-center">
-              <p>
+      <div className="flex-1 flex flex-col items-center p-4">
+        {isAuthenticated && (
+          <div className="w-full max-w-4xl">
+            <div className="text-center fixed top-0 left-0 right-0 z-10 bg-white shadow-sm py-8 px-6">
+              <p className="text-lg ">
                 Hello,{' '}
-                <span className="font-bold">
+                <span className="text-xl font-semibold text-center bg-gray-50">
                   {userDetails.firstName}, {userDetails.lastName}
                 </span> !
               </p>
               <p className="text-center">You are welcome to this amazing platform!</p>
             </div>
-            <Feed />
-          </>
-        ) : (
-          <p>Please log in to view your profile.</p>
+
+            <div className="mt-32">
+              <Feed />
+            </div>
+          </div>
         )}
       </div>
     </div>
-  );
-  
+  );  
 }
 
 export default HomePage;

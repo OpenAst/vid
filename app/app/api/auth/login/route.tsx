@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
       headers.append(
         'Set-Cookie',
-        `access=${data.access}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=3600; SameSite=Strict; Path=/`
+        `access=${data.access}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=${60 * 60 * 2}; SameSite=Strict; Path=/`
       );
 
       headers.append(
@@ -60,9 +60,16 @@ export async function POST(req: NextRequest) {
         }
       );
     } else {
+      let errorMessage = 'Authentication failed.'
+
+      if (data.detail) {
+        errorMessage = data.detail;
+      } else if (data.error) {
+        errorMessage = data.error
+      }
       return new Response(
         JSON.stringify({
-          error: data.detail || 'Authentication failed',
+          error: errorMessage,
         }),
         {
           status: apiRes.status,

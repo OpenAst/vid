@@ -12,7 +12,7 @@ def rearrange_string(s: str) -> str:
     result = []
     prev_count, prev_char = 0, ''
 
-    # Step 3: Rearrange characters
+
     while heap:
         count, char = heapq.heappop(heap)
         result.append(char)

@@ -6,34 +6,26 @@ interface VideoProps {
   title: string;
   thumbnail: string;
   file_url: string;
-  description: string;
-  uploader: string;
   views: number;
   timestamp: string;
 }
 
-const VideoCard: React.FC<VideoProps> = (
-  { id, title, thumbnail, uploader,
-     description, file_url, views, timestamp }
-) => {
+const VideoCard: React.FC<VideoProps> = ({ title, thumbnail, file_url, views, timestamp }) => {
   return (
-    <div className="w-full max-w-sm rounded-lg shadow-lg bg-gray-900 text-white p-4">
+    <div className="w-full max-w-xs p-2 rounded-lg transition hover:scale-105">
       {thumbnail ? (
-        <Image src={thumbnail} alt={title} className="w-full h-40 object-cover rounded-md" />
+        <Image src={thumbnail} alt={title} className="w-full h-44 object-cover rounded-md" />
       ) : (
-        <video src={file_url} controls className="w-ful h-48 rounded-md " />
+        <video src={file_url} controls className="w-full h-44 rounded-md" />
       )}
-    <div className="mt-3">
-      <h3 className="text-lg font-semibold truncate">{title}</h3>
-      <p className="text-sm text-gray-400">By {uploader}</p>
-      <div className="flex justify-between text-gray-500 text-sm mt-1">
-        <span>👀 {views} views</span>
-        <span>🕒 {timestamp}</span>
+      
+      <div className="mt-2">
+        <h3 className="text-sm font-medium truncate">{title}</h3>
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>👀 {views}</span>
+          <span>{timestamp}</span>
+        </div>
       </div>
-
-      <p className="text-sm text-gray-300 mt-2 line-clamp-2">{description}</p>
-      <p className="text-xs text-gray-500 mt-1">ID: {id}</p>
-    </div>
     </div>
   );
 };
