@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'social_django',
+    'chunked_upload',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     
@@ -73,8 +74,12 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-DATA_UPLOAD_MAX_MEMORY_SIZE =  300 * 1024 * 1024
-FILE_UPLOAD_MAX_MEMORY_SIZE =  300 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE =  1024 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE =  1024 * 1024 * 1024
+
+FILE_UPLOAD_PERMISSIONS = 0o644
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
@@ -221,6 +226,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+
+AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
+AWS_S3_ADDRESSING_STYLE = config('AWS_S3_ADDRESSING_STYLE')
+
+AWS_QUERYSTRING_AUTH = False
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/

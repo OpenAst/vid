@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store/store';
@@ -8,6 +7,8 @@ import { RootState } from '@/app/store/store';
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
+
+  
   return (
     <div className="flex h-screen">
       {isAuthenticated && (

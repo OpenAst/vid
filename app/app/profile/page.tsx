@@ -10,7 +10,7 @@ import Image from 'next/image';
 function ProfilePage() {
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, isError } = useSelector((state: RootState) => state.auth);
+  const { user, isLoading, isError } = useSelector((state: RootState) => state.auth);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -24,28 +24,28 @@ function ProfilePage() {
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-
-    if (!user) {
-      dispatch(fetchUser())
-      .unwrap()
-      .then((userData) => {
-        setUserDetails({
-          firstName: userData.first_name || '',
-          lastName: userData.last_name || '',
-          email: userData.email || '',
-          profile_picture: userData.profile_picture || '',
-          bio: userData.bio || '',
-          followers: userData.followers || '',
-        });
-      })
-      .catch((error) => console.error('Error fetching user:', error));
-  }
-}, [dispatch, isAuthenticated, router, user]);
-
+    const verifyUser = async () => {
+      try {
+        if (!user) {
+          const userData = await dispatch(fetchUser()).unwrap();
+          setUserDetails({
+            firstName: userData.first_name || '',
+            lastName: userData.last_name || '',
+            email: userData.email || '',
+            profile_picture: userData.profile_picture || '',
+            bio: userData.bio || '',
+            followers: userData.followers || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        router.push('/login');
+      }
+    };
+  
+    verifyUser();
+  }, [dispatch, router, user]);
+  
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);

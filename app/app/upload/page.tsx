@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { uploadVideo } from "@/app/store/videoSlice";
+import { fetchUser } from "@/app/store/authSlice";
 import { AppDispatch } from "@/app/store/store";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/app/store/store";
@@ -21,7 +22,7 @@ const UploadVideo = () => {
     uploader: "Anonymous",
   });
 
-  const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isLoading, user } = useSelector((state: RootState) => state.auth);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -59,6 +60,23 @@ const UploadVideo = () => {
       console.error("Upload failed", error);
     }
   };
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        if (!user) {
+          await dispatch(fetchUser()).unwrap();
+          console.log('Error authenticating');
+          }
+        } catch (error) {
+          console.log('Not working', error);
+          router.push('/login');
+        }
+
+    } 
+    checkAuth();
+    
+  }, [dispatch, router, user, isAuthenticated]);
 
   if (isLoading) return <div className="flex justify-center items-center h-screen">🔄 Loading...</div>;
 
