@@ -1,6 +1,7 @@
 from django.db import models
 from accounts.models import UserAccount
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 
 
@@ -30,3 +31,16 @@ class Video(models.Model):
       "views": self.views,
       "timestamp": self.get_timestamp(),
     }
+  
+  @property
+  def comment_count(self):
+    return self.comments.count()
+  
+class Comment(models.Model):
+  video = models.ForeignKey('Video', related_name='comments', on_delete=models.CASCADE)
+  user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+  content = models.TextField()
+  created_at = models.DateTimeField(auto_now_add=True)
+
+  def __str__(self):
+    return f"Comment by {self.user} on {self.video}"

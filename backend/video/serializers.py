@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Video
+from .models import Video, Comment
 from django.conf import settings
 
 class VideoSerializer(serializers.ModelSerializer):
@@ -25,3 +25,11 @@ class VideoSerializer(serializers.ModelSerializer):
   def create(self, validated_data):
     validated_data['uploader'] = self.context["request"].user
     return super().create(validated_data)
+  
+class CommentSerializer(serializers.ModelSerializer):
+  user = serializers.StringRelatedField(read_only=True)
+
+  class Meta:
+    model = Comment
+    fields = ['id', 'video', 'user', 'content', 'created_at']
+    read_only_fields = ['user', 'created_at']

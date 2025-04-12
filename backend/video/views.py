@@ -1,9 +1,11 @@
 from rest_framework import generics, permissions
-from .models import Video
-from .serializers import VideoSerializer
+from .models import Video, Comment
+from .serializers import VideoSerializer, CommentSerializer
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
 from rest_framework.response import Response
+from accounts.permissions import IsOwnerOrReadOnly
+
 
 class VideoPagination(PageNumberPagination):
   page_size = 10
@@ -39,3 +41,40 @@ class VideoDetailView(generics.RetrieveAPIView):
   queryset = Video.objects.all()
   serializer_class = VideoSerializer
   permission_classes = [permissions.AllowAny]    
+
+
+class CommentListAPIView(generics.ListAPIView):
+   queryset = Comment.objects.all()
+   serializer_class = CommentSerializer
+   permission_classes = [permissions.AllowAny]
+
+   def get_queryset(self):
+      video_id = self.kwargs['video_id']
+      return Comment.objects.filter(video_id=video_id).order_by('-created_at')
+
+class CommentCreateAPIView(generics.CreateAPIView):
+   serializer_class = CommentSerializer
+   permission_classes = [permissions.IsAuthenticated]
+
+   def perform_create(self, serializer):
+      video_id = self.kwargs['video_id']
+      serializer.save(user=self.request.user, video_id=video_id)
+
+class CommentDetailAPIView(generics.RetrieveAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "pk"
+
+class CommentUpdateAPIView(generics.UpdateAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    lookup_field = "pk"
+
+
+class CommentDeleteAPIView(generics.DestroyAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    lookup_field = "pk"
