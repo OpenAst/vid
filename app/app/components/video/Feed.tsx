@@ -9,6 +9,18 @@ const Feed = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {videos, isError, isLoading } = useSelector((state: RootState) => state.video);
   
+
+  type Video = {
+    id: string;
+    title: string;
+    file_url?: string;
+    thumbnail?: string; 
+    views?: number;  
+    timestamp?: string;
+    uploader?: string;
+  };
+  
+
   useEffect(() => {
     dispatch(fetchVideos({ page: 1, limit: 10 }))
       .unwrap()
@@ -29,16 +41,16 @@ const Feed = () => {
       )}
       {isError && <p className="text-red-500 text-center">{isError}</p>}
       <div className="flex flex-col items-center gap-4"> 
-        {videos?.results?.map((video: any) => (
+        {videos?.results?.map((video: Video) => (
           <div key={video.id} className="w-full max-w-2xl">
             <VideoCard
               key={video.id}
               id={video.id}
               title={video.title}
-              thumbnail={video.thumbnail}
-              file_url={video.file_url}
-              views={video.views}
-              timestamp={video.timestamp}
+              thumbnail={video.thumbnail || ""}
+              file_url={video.file_url || ""}
+              views={video.views || 0}
+              timestamp={video.timestamp || "N/A"}
             />
           </div>
         ))}
