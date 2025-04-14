@@ -1,0 +1,7 @@
+.env
+.vscode
+__pycache__/
+env/
+venv/
+node_modules
+backend/media/videos/*
