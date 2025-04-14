@@ -134,8 +134,8 @@ export const fetchPublicUser = createAsyncThunk(
       if (!username) throw new Error("Username is required");
       const response = await axios.get(`api/auth/profile?username=${username}`);
       return response.data;
-    } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data || "Error fetching user profile")
+    } catch (error: unknown) {
+      return thunkAPI.rejectWithValue(error instanceof Error ? error.message: "Error fetching user profile")
     }
   }
 )
