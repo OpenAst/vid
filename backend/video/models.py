@@ -2,7 +2,7 @@ from django.db import models
 from accounts.models import UserAccount
 from django.contrib.auth import get_user_model
 from django.conf import settings
-
+from accounts.models import UserAccount
 
 
 class Video(models.Model):
@@ -24,7 +24,7 @@ class Video(models.Model):
     return {
       "id": self.id,
       "title": self.title,
-      'fiel': self.file,
+      'file': self.file,
       "description": self.description,
       "thumbnail": self.thumbnail.url,
       "uploader": self.uploader.username,
@@ -44,3 +44,17 @@ class Comment(models.Model):
 
   def __str__(self):
     return f"Comment by {self.user} on {self.video}"
+
+class VideoLike(models.Model):
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('video', 'user')
+
+class CommentLike(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('comment', 'user')

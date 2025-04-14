@@ -8,7 +8,7 @@ import VideoCard from './VideoCard';
 const Feed = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {videos, isError, isLoading } = useSelector((state: RootState) => state.video);
-
+  
   useEffect(() => {
     dispatch(fetchVideos({ page: 1, limit: 10 }))
       .unwrap()
@@ -17,7 +17,7 @@ const Feed = () => {
       })
       .catch((error) => {
         console.error("Failed to fetch videos:", error);
-      });
+      });  
   }, [dispatch]);
 
   return (

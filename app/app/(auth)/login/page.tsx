@@ -131,7 +131,7 @@ const LoginPage = () => {
           disabled={isLoading}
         >
           {isLoading ? (
-            <span className="loading loading-spinner loading-md"></span>
+            <span className="loading loading-spinner loading-md">Signing in</span>
           ) : ( 
             'Login'
           )}
