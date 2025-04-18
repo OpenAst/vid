@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import React from 'react';
 
+
 const Navbar = () => {
   return (
     <header className='navbar bg-base-100 shadow-md'>

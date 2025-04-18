@@ -44,7 +44,6 @@ const Feed = () => {
         {videos?.results?.map((video: Video) => (
           <div key={video.id} className="w-full max-w-2xl">
             <VideoCard
-              key={video.id}
               id={video.id}
               title={video.title}
               thumbnail={video.thumbnail || ""}

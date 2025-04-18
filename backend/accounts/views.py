@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -9,6 +9,7 @@ from django.db import models
 from .models import UserAccount, Profile
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer 
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
@@ -93,15 +94,27 @@ def total_users(request):
         "user_details": list(users)
     })
 
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
+    def post(self, request):
+        refresh_token = request.data.get("refresh")
 
-# # Video model
-# class Video(models.Model):
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='videos')
-#     title = models.CharField(max_length=255)
-#     description = models.TextField(blank=True)
-#     video_file = models.FileField(upload_to='videos/')
-#     uploaded_at = models.DateTimeField(auto_now_add=True)
+        if refresh_token is None:
+            return Response({
+                "error": "Refresh token is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
 
-#     def __str__(self):
-#         return self.title
+            return Response({
+                "detail": "Logout successful"
+            }, status=status.HTTP_205_RESET_CONTENT)
+            
+        except TokenError as e:
+            return Response({
+                "error": "Token is invalid or expired",
+                "details": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)    
