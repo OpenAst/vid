@@ -64,14 +64,28 @@ TEMPLATES = [
 
 ROOT_URLCONF = 'backend.urls'
 
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000","http://localhost:3001",]
+
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SECURE = False  # Set to True in production
+CSRF_COOKIE_SECURE = False  
 CSRF_USE_SESSIONS = False
+CSRF_TRUSTED_ORIGINS = [
+    "https://vid-olive.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:3001",
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://vid-olive.vercel.app",
+]
+
+
+ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
 
 
 DATA_UPLOAD_MAX_MEMORY_SIZE =  1024 * 1024 * 1024
