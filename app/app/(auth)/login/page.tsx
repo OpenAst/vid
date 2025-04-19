@@ -45,7 +45,7 @@ const LoginPage = () => {
       if (typeof e === 'object' && e !== null && 'error' in e) {
         setErrorMessage(e.error as string);
       } else {
-        setErrorMessage('An unexpected error occurred. Please try again.');
+        setErrorMessage('Your login credentials are incorrect. Please try again.');
       }
 
 
