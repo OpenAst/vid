@@ -1,0 +1,11 @@
+# render.yaml
+services:
+  - type: web
+    name: django-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: daphne -b 0.0.0.0 -p 1000 backend.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: backend.settings
