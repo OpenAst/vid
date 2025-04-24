@@ -76,7 +76,6 @@ def get_csrf_token(request):
     return JsonResponse({ "csrftoken": get_token(request)})
 
 @api_view(['GET'])  
-@permission_classes([IsAdminUser])
 def home(request):
     return Response({'detail': 'Welcome home'}, status=status.HTTP_200_OK)
 
