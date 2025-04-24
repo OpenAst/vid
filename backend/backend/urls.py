@@ -8,6 +8,7 @@ from accounts.views import (
     )
 
 urlpatterns = [
+    path('', home, name='home'),
     path('admin/', admin.site.urls),
     path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), 
          name='custom_jwt_create'),
@@ -17,7 +18,6 @@ urlpatterns = [
     path('auth/', include('djoser.social.urls')),
     path('auth/csrf/', get_csrf_token, name='get_csrf_token'),
     path('users/profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
-    path('home/', home, name='home'),
     path('users/', total_users, name='total_users'),
     path('api/', include('video.urls')),
 ] 
