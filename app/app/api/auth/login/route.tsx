@@ -19,8 +19,21 @@ export async function POST(req: NextRequest) {
       body: body,
     });
 
-    const data = await apiRes.json();
-    console.log('Response', data);
+    let data;
+    try {
+      data = await apiRes.json();
+    } catch (err) {
+      console.log("Error", err);
+      const text = await apiRes.text();
+      console.error('Non-JSON error response from backend:', text);
+      return new Response(
+        JSON.stringify({ error: 'Unexpected server response', detail: text }),
+        {
+          status: apiRes.status,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     if (apiRes.ok) {
       const headers = new Headers();
@@ -35,61 +48,53 @@ export async function POST(req: NextRequest) {
         `refresh=${data.refresh}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=${60 * 60 * 24 * 5}; SameSite=Strict; Path=/`
       );
 
-      const csrfRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/csrf/`, {
-        method: 'GET', 
-        credentials: 'include',
-      });
+      try {
+        const csrfRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/csrf/`, {
+          method: 'GET',
+          credentials: 'include',
+        });
 
-      const csrfToken = csrfRes.headers.get('X-CSRFToken');
-      if (csrfToken) {
-        headers.append(
-          'Set-Cookie',
-          `csrftoken=${csrfToken}; Secure=${process.env.NODE_ENV !== 'development'}; SameSite=Strict; Path=/`
-        );
+        const csrfToken = csrfRes.headers.get('X-CSRFToken');
+        if (csrfToken) {
+          headers.append(
+            'Set-Cookie',
+            `csrftoken=${csrfToken}; Secure=${process.env.NODE_ENV !== 'development'}; SameSite=Strict; Path=/`
+          );
+        }
+      } catch (e) {
+        console.warn('CSRF token fetch failed:', e);
       }
 
       headers.append('Content-Type', 'application/json');
 
       return new Response(
-        JSON.stringify({
-          success: 'Logged in successfully',
-        }),
-        {
-          status: 200,
-          headers: headers,
-        }
+        JSON.stringify({ success: 'Logged in successfully' }),
+        { status: 200, headers }
       );
     } else {
-      let errorMessage = 'Authentication failed.'
+      let errorMessage = 'Authentication failed.';
 
       if (data.detail) {
         errorMessage = data.detail;
       } else if (data.error) {
-        errorMessage = data.error
+        errorMessage = data.error;
       }
+
       return new Response(
-        JSON.stringify({
-          error: errorMessage,
-        }),
+        JSON.stringify({ error: errorMessage }),
         {
           status: apiRes.status,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
         }
       );
     }
   } catch (error) {
-    console.error(error);
+    console.error('Fetch error:', error);
     return new Response(
-      JSON.stringify({
-        error: 'Something went wrong',
-      }),
+      JSON.stringify({ error: 'Something went wrong. Server is unreachable.' }),
       {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       }
     );
   }

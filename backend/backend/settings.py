@@ -81,7 +81,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://vid-olive.vercel.app",
-    "vid-4yi2.onrender.com",
+    "https://vid-4yi2.onrender.com",
 ]
 
 
