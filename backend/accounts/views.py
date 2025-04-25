@@ -77,7 +77,7 @@ def get_csrf_token(request):
 
 @api_view(['GET'])  
 def home(request):
-    return Response({'detail': 'Welcome home'}, status=status.HTTP_200_OK)
+    return Response({'detail': 'Welcome home !'}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
