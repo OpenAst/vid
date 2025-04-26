@@ -1,6 +1,7 @@
 
 from pathlib import Path
 import os
+import dj_database_url
 from decouple import config
 from datetime import timedelta
 
@@ -112,19 +113,24 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'HOST': config('DB_HOST'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'PORT': config('DB_PORT', default='5432'),
+if os.getenv('USE_DATABASE_URL', 'false') == 'true':
+  DATABASES = {
+    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+  }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'HOST': config('DB_HOST'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
     }
-}
+  
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = config('EMAIL_BACKEND')
 EMAIL_HOST = config('EMAIL_HOST')
 EMAIL_PORT = config('EMAIL_PORT')
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
