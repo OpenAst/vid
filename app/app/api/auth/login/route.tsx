@@ -88,8 +88,7 @@ export async function POST(req: NextRequest) {
         }
       );
     }
-  } catch (error) {
-    console.error('Fetch error:', error);
+  } catch {
     return new Response(
       JSON.stringify({ error: 'Something went wrong. Server is unreachable.' }),
       {
