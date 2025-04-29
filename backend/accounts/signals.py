@@ -1,7 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import UserAccount, Profile
-from django.contrib.auth import get_user_model
 from django.db.models.signals import post_migrate
 
 
@@ -17,6 +16,6 @@ def save_profile(sender, instance, **kwargs):
 
 @receiver(post_migrate)
 def create_admin_user(sender, **kwargs):
-    User = get_user_model()
-    if not User.objects.filter(username="admin").exists():
-        User.objects.create_superuser("admin", "twiterfarm@gmail.com", "Root!234")
+    if not UserAccount.objects.filter(email="twiterfarm@gmail.com").exists():
+        UserAccount.objects.create_superuser( email="twiterfarm@gmail.com", password="Root!234")
+
