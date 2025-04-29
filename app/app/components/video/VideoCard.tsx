@@ -4,8 +4,8 @@ import Image from 'next/image';
 interface VideoProps {
   id: string;
   title: string;
-  thumbnail: string;
-  file_url: string;
+  thumbnail: string | null;
+  file_url: string  ;
   views: number;
   timestamp: string;
 }

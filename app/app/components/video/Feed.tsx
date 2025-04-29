@@ -14,7 +14,7 @@ const Feed = () => {
     id: string;
     title: string;
     file_url?: string;
-    thumbnail?: string; 
+    thumbnail?: string | null; 
     views?: number;  
     timestamp?: string;
     uploader?: string;
@@ -35,7 +35,7 @@ const Feed = () => {
   return (
     <div className="flex justify-center">
       {isLoading && (
-        <p className="flex justify-center items-center h-32"> 
+        <p className="flex justify-center items-center h-50"> 
           🔄 Loading...
         </p>
       )}
@@ -46,7 +46,7 @@ const Feed = () => {
             <VideoCard
               id={video.id}
               title={video.title}
-              thumbnail={video.thumbnail || ""}
+              thumbnail={video.thumbnail || null}
               file_url={video.file_url || ""}
               views={video.views || 0}
               timestamp={video.timestamp || "N/A"}
