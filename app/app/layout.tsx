@@ -3,6 +3,7 @@ import "./globals.css";
 import Fonts from "./fonts"; 
 import ClientProvider from "./clientlayout"; 
 import Providers from './store/providers';
+import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: "VidChat",
@@ -15,7 +16,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <Fonts /> 
-          <ClientProvider>{children}</ClientProvider>
+          <ClientProvider>
+            {children}
+            <Toaster position="top-center" reverseOrder={false} />
+          </ClientProvider>
         </Providers>
       </body>
     </html>

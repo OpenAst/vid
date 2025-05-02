@@ -27,7 +27,13 @@ const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null); 
   const router = useRouter();
 
- 
+  interface AuthErrorResponse {
+    email?: string;
+    username?: string;
+    detail?: string;
+    error?: string;
+    status?: number;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,9 +45,30 @@ const LoginPage = () => {
 
       window.history.replaceState(null, '/');
       router.replace('/');
-    } catch (e: unknown) {
-      console.log("Error during login:", e);
+    } catch (err: unknown) {
+      console.log("Error during login:", err);
 
+      const defaultMsg = 'Your login credentials are incorrect. Please try again.';
+
+      if (typeof err === 'object' && typeof err !== null) {
+        const e = err as AuthErrorResponse;
+        console.log(e);
+
+
+        if (e.email) {
+          setErrorMessage(`Email Error: ${e.email}`);
+        } else if (e.username) {
+          setErrorMessage(`Username Error: ${e.username}`);
+        } else if (e.detail) {
+          setErrorMessage(e.detail)
+        } else {
+          setErrorMessage(defaultMsg);
+        }
+      } else {
+        setErrorMessage(defaultMsg);
+      }
+
+      
       if (typeof e === 'object' && e !== null && 'error' in e) {
         setErrorMessage(e.error as string);
       } else {

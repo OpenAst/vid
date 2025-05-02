@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     });
 
     let data;
+    
     try {
       data = await apiRes.json();
     } catch (err) {

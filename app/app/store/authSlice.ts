@@ -14,11 +14,14 @@ export const login = createAsyncThunk(
         body: JSON.stringify(credentials),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error('Login failed');
+        return rejectWithValue(data);
       }
 
-      return await res.json();
+      return data;
+
     } catch (error: unknown) {
       console.log('Error', error)
       
