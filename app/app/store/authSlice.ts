@@ -59,6 +59,32 @@ export const register = createAsyncThunk(
     }
   );
   
+
+  export const activate = createAsyncThunk(
+    'auth/activate',
+    async ({ uid, token }: { uid: string; token: string }, thunkAPI) => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/activate/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ uid, token }),
+        });
+  
+        if (!res.ok) {
+          const errorData = await res.json();
+          return thunkAPI.rejectWithValue(errorData);
+        }
+  
+        return {};
+      } catch (error) {
+        console.log(error);
+        return thunkAPI.rejectWithValue({ error: 'Network error' });
+      }
+    }
+  );
+
   export const refresh = createAsyncThunk(
     'auth/refresh', 
     async (_, { rejectWithValue }) => {
@@ -86,7 +112,7 @@ export const register = createAsyncThunk(
 
 export const verify = createAsyncThunk(
   'auth/verify',
-  async (credentials: { uid: string, token: string }, { rejectWithValue }) => {
+  async (credentials: { token: string }, { rejectWithValue }) => {
     try {
       const res = await fetch('api/auth/verify',{
         method: 'POST',
@@ -229,6 +255,18 @@ const authSlice = createSlice({
         state.user = action.payload.user;
       })
       .addCase(register.rejected, (state) => {
+        state.isLoading = false;
+        state.isError = true;
+      })
+      .addCase(activate.pending, (state) => {
+        state.isLoading = true;
+        state.isError = false;
+      })
+      .addCase(activate.fulfilled, (state) => {
+        state.isLoading = false;
+        state.isError = false;
+      })
+      .addCase(activate.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
       })

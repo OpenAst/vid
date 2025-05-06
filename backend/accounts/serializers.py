@@ -35,6 +35,19 @@ class UserDeleteSerializer(serializers.ModelSerializer):
       
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        username_or_email = attrs.get("email")
+        password = attrs.get("password")
+
+        try:
+           user_obj = UserAccount.objects.get(email=username_or_email)
+        except UserAccount.DoesNotExist:
+           raise serializers.ValidationError({"email": "No user with this email or username exists."})
+        
+        if not user_obj.check_password(password):
+           raise serializers.ValidationError({
+              "password": "Incorrect password."
+           })
+        
         data = super().validate(attrs)
 
         obj = self.user
