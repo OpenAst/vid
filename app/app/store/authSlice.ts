@@ -64,7 +64,7 @@ export const register = createAsyncThunk(
     'auth/activate',
     async ({ uid, token }: { uid: string; token: string }, thunkAPI) => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/activate/`, {
+        const res = await fetch('/api/auth/activate/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
