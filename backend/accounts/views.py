@@ -22,7 +22,7 @@ from .tokens import OneDayActivationTokenGenerator
 User = get_user_model()
 token_generator = OneDayActivationTokenGenerator()
 
-@csrf_exempt
+
 class ActivateUserView(APIView):
     def post(self, request):
         uid = request.data.get("uid")
