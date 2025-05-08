@@ -13,8 +13,33 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer 
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
+from django.utils.http import urlsafe_base64_decode
+from .tokens import OneDayActivationTokenGenerator
+
+
 
 User = get_user_model()
+token_generator = OneDayActivationTokenGenerator()
+
+class ActivateUserView(APIView):
+    def post(self, request):
+        uid = request.data.get("uid")
+        token = request.data.get("token")
+
+        try: 
+            uid = urlsafe_base64_decode(uid).decode()
+            user = UserAccount.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({"detail": "Invalid UID"}, status.HTTP_400_BAD_REQUEST)
+        
+        if token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            return Response({"detail": "Account activated"}, status=status.HTTP_200_OK)
+
+        return Response({"detail": "Activation link expired or invalid"}, status=status.HTTP_400_BAD_REQUEST)
+
+        
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
