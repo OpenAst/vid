@@ -10,7 +10,7 @@ from accounts.views import (
 urlpatterns = [
     path('', home, name='home'),
     path('admin/', admin.site.urls),
-    path('auth/users/activation/', ActivateUserView, name='activate'),
+    path('auth/users/activation/', ActivateUserView.as_view(), name='activate'),
     path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), 
          name='custom_jwt_create'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
