@@ -40,7 +40,7 @@ export const register = createAsyncThunk(
     first_name: string, last_name: string, username: string
   }, { rejectWithValue }) => {
     try {
-      const res = await fetch('api/auth/register', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify(credentials),
@@ -114,7 +114,7 @@ export const verify = createAsyncThunk(
   'auth/verify',
   async (credentials: { token: string }, { rejectWithValue }) => {
     try {
-      const res = await fetch('api/auth/verify',{
+      const res = await fetch('/api/auth/verify',{
         method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify(credentials),
@@ -139,7 +139,7 @@ export const fetchUser = createAsyncThunk(
   'auth/fetchUser',
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch('api/auth/user_details', {
+      const res = await fetch('/api/auth/user_details', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json'},
       });
@@ -162,7 +162,7 @@ export const fetchPublicUser = createAsyncThunk(
   async (username: string, thunkAPI) => {
     try {
       if (!username) throw new Error("Username is required");
-      const response = await axios.get(`api/auth/profile?username=${username}`);
+      const response = await axios.get(`/api/auth/profile?username=${username}`);
       return response.data;
     } catch (error: unknown) {
       return thunkAPI.rejectWithValue(error instanceof Error ? error.message: "Error fetching user profile")
