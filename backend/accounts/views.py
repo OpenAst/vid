@@ -2,13 +2,11 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status, generics, permissions
 from django.db import models
 from .models import UserAccount, Profile
 from django.conf import settings
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer 
