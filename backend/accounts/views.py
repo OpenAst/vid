@@ -8,6 +8,7 @@ from rest_framework import status, generics, permissions
 from django.db import models
 from .models import UserAccount, Profile
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer 
@@ -21,6 +22,7 @@ from .tokens import OneDayActivationTokenGenerator
 User = get_user_model()
 token_generator = OneDayActivationTokenGenerator()
 
+@csrf_exempt
 class ActivateUserView(APIView):
     def post(self, request):
         uid = request.data.get("uid")
