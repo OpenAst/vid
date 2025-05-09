@@ -1,16 +1,17 @@
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from datetime import datetime, timedelta, timezone  
+from datetime import datetime, timedelta, timezone
 
 class OneDayActivationTokenGenerator(PasswordResetTokenGenerator):
     def _get_timestamp(self, token):
         try:
             ts_b36 = token.split("-")[1]
-            return int(ts_b36, 36)
-        except (IndexError, ValueError):
+            ts_int = int(ts_b36, 36)
+            return ts_int
+        except (IndexError, ValueError, OverflowError):
             return None
 
     def _date_from_timestamp(self, ts):
-        return datetime(2001, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=ts * 60)
+        return datetime(2001, 1, 1, tzinfo=timezone.utc) + timedelta(minutes=ts)
 
     def check_token(self, user, token):
         if not super().check_token(user, token):
