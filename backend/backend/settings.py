@@ -35,13 +35,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 TEMPLATES = [
@@ -65,9 +66,9 @@ TEMPLATES = [
 ROOT_URLCONF = 'backend.urls'
 
 
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SECURE = False  
-CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = True 
+CSRF_USE_SESSIONS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://vid-olive.vercel.app",
     "http://localhost:3000",

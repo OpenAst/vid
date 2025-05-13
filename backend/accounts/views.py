@@ -11,7 +11,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer 
 from django.http import JsonResponse
-from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.http import urlsafe_base64_decode
 from .tokens import OneDayActivationTokenGenerator
 
@@ -97,8 +97,9 @@ class ProfileUpdateView(generics.UpdateAPIView):
                 "error": "Profile update failed"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-def get_csrf_token(request):
-    return JsonResponse({ "csrftoken": get_token(request)})
+@ensure_csrf_cookie
+def csrf(request):
+    return JsonResponse({'message': 'CSRF cookie set'})
 
 @api_view(['GET'])  
 def home(request):

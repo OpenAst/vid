@@ -21,7 +21,7 @@ const ActivatePage = () => {
         .then(() => {
           setIsActivated(true);
           toast.success('Account activated! Redirecting to login...');
-          setTimeout(() => router.push('/(auth)/login'), 2000);
+          setTimeout(() => router.push('/login'), 2000);
         })
         .catch(() => {
           setIsActivated(false);

@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from django.urls import path, include
 from accounts.views import (
   CustomTokenObtainPairView, ProfileUpdateView, home, total_users,
-  get_csrf_token, LogoutView, ActivateUserView
+  csrf, LogoutView, ActivateUserView
     )
 
 urlpatterns = [
@@ -17,7 +17,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
     path('auth/', include('djoser.social.urls')),
-    path('auth/csrf/', get_csrf_token, name='get_csrf_token'),
+    path('auth/csrf/', csrf, name='csrf'),
     path('users/profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
     path('users/', total_users, name='total_users'),
     path('api/', include('video.urls')),

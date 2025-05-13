@@ -55,12 +55,24 @@ export async function POST(req: NextRequest) {
           credentials: 'include',
         });
 
-        const csrfToken = csrfRes.headers.get('X-CSRFToken');
-        if (csrfToken) {
-          headers.append(
-            'Set-Cookie',
-            `csrftoken=${csrfToken}; Secure=${process.env.NODE_ENV !== 'development'}; SameSite=Strict; Path=/`
-          );
+        const setCookieHeaders = csrfRes.headers.getSetCookie?.() || csrfRes.headers.get('Set-Cookie');
+
+        if (setCookieHeaders) {
+          const cookieString = Array.isArray(setCookieHeaders) ? 
+          setCookieHeaders.find(cookie => cookie.startsWith('csrftoken=')) : setCookieHeaders;
+
+          if (cookieString) {
+            const tokenMatch = cookieString.match(/csrftoken=([^;]+)/);
+            const csrfToken = tokenMatch?.[1];
+
+            if (csrfToken) {
+              headers.append(
+                'Set-Cookie',
+                `csrftoken=${csrfToken}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'};  SameSite=Strict; Path=/`
+              )
+            }
+          }
+         
         }
       } catch (e) {
         console.warn('CSRF token fetch failed:', e);
