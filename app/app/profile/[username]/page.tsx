@@ -28,11 +28,6 @@ function ProfilePage() {
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-
     if (user && typeof user !== 'string') {
       setUserDetails({
         firstName: user.first_name || '',
@@ -42,6 +37,7 @@ function ProfilePage() {
         profile_picture: user.profile_picture || '',
       });
     } else if (safeUsername) {
+      console.log("The current user", safeUsername);
       dispatch(fetchPublicUser(safeUsername))
         .unwrap()
         .then((userData) => {
@@ -55,7 +51,7 @@ function ProfilePage() {
         })
         .catch((error) => console.error('Error fetching user:', error));
     }
-  }, [dispatch, isAuthenticated, router, user, safeUsername ]);
+  }, [dispatch, router, user, safeUsername ]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
