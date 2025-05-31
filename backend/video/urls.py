@@ -6,6 +6,7 @@ urlpatterns = [
     path('videos/', views.VideoListView.as_view(), name='video-list'),
     path('videos/<int:pk>/', views.VideoDetailView.as_view(), name='video-detail'),
 
+    path('video/pre_signed_url/', views.get_presigned_url, name='presigned_url'),
     path('videos/<uuid:video_id>/comments/', views.CommentListAPIView.as_view(), name='comment-list'),
     path('videos/<uuid:video_id>/comments/create/', views.CommentCreateAPIView.as_view(), name='comment-create'),
     path('comments/<int:pk>/', views.CommentDetailAPIView.as_view(), name='comment-detail'),

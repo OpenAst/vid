@@ -23,7 +23,7 @@ const UploadVideo = () => {
     uploader: "Anonymous",
   });
 
-  const { isAuthenticated, isLoading, user } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -65,9 +65,9 @@ const UploadVideo = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        if (!user) {
-          await dispatch(fetchUser()).unwrap();
-          console.log('Error authenticating');
+        if (!isAuthenticated) {
+          const user = await dispatch(fetchUser()).unwrap();
+          console.log('User authenticated', user);
           }
         } catch (error) {
           console.log('Not working', error);
@@ -77,7 +77,7 @@ const UploadVideo = () => {
     } 
     checkAuth();
     
-  }, [dispatch, router, user, isAuthenticated]);
+  }, [dispatch, router, isAuthenticated]);
 
   if (isLoading) return <div className="flex justify-center items-center h-screen">🔄 Loading...</div>;
 

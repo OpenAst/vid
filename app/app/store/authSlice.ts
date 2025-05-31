@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
 
 
+
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: {
@@ -148,7 +149,8 @@ export const fetchUser = createAsyncThunk(
       const error = await res.json();
       throw new Error(error.error) || 'Failed to fetch user profile';
     }  
-    return await res.json();
+    const data = await res.json();
+    return data;
     } catch (error: unknown) {
       console.log('Error', error)
       return rejectWithValue(
@@ -200,6 +202,7 @@ interface User {
 interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
+  token: string;
   isLoading: boolean;
   registerSuccess: boolean;
   logged_out: boolean;
@@ -210,6 +213,7 @@ interface AuthState {
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
+  token: '',
   isLoading: false,
   registerSuccess: false,
   logged_out: false,
@@ -291,6 +295,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload.user;
         state.isAuthenticated = true;
+        state.token = action.payload.token;
       })
       .addCase(fetchUser.rejected, (state) => {
         state.isLoading = false;

@@ -10,7 +10,7 @@ import Feed from './components/video/Feed';
 
 
 function HomePage() {
-  const { isAuthenticated, isLoading, isError } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isLoading, isError, token } = useSelector((state: RootState) => state.auth);
   const dispatch: AppDispatch = useDispatch();
 
   console.log("Isauthenticated", isAuthenticated)
@@ -67,7 +67,7 @@ function HomePage() {
             </div>
 
             <div className="mt-32">
-              <Feed />
+              <Feed jwtToken={token}/>
             </div>
           </div>
         )}

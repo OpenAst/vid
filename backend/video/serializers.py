@@ -38,13 +38,15 @@ class VideoSerializer(serializers.ModelSerializer):
   
 class CommentSerializer(serializers.ModelSerializer):
   user = serializers.StringRelatedField(read_only=True)
-  like_count = serializers.SerializerMethodField()
+  likes = serializers.SerializerMethodField()
 
   class Meta:
     model = Comment
-    fields = ['id', 'video', 'user', 'content', 'like_count', 'created_at']
+    fields = ['id', 'video', 'user', 'content', 'likes', 'created_at']
     read_only_fields = ['user', 'created_at']
 
+  def get_likes(self, obj):
+     return obj.likes.count()
 
 class VideoLikeSerializer(serializers.ModelSerializer):
     class Meta:

@@ -116,7 +116,9 @@ CHANNEL_LAYERS = {
 
 if os.getenv('USE_DATABASE_URL', 'false') == 'true':
   DATABASES = {
-    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+    'default': dj_database_url.config(
+       default=os.getenv('DATABASE_URL'), conn_max_age=600, ssl_require=True
+    )
   }
 else:
     DATABASES = {
@@ -138,6 +140,12 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+
+
+R2_ACCESS_KEY_ID = config('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = config('R2_SECRET_ACCESS_KEY')
+R2_ENDPOINT_URL = config('R2_ENDPOINT_URL')
+R2_BUCKET_NAME = config('R2_BUCKET_NAME')
 
 LOGGING = {
     'version': 1,
@@ -251,7 +259,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 
 # Internationalization

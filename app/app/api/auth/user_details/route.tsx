@@ -24,7 +24,7 @@ export async function GET() {
     const data = await apiRes.json();
 
     if (apiRes.ok) {
-      return new Response(JSON.stringify(data), {
+      return new Response(JSON.stringify({ ...data, token}), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });

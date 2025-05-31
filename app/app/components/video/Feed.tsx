@@ -3,12 +3,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchVideos } from '../../store/videoSlice';
 import { RootState, AppDispatch } from "../../store/store";
 import VideoCard from './VideoCard';
+import Comments from "./Comments";
 
-
-const Feed = () => {
+const Feed = ({ jwtToken }: { jwtToken: string}) => {
   const dispatch = useDispatch<AppDispatch>();
   const {videos, isError, isLoading } = useSelector((state: RootState) => state.video);
-  
+  const { token } = useSelector((state: RootState) => state.auth);
 
   type Video = {
     id: string;
@@ -50,7 +50,12 @@ const Feed = () => {
               file_url={video.file_url || ""}
               views={video.views || 0}
               timestamp={video.timestamp || "N/A"}
+              jwtToken={jwtToken}
             />
+
+             <div className="mt-2 p-2 bg-gray-50 border">
+              <Comments jwtToken={token} roomId={video.id} />
+            </div>
           </div>
         ))}
       </div>

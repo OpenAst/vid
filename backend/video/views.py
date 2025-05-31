@@ -1,11 +1,18 @@
+import uuid
+import boto3
+from django.conf import settings
+from rest_framework import status
+from django.db.models import Count
+from django.http import JsonResponse
+from rest_framework.response import Response
 from rest_framework import generics, permissions, viewsets
 from .models import Video, Comment, VideoLike, CommentLike
 from .serializers import VideoSerializer, CommentSerializer
 from rest_framework.pagination import PageNumberPagination
-from rest_framework import status
-from rest_framework.response import Response
 from accounts.permissions import IsOwnerOrReadOnly
-from django.db.models import Count
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view
+
 
 class VideoPagination(PageNumberPagination):
   page_size = 10
@@ -124,3 +131,43 @@ class CommentLikeViewSet(viewsets.ViewSet):
             return Response({"detail": "Unliked"}, status=204)
         except CommentLike.DoesNotExist:
             return Response({"detail": "Like does not exist"}, status=404)      
+        
+
+
+@api_view(['POST'])
+@csrf_exempt
+def get_presigned_url(request):
+    file_name = request.data.get('file_name')
+    file_type = request.data.get('file_type')
+
+    if not file_name or not file_type:
+        return Response({"Error": "Missing filename"}, status=400)
+    
+    unique_file_name = f"{uuid.uuid4()}_{file_name}"
+    s3 = boto3.client(
+        's3',
+        endpoint_url=settings.R2_ENDPOINT_URL,
+        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+        region_name='auto'
+    )
+
+    try:
+        presigned_post = s3.generate_presigned_post(
+            Bucket=settings.R2_BUCKET_NAME,
+            Key=unique_file_name,
+            Fields={"acl": "public-read", "Content-Type": "video/mp4"},
+            Conditions=[
+                    {"acl": "public-read"},
+                ["starts-with", "Content-Type", file_type]
+            ],
+            ExpiresIn=3600   
+        )
+
+        return JsonResponse({
+            'url': presigned_post['url'],
+            'fields': presigned_post['fields'],
+            'file_key': unique_file_name
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

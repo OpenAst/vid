@@ -41,12 +41,12 @@ export async function POST(req: NextRequest) {
 
       headers.append(
         'Set-Cookie',
-        `access=${data.access}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=${60 * 60 * 2}; SameSite=Strict; Path=/`
+        `access=${data.access}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=${60 * 60 * 24}; SameSite=Strict; Path=/`
       );
 
       headers.append(
         'Set-Cookie',
-        `refresh=${data.refresh}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=${60 * 60 * 24 * 5}; SameSite=Strict; Path=/`
+        `refresh=${data.refresh}; HttpOnly; Secure=${process.env.NODE_ENV !== 'development'}; Max-Age=${60 * 60 * 24 * 30}; SameSite=Strict; Path=/`
       );
 
       try {
