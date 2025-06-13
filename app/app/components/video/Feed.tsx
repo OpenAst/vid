@@ -8,7 +8,7 @@ import Comments from "./Comments";
 const Feed = ({ jwtToken }: { jwtToken: string}) => {
   const dispatch = useDispatch<AppDispatch>();
   const {videos, isError, isLoading } = useSelector((state: RootState) => state.video);
-  const { token } = useSelector((state: RootState) => state.auth);
+  const { token, user } = useSelector((state: RootState) => state.auth);
 
   type Video = {
     id: string;
@@ -53,8 +53,16 @@ const Feed = ({ jwtToken }: { jwtToken: string}) => {
               jwtToken={jwtToken}
             />
 
-             <div className="mt-2 p-2 bg-gray-50 border">
-              <Comments jwtToken={token} roomId={video.id} />
+             <div className="mt-2">
+              <Comments
+                jwtToken={token}
+                roomId={video.id}
+                currentUser={{
+                  id: user?.id || "",
+                  name: user?.username || "Anonymous",
+                  avatar: user?.profile_picture
+                }}
+              />
             </div>
           </div>
         ))}

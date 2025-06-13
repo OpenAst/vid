@@ -5,6 +5,8 @@ import { MouseEvent } from 'react';
 import { AppDispatch } from "@/app/store/store";
 import { useDispatch } from "react-redux";
 import { setUnAuthenticated } from "@/app/store/authSlice";
+import Image from 'next/image';
+
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -41,8 +43,10 @@ export default function LogoutButton() {
   return (
     <button 
       onClick={handleLogout}
-      className="block text-sm hover:underline rounded-md">
-        Logout
+      className="flex items-center text-sm mx-4 space-x-2 mt-5 hover:underline rounded-md">
+        <Image src="id-card-clip-alt.svg" alt="House icon" width={16} height={16} />
+          <span>Logout</span>
     </button>
+
   )
 }

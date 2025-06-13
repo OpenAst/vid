@@ -64,7 +64,7 @@ export const register = createAsyncThunk(
   export const activate = createAsyncThunk(
     'auth/activate',
     async ({ uid, token }: { uid: string; token: string }, thunkAPI) => {
-      try {
+      try { 
         const res = await fetch('/api/auth/activate/', {
           method: 'POST',
           headers: {
@@ -191,7 +191,7 @@ export const updateProfile = createAsyncThunk(
 
 
 interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
   first_name: string;

@@ -21,7 +21,7 @@ const VideoCard: React.FC<VideoProps> = ({ title, thumbnail, file_url, views, ti
       )}
       
       <div className="mt-2">
-        <h3 className="text-sm font-medium truncate">{title}</h3>
+        <h3 className="text-sm font-medium">{title}</h3>
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>{views}</span>
           <span>{timestamp}</span>

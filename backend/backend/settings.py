@@ -48,7 +48,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'chat/templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'backend/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,12 +80,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
     "http://localhost:3001",
     "https://vid-olive.vercel.app",
-    "https://vid-4yi2.onrender.com",
 ]
 
+FRONTEND_URL = "https://oneclyq.com"
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
 
@@ -218,6 +217,8 @@ SIMPLE_JWT = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
+    "DOMAIN": "oneclyq.com",
+    "SITE_NAME": "OneClyq",
     'USER_CREATE_PASSWORD_RETYPE': True,
     'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,

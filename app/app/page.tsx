@@ -25,7 +25,7 @@ function HomePage() {
       try {
         const resultAction = await dispatch(fetchUser());
         if (fetchUser.fulfilled.match(resultAction)) {
-          const userData = resultAction.payload;
+          const userData = resultAction.payload
           setUserDetails({
             firstName: userData.first_name || '',
             lastName: userData.last_name || '',
@@ -39,16 +39,16 @@ function HomePage() {
     fetchData();
   }, [dispatch]);
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen">🔄 Loading...</div>;
+  if (isLoading) return <div className="flex justify-center items-center h-screen">🔄 Loading...</div>
 
   if (isError) {
     return (
       <div className="flex flex-col h-screen items-center justify-center">
         <p className="text-red-500 text-lg font-semibold mb-5">Unauthorized !</p>
         <p>Please login or sign up</p>
-        <Link href="/login" className="text-blue-500 underline mt-5">Login</Link>
+        <Link href="/login" className="text-blue-500 underline mt-5">Please Login</Link>
       </div>
-    );
+    )
   }
 
   return (
@@ -73,7 +73,7 @@ function HomePage() {
         )}
       </div>
     </div>
-  );  
+  )
 }
 
 export default HomePage;

@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 export const uploadVideo = createAsyncThunk(
-  "video/uploadVideo",
+  "video/upload",
   async (formData: FormData, { rejectWithValue }) => {
     try {
       const res = await fetch("/api/video/upload/", {
