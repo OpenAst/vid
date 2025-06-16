@@ -41,12 +41,13 @@ export default function LogoutButton() {
   };
 
   return (
-    <button 
+    <button
       onClick={handleLogout}
-      className="flex items-center text-sm mx-4 space-x-2 mt-5 hover:underline rounded-md">
-        <Image src="id-card-clip-alt.svg" alt="House icon" width={16} height={16} />
-          <span>Logout</span>
+      className="flex flex-col md:flex-row items-center
+       justify-center hover:bg-gray-100 text-xs w-full"
+    >
+      <Image src="new_logout.svg" alt="Logout" width={18} height={20} />
+      <span className="hidden md:inline mt-1 md:mt-0 md:ml-2">Logout</span>
     </button>
-
   )
 }

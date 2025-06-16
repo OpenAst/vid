@@ -53,11 +53,11 @@ function HomePage() {
 
   return (
     <div className="flex h-screen">
-      <div className="flex-1 flex flex-col items-center p-4">
+      <div className="flex-1 flex flex-col items-center p-2">
         {isAuthenticated && (
           <div className="w-full max-w-4xl">
             <div className="text-center fixed top-0 left-0 right-0 z-10 bg-white shadow-sm py-8 px-6">
-              <p className="text-lg ">
+              <p className="text-md ">
                 Hello,{' '}
                 <span className="text-xl font-semibold text-center bg-gray-50">
                   {userDetails.firstName}, {userDetails.lastName}
@@ -66,7 +66,7 @@ function HomePage() {
               <p className="text-center">You are welcome to this amazing platform!</p>
             </div>
 
-            <div className="mt-32">
+            <div className="mt-28">
               <Feed jwtToken={token}/>
             </div>
           </div>
