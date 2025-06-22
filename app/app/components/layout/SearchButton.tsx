@@ -2,7 +2,9 @@ import React from 'react'
 
 function SearchButton() {
   return (
-    <div>SearchButton</div>
+    <div className='rounded '>
+
+    </div>
   )
 }
 

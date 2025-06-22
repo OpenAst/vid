@@ -2,6 +2,71 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
 
 
+export interface registerSuccessResponse {
+  email: string;
+  user: User
+  username: string;
+  id: string;
+}
+
+export interface DjoserErrorResponse {
+  email?: string[];
+  password?: string[];
+  non_field_errors?: string[];
+  detail?: string;
+  [key: string]: unknown;
+}
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: DjoserErrorResponse | string;
+}
+
+function isRegisterResponse(payload: unknown): payload is registerSuccessResponse {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'user' in payload &&
+    (payload).user !== undefined
+  );
+}
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile_picture?: string;
+}
+
+interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
+  token: string;
+  isLoading: boolean;
+  registerSuccess: boolean;
+  logged_out: boolean;
+  isError: boolean;
+  activationError: string | null;
+  emailExists: boolean | null;
+  errorMessage?: string;
+}
+
+const initialState: AuthState = {
+  isAuthenticated: false,
+  user: null,
+  token: '',
+  isLoading: false,
+  registerSuccess: false,
+  logged_out: false,
+  isError: false,
+  activationError: null,
+  emailExists: null,
+  errorMessage: '',
+};
+
 
 export const login = createAsyncThunk(
   'auth/login',
@@ -46,16 +111,17 @@ export const register = createAsyncThunk(
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify(credentials),
       });
+      
+      const result: ApiResponse = await res.json();
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error) || 'Registration failed';
-    }  
-    return await res.json();
+      if (!res.ok || !result.success) {
+        return rejectWithValue(result.error || 'Registration failed') ;
+      }  
+
+      return result.data;
     } catch (error: unknown) {
-      console.log('Error', error)
-      return rejectWithValue(
-        (error instanceof Error ? error.message: 'Something went wrong') || 'Something went wrong'); 
+      const err = error as Error;
+      return rejectWithValue(err.message || 'Network error'); 
       }
     }
   );
@@ -190,36 +256,6 @@ export const updateProfile = createAsyncThunk(
 )
 
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  profile_picture?: string;
-}
-
-interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
-  token: string;
-  isLoading: boolean;
-  registerSuccess: boolean;
-  logged_out: boolean;
-  isError: boolean;
-  errorMessage?: string;
-}
-
-const initialState: AuthState = {
-  isAuthenticated: false,
-  user: null,
-  token: '',
-  isLoading: false,
-  registerSuccess: false,
-  logged_out: false,
-  isError: false,
-};
-
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -255,8 +291,10 @@ const authSlice = createSlice({
         state.isLoading = true;
       })
       .addCase(register.fulfilled, (state, action) => {
+        if (isRegisterResponse(action.payload)) {
+          state.user = action.payload.user;
+        }
         state.isLoading = false;
-        state.user = action.payload.user;
       })
       .addCase(register.rejected, (state) => {
         state.isLoading = false;

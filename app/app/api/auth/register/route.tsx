@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import type { ApiResponse, DjoserErrorResponse, registerSuccessResponse } from "@/app/store/authSlice";
 
 export async function POST(req: NextRequest) {
   const { first_name, last_name, username, email, password, re_password } = await req.json();
@@ -24,32 +25,38 @@ export async function POST(req: NextRequest) {
 
     const contentType = apiRes.headers.get('content-type');
 
-    let data: unknown;
-    if (contentType && contentType.includes('application/json')) {
-      data = await apiRes.json();
+    let data: registerSuccessResponse | DjoserErrorResponse | string;
+
+    if (contentType?.includes('application/json')) {
+      data = await apiRes.json() as registerSuccessResponse | DjoserErrorResponse;
     } else {
-      const text = await apiRes.text(); 
-      data = { error: text };
+       data = await apiRes.text(); 
     }
 
     if (apiRes.ok) {
-      return new Response(JSON.stringify({ success: true, data }), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response: ApiResponse<registerSuccessResponse> = {
+        success: true,
+        data: data as registerSuccessResponse
+      };
+      return Response.json(response, { status: 201 });
     } else {
-      return new Response(JSON.stringify({ error: data }), {
-        status: apiRes.status,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const errorResponse: ApiResponse = {
+        success: false,
+        error: typeof data === 'string'
+          ? { detail: data }
+          : (data && 'email' in data && Array.isArray((data as DjoserErrorResponse).email))
+            ? data as DjoserErrorResponse
+            : { detail: 'Unknown error occurred' }
+      };
+
+      return Response.json(errorResponse, { status: apiRes.status });
     }
   } catch (err) {
     console.error('Registration error:', err);
-    return new Response(
-      JSON.stringify({
-        error: 'Something went wrong when registering for an account',
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    const errorResponse: ApiResponse = {
+      success: false,
+      error: 'Something went wrong when registering for an account'
+    };
+    return Response.json(errorResponse, { status: 500 });
   }
 }

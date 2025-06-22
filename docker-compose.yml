@@ -1,41 +1,18 @@
-version: "3.9"
+version: "3.8"
 
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    volumes:
-      - ./backend:/app
-    ports:
-      - "8000:8000"
-    env_file:
-      - backend/.env
-    depends_on:
-      - db
-
-  frontend:
-    build:
-      context: .
-      dockerfile: app/Dockerfile
-    volumes:
-      - ./app:/app
-      - /app/node_modules
-    ports:
-      - "3000:3000"
-    env_file:
-      - app/.env
-
   db:
     image: postgres:15
-    volumes:
-      - pgdata:/var/lib/postgresql/data/
-    environment:
-      POSTGRES_DB: your_db
-      POSTGRES_USER: your_user
-      POSTGRES_PASSWORD: your_password
+    container_name: postgres-db
+    restart: always
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  pgdata:
+  postgres_data:

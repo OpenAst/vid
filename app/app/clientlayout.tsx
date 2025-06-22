@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { FiSearch } from 'react-icons/fi';
 import LogoutButton from '@/app/components/layout/LogoutButton'
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store/store';
@@ -10,6 +11,14 @@ import Image from 'next/image';
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Searching for:', searchQuery);
+    setSearchOpen(false);
+  };
 
   return (
     <div className="flex h-screen">
@@ -85,10 +94,49 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         </aside>
       )}
 
+      {searchOpen && (
+        <div className='fixed inset-0 bg-white bg-opacity-25 z-20 items-end justify-center pt-15'>
+          <div className='bg-white p-2 rounded-lg w-full max-w-md'>
+            <form onSubmit={handleSearch} className="flex">
+              <input 
+                type='text'
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder='Search...'
+                className='flex-1 border rounded-l px-4 py-2 focus:ring-2 focus:ring-blue-400'
+                autoFocus
+              />
+              <button 
+                type='submit'
+                className='bg-blue-500 text-white 
+                px-2 py-2 rounded-r hover:bg-blue-500'>
+                    Search
+              </button>
+            </form>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className='absolute top-2 right-2
+                text-gray-500 hover:text-gray-800'
+              >
+                ✕
+              </button>
+            )}
+            
+            <button
+              onClick={() => setSearchOpen(false)}
+              className='absolute top-2 right-2 text-gray-500 hover:text-gray-800'
+            >
+              
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Adjusted padding */}
       <div 
         className={`
-          flex-1 flex flex-col items-center justify-center p-4 transition-all duration-300
+          flex-1 flex flex-col items-center justify-center p-2 transition-all duration-300
           ${isAuthenticated ? 'md:pl-[80px]' : ''}
         `}
       >
@@ -102,6 +150,17 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
+
+      <div className='p-2'>
+        <button 
+          onClick={() => setSearchOpen(!searchOpen)}
+          className='w-full flex flex-col items-center p-2 hover:bg-gray-100 rounded'
+          aria-label='Search'
+          >
+            <FiSearch className='w-5 h-5' />
+            <span className='text-xs mt-1 hidden md:block'>Search</span>
+        </button>
+          </div>
     </div>
   );
 }

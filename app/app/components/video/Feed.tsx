@@ -35,12 +35,12 @@ const Feed = ({ jwtToken }: { jwtToken: string}) => {
   return (
     <div className="flex justify-center">
       {isLoading && (
-        <p className="flex justify-center items-center h-50"> 
+        <p className="flex justify-center items-center h-5"> 
           🔄 Loading...
         </p>
       )}
       {isError && <p className="text-red-500 text-center">{isError}</p>}
-      <div className="flex flex-col items-center gap-4"> 
+      <div className="flex flex-col items-center gap-"> 
         {videos?.results?.map((video: Video) => (
           <div key={video.id} className="w-full max-w-2xl">
             <VideoCard
