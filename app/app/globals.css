@@ -4,15 +4,9 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: hsl(0, 0%, 9%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   color: var(--foreground);
@@ -23,4 +17,9 @@ body {
 
 h1 {
   font-family: var(--font-gt-super, Arial);
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }

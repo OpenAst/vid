@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { stat } from 'fs';
 
 
 
@@ -54,6 +55,11 @@ export const register = createAsyncThunk(
     return await res.json();
     } catch (error: unknown) {
       console.log('Error', error)
+      let message = 'Registration failed';
+      if (typeof error === 'object' && error !== null) {
+        const errObj = error as { res?: { data?: { detail?: string; message?: string } } };
+        message = errObj.res?.data?.detail || errObj.res?.data?.message || 'Registration failed';
+      }
       return rejectWithValue(
         (error instanceof Error ? error.message: 'Something went wrong') || 'Something went wrong'); 
       }
@@ -218,6 +224,7 @@ const initialState: AuthState = {
   registerSuccess: false,
   logged_out: false,
   isError: false,
+  errorMessage: '',
 };
 
 const authSlice = createSlice({
@@ -226,6 +233,10 @@ const authSlice = createSlice({
   reducers: {
     setAuthenticated(state, action) {
       state.isAuthenticated = action.payload.user;
+    },
+    resetAuthState: (state) => {
+      state.isError = false;
+      state.errorMessage = '';
     },
     setUser(state, action) {
       state.user = action.payload.user;
@@ -255,12 +266,14 @@ const authSlice = createSlice({
         state.isLoading = true;
       })
       .addCase(register.fulfilled, (state, action) => {
+        state.errorMessage = '';
         state.isLoading = false;
         state.user = action.payload.user;
       })
-      .addCase(register.rejected, (state) => {
+      .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
+        state.errorMessage = action.payload as string;
       })
       .addCase(activate.pending, (state) => {
         state.isLoading = true;
@@ -344,5 +357,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { setAuthenticated, setUser, setUnAuthenticated } = authSlice.actions;
+export const { setAuthenticated, setUser, setUnAuthenticated, resetAuthState } = authSlice.actions;
 export default authSlice.reducer;

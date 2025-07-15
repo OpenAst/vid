@@ -4,14 +4,14 @@ from django.conf import settings
 from rest_framework import status
 from django.db.models import Count
 from django.http import JsonResponse
-from rest_framework.response import Response
-from rest_framework import generics, permissions, viewsets
+from rest_framework.response import Response 
+from rest_framework import generics, permissions, viewsets 
 from .models import Video, Comment, VideoLike, CommentLike
 from .serializers import VideoSerializer, CommentSerializer
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import PageNumberPagination 
 from accounts.permissions import IsOwnerOrReadOnly
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 
 
 class VideoPagination(PageNumberPagination):
@@ -19,22 +19,6 @@ class VideoPagination(PageNumberPagination):
   page_size_query_param = 'limit'
   max_page_size = 100
 
-class VideoUploadView(generics.CreateAPIView):
-    serializer_class = VideoSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def perform_create(self, serializer):
-      print("Authenticated user:", self.request.user)
-      print("Incoming data:", self.request.data)
-      
-      serializer.save(uploader=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        try:
-            return super().create(request, *args, **kwargs)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
 class VideoListView(generics.ListAPIView):
   serializer_class = VideoSerializer
   permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -132,14 +116,55 @@ class CommentLikeViewSet(viewsets.ViewSet):
         except CommentLike.DoesNotExist:
             return Response({"detail": "Like does not exist"}, status=404)      
         
+class VideoUploadView(generics.CreateAPIView):
+    serializer_class = VideoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+      print("Authenticated user:", self.request.user)
+      print("Incoming data:", self.request.data)
+      
+      serializer.save(uploader=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Validate required fields
+            file_key = request.data.get('file_key')
+            if not file_key:
+               return Response(
+                  { 'error': "File key is required"},
+                  status=status.HTTP_400_BAD_REQUEST
+               )
+            
+            thumbnail_key = request.data.get('thumbnail_key')
+            
+            file_url = f"https://{settings.R2_PUBLIC_DOMAIN}/{file_key}"
+
+            thumbnail_key = f"https://{settings.R2_PUBLIC_DOMAIN}/{thumbnail_key}" if thumbnail_key else None
+
+            video_data = {
+               'uploader': request.user,
+               'title': request.data.get('title'),
+               'description': request.data.get('description', ''),
+               'file_url': file_url,
+               'thumbnail_url': thumbnail_key
+            }
+
+            serializer = self.get_serializer(data=video_data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+
+            response_data = serializer.data
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
 
 
 @api_view(['POST'])
-@csrf_exempt
-def get_presigned_url(request):
-    file_name = request.data.get('file_name')
-    file_type = request.data.get('file_type')
-
+@permission_classes([IsAuthenticated])
+def generate_presigned_url(request):
+    
     if not file_name or not file_type:
         return Response({"Error": "Missing filename"}, status=400)
     
@@ -149,25 +174,35 @@ def get_presigned_url(request):
         endpoint_url=settings.R2_ENDPOINT_URL,
         aws_access_key_id=settings.R2_ACCESS_KEY_ID,
         aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
-        region_name='auto'
+        region_name=settings.AWS_S3_REGION_NAME,
+        config=boto3.sesssion.Config(signature_version='s3v4')
     )
 
+    file_name = request.data.get('file_name')
+    content_type = request.data.get('content_type', 'application/octet-stream')
+
+    if not file_name:
+        return Response({'error': 'file_name is required'}, status=400)
+
+    unique_key = f"user_{request.user.id}/{uuid.uuid4()}_{file_name}"
+
     try:
-        presigned_post = s3.generate_presigned_post(
-            Bucket=settings.R2_BUCKET_NAME,
-            Key=unique_file_name,
-            Fields={"acl": "public-read", "Content-Type": "video/mp4"},
-            Conditions=[
-                    {"acl": "public-read"},
-                ["starts-with", "Content-Type", file_type]
-            ],
+        presigned_url = s3.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                'Key': unique_key,
+                'ContentType': content_type,
+                'ACL': settings.AWS_DEFAULT_ACL
+            },
             ExpiresIn=3600   
         )
 
-        return JsonResponse({
-            'url': presigned_post['url'],
-            'fields': presigned_post['fields'],
-            'file_key': unique_file_name
+        return Response({
+            'presigned_url': presigned_url,
+            'key': unique_key,
+            'public_url': f"{settings.MEDIA_URL}{unique_key}",
+            'expires_in': 3600
         })
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return Response({'error': str(e)}, status=500)

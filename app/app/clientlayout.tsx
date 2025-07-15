@@ -6,6 +6,8 @@ import LogoutButton from '@/app/components/layout/LogoutButton'
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store/store';
 import Image from 'next/image';
+import { inter, lusitana } from '@/app/ui/fonts';
+import { DarkModeToggle } from './components/layout/DarkModeToggle';
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -34,18 +36,20 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             />
           </svg>
         </button>
+
+
       )}
 
       {/* Sidebar/Navbar - Now narrower */}
       {isAuthenticated && (
         <aside
-          className={`
+          className={`${inter.className} antialiased
             w-[75px] md:w-[80px] h-screen border-r fixed left-0 top-0 bg-white z-20 
             flex flex-col justify-between transition-all duration-300
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
-          <nav className="space-y-4 p-2 mt-10">
+          <nav className="space-y-8 p-2 mt-14">
             <Link 
               href="/" 
               className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
@@ -80,6 +84,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             </Link>
           </nav>
           <div className="p-2 hover:bg-gray-100 mb-2 rounded">
+            <DarkModeToggle />
             <LogoutButton />
           </div>
         </aside>
@@ -87,7 +92,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
 
       {/* Main Content - Adjusted padding */}
       <div 
-        className={`
+        className={`${lusitana.className} antialiased
           flex-1 flex flex-col items-center justify-center p-4 transition-all duration-300
           ${isAuthenticated ? 'md:pl-[80px]' : ''}
         `}

@@ -6,6 +6,8 @@ import { fetchPublicUser, updateProfile } from '@/app/store/authSlice';
 import { RootState, AppDispatch } from '@/app/store/store';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
+import { ToastContainer, toast } from 'react-toastify';
+
 
 function ProfilePage() {
   const dispatch: AppDispatch = useDispatch();
@@ -70,10 +72,15 @@ function ProfilePage() {
     formData.append('first_name', userDetails.firstName);
     formData.append('last_name', userDetails.lastName);
 
-    dispatch(updateProfile(formData))
-      .unwrap()
-      .then(() => alert('Profile updated successfully!'))
-      .catch((err) => console.error('Update failed:', err));
+    try {
+      const res = await dispatch(updateProfile(formData)).unwrap();
+      if (res.ok) {
+        toast.success('Profile successfully updated')
+      }
+    } catch (error) {
+      console.log("Error updating profile", error);
+    }
+    
   };
 
   if (isLoading) return <p className='text-center'>Loading...</p>;
@@ -102,7 +109,7 @@ function ProfilePage() {
           </button>
         </>
       )}
-
+      <ToastContainer />
       <div className='mt-6 text-center'>
         <p className='text-xl font-bold'>{userDetails.firstName} {userDetails.lastName}</p>
         <p className='text-gray-600'>{userDetails.email}</p>

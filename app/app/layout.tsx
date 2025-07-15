@@ -6,13 +6,13 @@ import Providers from './store/providers';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
-  title: "VidChat",
-  description: "video microblogging",
+  title: "OneClyq",
+  description: "Video microblogging",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="light">
       <body>
         <Providers>
           <Fonts /> 

@@ -1,73 +1,111 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
-import { register } from '@/app/store/authSlice';
+import { register, resetAuthState } from '@/app/store/authSlice';
 import Link from 'next/link';
 import AuthLayout from '../../components/layout/AuthLayout';
 
 const RegisterPage = () => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  
-  const [firstname, setFirstname] = useState('');
-  const [lastname, setLastname] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formData, setFormData] = useState({
+    firstname: '',
+    lastname: '',
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
   const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  const { isLoading, isError, errorMessage } = useSelector((state: RootState) => state.auth);
   
-  const { isLoading, isError } = useSelector((state: RootState) => state.auth);
-  
+  useEffect(() => {
+    dispatch(resetAuthState());
+  }, [dispatch]);
+
   const togglePassword = () => setShowPassword(!showPassword);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (localError) setLocalError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError('');
 
-    if (password !== confirmPassword) {
-      alert('Passwords do not match');
+    if (formData.password !== formData.confirmPassword) {
+      setLocalError('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setLocalError('Password must be at least 6 characters');
       return;
     }
 
     try {
-      await dispatch(
+      const result = await dispatch(
         register({
-          first_name: firstname,
-          last_name: lastname,
-          email,
-          username,
-          password,
-          re_password: confirmPassword,
+          first_name: formData.firstname,
+          last_name: formData.lastname,
+          email: formData.email,
+          username: formData.username,
+          password: formData.password,
+          re_password: formData.confirmPassword,
         })
       ).unwrap();
 
-      alert('Registration successful!');
-      router.push('/check-email'); 
+      if (result.success) {
+        router.push('/check-email');
+      }
     } catch (error) {
       console.error('Registration failed:', error);
     }
   };
 
+  const displayError = localError || (isError && errorMessage) || '';
+
+  const getErrorMessage = () => {
+    if (localError) return localError;
+    if (!isError) return '';
+
+    if (errorMessage?.includes('password')) {
+      return 'Invalid password. Must be at least 6 characters';
+    }
+    if (errorMessage?.includes('email')) {
+      return 'Invalid email address';
+    }
+    if (errorMessage?.includes('username')) {
+      return 'Username already exists';
+    }
+    return 'Registration failed. Please try again';
+  };
+  
   return (
     <AuthLayout title="Sign Up">
       <form
         onSubmit={handleSubmit}
-        className="grid gap-3 w-full max-w-lg mx-auto"
+        className="grid gap-2 max-w-lg mx-auto md:mt-8"
       >
-        
         <div className="form-control">
           <label className="label">
             <span className="label-text">Firstname</span>
           </label>
           <input
             type="text"
+            name="firstname" 
             placeholder="Enter your firstname"
-            value={firstname}
-            onChange={(e) => setFirstname(e.target.value)}
+            value={formData.firstname}
+            onChange={handleChange}
             className="input input-bordered"
             required
           />
@@ -79,9 +117,10 @@ const RegisterPage = () => {
           </label>
           <input
             type="text"
+            name="lastname"
             placeholder="Enter your lastname"
-            value={lastname}
-            onChange={(e) => setLastname(e.target.value)}
+            value={formData.lastname}
+            onChange={handleChange}
             className="input input-bordered"
             required
           />
@@ -93,9 +132,10 @@ const RegisterPage = () => {
           </label>
           <input
             type="email"
+            name="email"
             placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={formData.email}
+            onChange={handleChange}
             className="input input-bordered"
             required
           />
@@ -107,9 +147,10 @@ const RegisterPage = () => {
           </label>
           <input
             type="text"
+            name="username" 
             placeholder="Enter your username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={formData.username}
+            onChange={handleChange}
             className="input input-bordered"
             required
           />
@@ -121,9 +162,10 @@ const RegisterPage = () => {
           </label>
           <input
             type={showPassword ? 'text' : 'password'}
+            name="password" 
             placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={formData.password}
+            onChange={handleChange}
             className="input input-bordered"
             minLength={6}
             required
@@ -136,36 +178,37 @@ const RegisterPage = () => {
           </span>
         </div>
 
-
         <div className="form-control relative">
           <label className="label">
             <span className="label-text">Confirm Password</span>
           </label>
           <input
             type={showPassword ? 'text' : 'password'}
+            name="confirmPassword"
             placeholder="Confirm your password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            value={formData.confirmPassword}
+            onChange={handleChange}
             className="input input-bordered"
             minLength={6}
             required
           />
         </div>
 
-        {isError && (
-          <div className="bg-accent-green text-sm lg:col-span-2">
-            <p>An error occurred. Please try again.</p>
+        {(localError || isError) && (
+          <div className="bg-red-100 text-red-700 p-2 rounded text-sm lg:col-span-2">
+            <p>{getErrorMessage()}</p>
           </div>
         )}
 
         <div className="lg:col-span-2">
           <button
             type="submit"
-            className={`btn bg-primary-blue w-full
+            className={`btn bg-primary-blue w-full text-white
                flex items-center justify-center ${isLoading ? 
                'loading w-6 h-6 justify-center' : ''}`}
+            disabled={isLoading}
           >
-            Register
+            {isLoading ? 'Processing...' : 'Register'}
           </button>
         </div>
       </form>

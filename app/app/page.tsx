@@ -56,7 +56,7 @@ function HomePage() {
       <div className="flex-1 flex flex-col items-center p-2">
         {isAuthenticated && (
           <div className="w-full max-w-4xl">
-            <div className="text-center fixed top-0 left-0 right-0 z-10 bg-white shadow-sm py-8 px-6">
+            <div className="text-center fixed top-0 left-0 right-0 z-10 bg-white shadow-sm py-2 px-2">
               <p className="text-md ">
                 Hello,{' '}
                 <span className="text-xl font-semibold text-center bg-gray-50">
