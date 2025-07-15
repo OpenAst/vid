@@ -11,8 +11,8 @@ export const uploadVideo = createAsyncThunk(
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => "Failed to upload video");
-        return rejectWithValue(errorData);
+        const errorData = await res.json()
+        return rejectWithValue(errorData.error || "Upload failed");
       }
 
       return await res.json();
@@ -26,9 +26,12 @@ export const fetchVideos = createAsyncThunk(
   "videos/fetch",
   async ({ page = 1, limit = 10 }: { page?: number; limit?: number }, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/api/video/fetch/?page=${page}&limit=${limit}/`);
+      const res = await fetch(`/api/video/fetch/?page=${page}&limit=${limit}/`, {
+        credentials: 'include',
+      });
+
       if (!res.ok) {
-        const errorData = await res.json().catch(() => "Failed to fetch videos");
+        const errorData = await res.json()
         return rejectWithValue(errorData.message || "Failed to fetch videos")
       }
       return await res.json();
@@ -42,6 +45,7 @@ interface Video {
   id: string;
   title: string;
   description: string;
+  file_url: string;
   thumbnail: string;
   videoUrl: string;
 }

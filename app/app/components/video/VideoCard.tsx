@@ -13,12 +13,19 @@ interface VideoProps {
 
 const VideoCard: React.FC<VideoProps> = ({ title, thumbnail, file_url, views, timestamp }) => {
   return (
-    <div className="w-full max-w-xs p-2 rounded-lg transition hover:scale-105">
-      {thumbnail ? (
-        <Image src={thumbnail} alt={title} className="w-full h-44 object-cover rounded-md" />
-      ) : (
-        <video src={file_url} controls className="w-full h-44 rounded-md" />
-      )}
+    <div className="w-full max-w-sm p-2 rounded-lg transition hover:scale-105">
+      <div className="aspect-w-16 aspect-h-9 w-full">
+        {thumbnail ? (
+          <Image 
+            src={thumbnail} alt={title} 
+            width={320}
+            height={180}
+            className="w-full h-full object-cover rounded-md" />
+        ) : (
+          <video src={file_url} controls 
+            className="w-full h-full rounded-md object-contain" />
+        )}
+      </div>
       
       <div className="mt-2">
         <h3 className="text-sm font-medium">{title}</h3>

@@ -6,6 +6,8 @@ import { fetchUser, updateProfile } from '@/app/store/authSlice';
 import { RootState, AppDispatch } from '@/app/store/store';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { ToastContainer, toast } from 'react-toastify';
+
 
 function ProfilePage() {
   const dispatch: AppDispatch = useDispatch();
@@ -69,9 +71,8 @@ function ProfilePage() {
     formData.append('last_name', userDetails.lastName);
     formData.append('bio', userDetails.bio)
 
-    dispatch(updateProfile(formData))
-      .unwrap()
-      .then(() => alert('Profile updated successfully!'))
+    dispatch(updateProfile(formData)).unwrap()
+      .then(() => toast.success('Profile updated successfully!'))
       .catch((err) => console.error('Update failed:', err));
   };
 
@@ -133,6 +134,7 @@ function ProfilePage() {
       >
         Update Profile
       </button>
+      <ToastContainer />
     </div>
   );
 }

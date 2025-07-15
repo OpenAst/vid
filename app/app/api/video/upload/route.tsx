@@ -9,10 +9,14 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
+    const thumbnail = formData.get("thumbnail") as File | null;
 
 
     if (!csrfToken || !title || !accessToken || !file || !description) {
-      throw new Error('Missing required fields or authentication.');
+      return NextResponse.json(
+        { error: "Missing required fields or authentication"},
+        { status: 400}
+      )
     }
 
     const presignedRes = await fetch(
@@ -28,33 +32,54 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           file_name: file.name,
           file_type: file.type,
+          thumbnail_name: thumbnail?.name,
+          thumbnail_type: thumbnail?.type,
         }),
       }
     );
 
     if (!presignedRes.ok) {
-      const error = await presignedRes.text();
-      throw new Error(`Presigned URL error: ${error}`);
+      const error = await presignedRes.json();
+      throw new Error(`Presigned URL error: ${error.message || error}`);
     }
 
-    const { url, fields, file_key } = await presignedRes.json();
+    const { video: videoPresigned, thumbnail: thumbnailPresigned } = await presignedRes.json();
 
-    const uploadFormData = new FormData();
-    Object.entries(fields).forEach(([key, value]) => {
-      uploadFormData.append(key, value as string);
+    const uploadVideoFormData = new FormData();
+    Object.entries(videoPresigned.fields).forEach(([key, value]) => {
+      uploadVideoFormData.append(key, value as string);
     });
-    uploadFormData.append("file", file);
+    uploadVideoFormData.append("file", file);
 
-    const uploadRes = await fetch(url, {
+    const uploadVideoRes = await fetch(videoPresigned.url, {
       method: "POST",
-      body: uploadFormData,
+      body: uploadVideoFormData,
     });
 
-    if (!uploadRes.ok) {
-      const error = await uploadRes.text();
-      throw new Error(`R2 upload failed: ${error}`);
+    if (!uploadVideoRes.ok) {
+      throw new Error('Video upload to R2 failed');
     }
 
+    let thumbnailKey = null;
+    if (thumbnail && thumbnailPresigned) {
+      const uploadThumbnailFormData = new FormData();
+      Object.entries(thumbnailPresigned.fields).forEach(([key, value]) => {
+        uploadThumbnailFormData.append(key, value as string);
+      })
+      uploadThumbnailFormData.append("file", thumbnail);
+
+      const thumbnailUploadRes = await fetch(thumbnailPresigned.url, {
+        method: "POST",
+        body: uploadThumbnailFormData
+      });
+
+      if (!thumbnailUploadRes.ok) {
+        throw new Error("Thumbnail upload to R2 failed");
+      }
+      thumbnailKey = thumbnailPresigned.key;
+    }
+
+    // Save metadata to Django 
     const saveRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/videos/upload/`, {
       method: "POST",
       headers: {
@@ -65,17 +90,19 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         title,
         description,
-        video_url: `${process.env.NEXT_PUBLIC_R2_URL}/${file_key}}`,
+        file_key: videoPresigned.key,
+        thumbnail_key: thumbnailKey,
       }),
     });
 
     if (!saveRes.ok) {
-      const error = await saveRes.text();
-      throw new Error(`Saving metadata failed: ${error}`);
+      const error = await saveRes.json();
+      throw new Error(`Saving metadata failed: ${error.message || error}`);
     }
 
     const finalData = await saveRes.json();
-    return NextResponse.json(finalData);
+    return NextResponse.json(finalData, { status: 201});
+    
   } catch (err) {
     console.log('Error working upload', err);
     return NextResponse.json(

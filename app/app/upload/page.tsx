@@ -85,7 +85,7 @@ const UploadVideo = () => {
   <>
     {isAuthenticated && 
       <div className="min-h-screen w-full flex justify-center items-center bg-gray-50 px-4 sm:px-6">
-        <div className="w-full max-w-2xl px-4 py-6 sm:px-10 lg:px-8">
+        <div className="w-full max-w-xl px-4 py-4 sm:px-10 lg:px-8">
           <h2 className="text-2xl font-semibold text-center mb-6">Upload a Video</h2>
           <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-4 bg-white p-4 sm:p-6 rounded-lg shadow-sm">
             <div>
@@ -128,7 +128,7 @@ const UploadVideo = () => {
                 type="file"
                 accept="video/*"
                 onChange={handleFileChange}
-                className="block w-full text-sm text-gray-500
+                className="block w-[15%] text-sm text-gray-500
                   file:mr-4 file:py-2 file:px-4
                   file:rounded-md file:border-0
                   file:text-sm file:font-semibold
@@ -147,7 +147,7 @@ const UploadVideo = () => {
                   <video
                     src={preview}
                     controls
-                    className="w-full rounded-md border border-gray-200"
+                    className="w-full rounded-md border border-gray-200 object-contain"
                   />
                 </div>
               </div>
