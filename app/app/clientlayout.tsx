@@ -54,7 +54,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
-          <nav className="space-y-4 p-2 mt-10">
+          <nav className="space-y-8 p-2 mt-16">
             <Link 
               href="/" 
               className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
@@ -94,45 +94,6 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         </aside>
       )}
 
-      {searchOpen && (
-        <div className='fixed inset-0 bg-white bg-opacity-25 z-20 items-end justify-center pt-15'>
-          <div className='bg-white p-2 rounded-lg w-full max-w-md'>
-            <form onSubmit={handleSearch} className="flex">
-              <input 
-                type='text'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder='Search...'
-                className='flex-1 border rounded-l px-4 py-2 focus:ring-2 focus:ring-blue-400'
-                autoFocus
-              />
-              <button 
-                type='submit'
-                className='bg-blue-500 text-white 
-                px-2 py-2 rounded-r hover:bg-blue-500'>
-                    Search
-              </button>
-            </form>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className='absolute top-2 right-2
-                text-gray-500 hover:text-gray-800'
-              >
-                ✕
-              </button>
-            )}
-            
-            <button
-              onClick={() => setSearchOpen(false)}
-              className='absolute top-2 right-2 text-gray-500 hover:text-gray-800'
-            >
-              
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main Content - Adjusted padding */}
       <div 
         className={`
@@ -150,17 +111,6 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
-      <div className='p-2'>
-        <button 
-          onClick={() => setSearchOpen(!searchOpen)}
-          className='w-full flex flex-col items-center p-2 hover:bg-gray-100 rounded'
-          aria-label='Search'
-          >
-            <FiSearch className='w-5 h-5' />
-            <span className='text-xs mt-1 hidden md:block'>Search</span>
-        </button>
-          </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { RootState, AppDispatch } from '@/app/store/store';
 import Link from 'next/link';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import AuthLayout from '../../components/layout/AuthLayout';
+import { ToastContainer, toast } from 'react-toastify';
 
 const LoginPage = () => {
   
@@ -43,8 +44,11 @@ const LoginPage = () => {
       const res = await dispatch(login({ email, password, username })).unwrap();
       console.log('Login successful:', res);
 
+
       window.history.replaceState(null, '/');
       router.replace('/');
+      toast.success('Login successful.');
+
     } catch (err: unknown) {
       console.log("Error during login:", err);
 
@@ -103,7 +107,7 @@ const LoginPage = () => {
     <AuthLayout title="Sign In">
       <p className="text-center mb-6">Sign into your Account</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="form-control">
           <input
             className="input input-bordered w-full"
@@ -129,7 +133,7 @@ const LoginPage = () => {
         
         <div className="form-control relative">
           <input
-            className="input input-bordered w-full"
+            className="input w-full"
             type={showPassword ? 'text' : 'password'}
             placeholder="Password"
             name="password"
@@ -154,17 +158,17 @@ const LoginPage = () => {
 
         <button
           type="submit"
-          className={`btn bg-primary-blue w-full flex items-center justify-center ${isLoading ? 'opacity-75' : ''}`}
+          className={`btn btn-primary hover:opacity-75 w-full flex items-center justify-center ${isLoading ? 'opacity-75' : ''}`}
           disabled={isLoading}
         >
           {isLoading ? (
-            <span className="loading loading-spinner loading-md">Signing in</span>
+            <span className="loading loading-spinner loading-sm">Signing in</span>
           ) : ( 
             'Login'
           )}
         </button>
       </form>
-
+      <ToastContainer />
       <p className="text-center mt-4">
       Don&apos;t have an account?{' '}
         <Link className="text-primary-blue hover:underline" href="/register">

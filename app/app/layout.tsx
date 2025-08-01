@@ -4,15 +4,17 @@ import Fonts from "./fonts";
 import ClientProvider from "./clientlayout"; 
 import Providers from './store/providers';
 import { Toaster } from 'react-hot-toast';
+import { lusitana, inter } from "./fonts";
+
 
 export const metadata: Metadata = {
-  title: "VidChat",
+  title: "OneClyq",
   description: "video microblogging",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.className}`}>
       <body>
         <Providers>
           <Fonts /> 

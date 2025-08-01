@@ -1,40 +1,48 @@
 from rest_framework import serializers
 from .models import Video, Comment, VideoLike, CommentLike
 from django.conf import settings
+from accounts.models import UserAccount
+
+
+class UserPublicSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = UserAccount
+    fields = ['id', 'email']
 
 class VideoSerializer(serializers.ModelSerializer):
-  uploader = serializers.CharField(source='user.username', read_only=True)
+  uploader = UserPublicSerializer(read_only=True)
   timestamp = serializers.SerializerMethodField()
-  file_url = serializers.SerializerMethodField()
   like_count = serializers.IntegerField(read_only=True)
   has_liked = serializers.SerializerMethodField()
+  thumbnail_url = serializers.SerializerMethodField()
 
-  def get_file_url(self, obj):
-    request = self.context.get('request')
-    if obj.file:
-      return request.build_absolute_uri(obj.file.url)
-    
-    return None
-  
-  def get_like_count(self, obj):
-     return obj.likes.count()
-  
   class Meta:
     model = Video
-    fields = ['uploader', 'timestamp', 'file_url',  "like_count", "has_liked"]
-    read_only_fields = ['id', 'views', 'timestamp', 'uploader']
+    fields = [
+      'id', 'title', 'description', 'thumbnail_url',
+       'timestamp', 'file_url',  'uploader', "like_count", "has_liked"
+    ]
+    read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at']
+  
+
+  def get_thumbnail_url(self, obj):
+    request = self.context.get('request')
+    if obj.thumbnail:
+      return request.build_absolute_uri(obj.thumbnail)
+    return None
+
+  def get_like_count(self, obj):
+     return obj.likes.count()
   
   def get_timestamp(self, obj):
     return obj.created_at.strftime('%b %d, %Y')
   
+    
   def get_has_liked(self, obj):
      request = self.context.get("request")
      if request and request.user.is_authenticated:
         return obj.likes.filter(id=request.user.id).exists()
      return False
-  def create(self, validated_data):
-    validated_data['uploader'] = self.context["request"].user
-    return super().create(validated_data)
   
 class CommentSerializer(serializers.ModelSerializer):
   user = serializers.StringRelatedField(read_only=True)

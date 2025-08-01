@@ -4,19 +4,20 @@ import React, { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import { fetchUser } from '../store/authSlice';
-import router from 'next/router';
+import { useRouter } from 'next/navigation'
 
 
 function AboutPage() {
 
   const { isAuthenticated, isLoading, user } = useSelector((state: RootState) => state.auth);
   const dispatch: AppDispatch = useDispatch();
+  const router = useRouter();
 
   useEffect(() => {
     if (!user) {
       dispatch(fetchUser())
         .unwrap()
-        .catch((err) => {
+        .catch((err: any) => {
           console.error('Error fetching user: ', err);
           router.push("/login")
         })

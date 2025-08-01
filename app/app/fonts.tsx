@@ -1,10 +1,20 @@
 'use client';
 
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Lusitana } from "next/font/google";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+});
+
+export const inter = Inter({
+  subsets: ['latin'],
+  variable: '---font-inter',
+});
+
+export const lusitana = Lusitana({
+  weight: ['400', '700'],
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
@@ -17,7 +27,7 @@ export default function Fonts() {
     <>
       <style>{`
         :root {
-          ${geistSans.variable};
+          ${inter.variable};
           ${geistMono.variable};
         }
       `}</style>

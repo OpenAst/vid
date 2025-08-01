@@ -1,171 +1,241 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { uploadVideo } from "@/app/store/videoSlice";
 import { fetchUser } from "@/app/store/authSlice";
 import { AppDispatch } from "@/app/store/store";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/app/store/store";
+import { toast, ToastContainer} from 'react-toastify';
 
+
+interface FormDataState {
+  title: string;
+  description: string;
+  thumbnail?: File;
+}
 
 const UploadVideo = () => {
   const dispatch = useDispatch<AppDispatch>();
-  
   const router = useRouter();
-  const [preview, setPreview] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [formData, setFormData] = useState({
+  
+  // State management
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormDataState>({
     title: "",
-    description: "",
-    views: 0,
-    timestamp: Date.now(),
-    uploader: "Anonymous",
+    description: ""
   });
+  const [isUploading, setIsUploading] = useState(false);
 
   const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setSelectedFile(file);
-      setPreview(URL.createObjectURL(file));
-    }
-  };
 
   const handleInputChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setVideoFile(file);
+  };
 
-    if (!selectedFile) {
-      alert("Please select a video file.");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!videoFile) {
+      toast.error("Please select a video file");
       return;
     }
 
-    const data = new FormData();
-    data.append("title", formData.title);
-    data.append("description", formData.description);
-    data.append("file", selectedFile);
+    if (!formData.title) {
+      toast.error("Please enter a title");
+      return;
+    }
 
     try {
-      await dispatch(uploadVideo(data)).unwrap();
-      alert("Video uploaded successfully!");
+      setIsUploading(true);
+
+      const body = new FormData();
+      body.append('file', videoFile);
+      body.append('title', formData.title);
+      body.append('description', formData.description);
+
+
+      const res = await fetch("/api/video/upload/", {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+      
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to get presigned URL");
+      }
+
+      console.log("Upload response data:", data);
+
+      // STEP 2: Save metadata in database via a separate API route
+      const metadata = {
+        title: formData.title,
+        description: formData.description || '',
+        file_url: data.file_url,     
+        file_key: data.object_key,    
+        file_size: videoFile.size,
+        file_type: videoFile.type,
+      };
+
+      console.log("Metadata being sent", metadata);
+
+      const metaRes = await fetch("/api/video/save-metadata/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(metadata),
+      });
+
+      const metaDataRes = await metaRes.json();
+
+      if (!metaDataRes.ok) {
+        throw new Error(metaDataRes.error || "Failed to save metadata");
+      }
+      console.log("Upload successful");
+      
+      toast.success("Video uploaded successfully");
       router.push("/");
-    } catch (error) {
-      console.error("Upload failed", error);
+    } catch (error: any) {
+      console.error("Upload failed:", error);
+      toast.error(error.message || "Failed to upload video");
+    } finally {
+      setIsUploading(false);
     }
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const verifyAuth = async () => {
       try {
         if (!isAuthenticated) {
-          const user = await dispatch(fetchUser()).unwrap();
-          console.log('User authenticated', user);
-          }
-        } catch (error) {
-          console.log('Not working', error);
-          router.push('/login');
+          await dispatch(fetchUser()).unwrap();
         }
+      } catch (error) {
+        router.push('/login');
+      }
+    };
 
-    } 
-    checkAuth();
-    
+    verifyAuth();
   }, [dispatch, router, isAuthenticated]);
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen">🔄 Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
-  <>
-    {isAuthenticated && 
-      <div className="min-h-screen w-full flex justify-center items-center bg-gray-50 px-4 sm:px-6">
-        <div className="w-full max-w-xl px-4 py-4 sm:px-10 lg:px-8">
-          <h2 className="text-2xl font-semibold text-center mb-6">Upload a Video</h2>
-          <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-4 bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white shadow rounded-lg p-6 sm:p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Upload New Video</h1>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Title Input */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                Video Title
+                Video Title *
               </label>
               <input
                 type="text"
                 id="title"
                 name="title"
-                placeholder="Enter video title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="border border-gray-300 p-2 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
                 required
+                maxLength={100}
               />
             </div>
-
+            <ToastContainer />
+            {/* Description Input */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description (optional)
+                Description
               </label>
               <textarea
                 id="description"
                 name="description"
-                placeholder="Enter video description"
+                rows={4}
                 value={formData.description}
                 onChange={handleInputChange}
-                rows={3}
-                className="border border-gray-300 p-2 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                maxLength={500}
               />
             </div>
 
+            {/* Video Upload */}
             <div>
-              <label htmlFor="video-upload" className="block text-sm font-medium text-gray-700 mb-1">
-                Video File
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Video File *
               </label>
-              <input
-                id="video-upload"
-                type="file"
-                accept="video/*"
-                onChange={handleFileChange}
-                className="block w-[15%] text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-                required
-              />
-            </div>
-
-            {preview && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Video Preview
+              <div className="mt-1 flex items-center">
+                <label
+                  htmlFor="video-upload"
+                  className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                >
+                  Select Video
+                  <input
+                    id="video-upload"
+                    name="video"
+                    type="file"
+                    accept="video/*"
+                    onChange={handleFileChange}
+                    className="sr-only"
+                    required
+                  />
                 </label>
-                <div className="aspect-w-16 aspect-h-9">
+                <span className="ml-2 text-sm text-gray-500">
+                  {videoFile ? videoFile.name : "No file selected"}
+                </span>
+              </div>
+              {previewUrl && (
+                <div className="mt-4">
                   <video
-                    src={preview}
+                    src={previewUrl}
                     controls
-                    className="w-full rounded-md border border-gray-200 object-contain"
+                    className="w-full rounded-md border border-gray-200"
                   />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
-            >
-              Upload Video
-            </button>
+            {/* Submit Button */}
+            <div className="pt-4">
+              <button
+                type="submit"
+                className={`w-full flex btn btn-primary justify-center py-3 
+                  px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
+                  hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2
+                focus:ring-orange-500 focus:border-orange-500 ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isUploading ? 'Uploading...' : 'Upload Video'}
+              </button>
+            </div>
           </form>
         </div>
       </div>
-    }
-    
-  </>
+    </div>
   );
-}
+};
 
 export default UploadVideo;

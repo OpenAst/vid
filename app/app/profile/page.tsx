@@ -34,7 +34,7 @@ function ProfilePage() {
             firstName: userData.first_name || '',
             lastName: userData.last_name || '',
             email: userData.email || '',
-            profile_picture: userData.profile_picture || '',
+            profile_picture: userData.profile_picture || '/dog5.jpg',
             bio: userData.bio || '',
             followers: userData.followers || '',
           });
@@ -71,9 +71,20 @@ function ProfilePage() {
     formData.append('last_name', userDetails.lastName);
     formData.append('bio', userDetails.bio)
 
-    dispatch(updateProfile(formData)).unwrap()
-      .then(() => toast.success('Profile updated successfully!'))
-      .catch((err) => console.error('Update failed:', err));
+    try {
+      const updatedUser = await dispatch(updateProfile(formData)).unwrap();
+      toast.success('Profile updated successfully!');
+      if (updatedUser.profile_picture) {
+        setUserDetails(prev => ({
+           ...prev,
+        profile_picture: updatedUser.profile_picture
+        }));
+        setPreviewImage(null);
+      }
+    }catch (err) {
+      console.error('Update failed:', err);
+      toast.error('Profile update failed.');
+    }
   };
 
   if (isLoading) return <p className='text-center'>Loading...</p>;

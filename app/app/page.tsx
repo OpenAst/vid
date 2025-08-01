@@ -58,10 +58,12 @@ function HomePage() {
           <div className="w-full max-w-4xl">
             <div className="text-center fixed top-0 left-0 right-0 z-10 bg-white py-4">
               <p className="text-md">
-                <span className="text-xl font-semibold text-center bg-gray-50 ">
-                  {userDetails.firstName}, {userDetails.lastName}
-                </span> !
+                Hello, 
+                <span className="text-xl font-semibold text-center bg-gray-20 ">
+                {userDetails.firstName}, {userDetails.lastName}
+                </span> 
               </p>
+              <p className='text-center'>You are welcome to this amazing platform</p>
             </div>
 
             <div className="mt-12">

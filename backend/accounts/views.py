@@ -41,21 +41,6 @@ class ActivateUserView(APIView):
 
         
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def check_email_exists(request):
-    if not request.data.get('email'):
-        return Response({'error': 'Bad_request'}, status=status.HTTP_400_BAD_REQUEST)
-
-    email = request.data.get('email')
-    try:
-        User.objects.get(email=email)
-        return Response({'email_exists': True}, status=status.HTTP_200_OK)
-
-    except User.DoesNotExist:
-        return Response({'email_exists': False}, status=status.HTTP_404_NOT_FOUND)
-
-
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -143,4 +128,16 @@ class LogoutView(APIView):
                 "error": "Token is invalid or expired",
                 "details": str(e)
             }, status=status.HTTP_400_BAD_REQUEST)    
-        
+
+@api_view(['GET'])
+def check_email(request):
+    email = request.query_params.get('email')
+
+    if not email:
+        return Response({
+            "error": "Email is required",
+        }, status=status.HTTP_400_BAD_REQUEST)
+    exists = User.objects.filter(email=email).exists()
+
+    return Response({'exists': exists}, status=status.HTTP_200_OK)
+    
