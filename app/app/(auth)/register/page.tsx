@@ -235,8 +235,8 @@ const RegisterPage = () => {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span className="loading loading-spinner loading-sm"></span>
-            ) : (
+              <span className="loading loading-spinner loading-sm">Signing in</span>
+            ) : ( 
               'Register'
             )}
           </button>

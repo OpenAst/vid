@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       },
       body: file,
     });
-
+    
     if (!uploadRes.ok) {
       throw new Error(`R2 upload failed with status ${uploadRes.status}`);
     }

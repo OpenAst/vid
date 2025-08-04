@@ -79,6 +79,13 @@ const UploadVideo = () => {
 
       console.log("Upload response data:", data);
 
+      function sanitizeFileUrl(fileUrl: string): string {
+        const parts = fileUrl.split('/');
+        const fileName = parts.pop();
+        const encodedFileName = encodeURIComponent(fileName || '');
+        return [...parts, encodedFileName].join('/');
+      }
+      
       // STEP 2: Save metadata in database via a separate API route
       const metadata = {
         title: formData.title,
@@ -100,14 +107,16 @@ const UploadVideo = () => {
         body: JSON.stringify(metadata),
       });
 
+      if (!metaRes.ok) {
+        const errorData = await metaRes.json();
+        throw new Error(errorData.error || "Failed to save metadata");
+      }
+
       const metaDataRes = await metaRes.json();
 
-      if (!metaDataRes.ok) {
-        throw new Error(metaDataRes.error || "Failed to save metadata");
-      }
-      console.log("Upload successful");
+      console.log("Upload successful", metaDataRes);
       
-      toast.success("Video uploaded successfully");
+      toast.success("Video upload and metadata saved successfully");
       router.push("/");
     } catch (error: any) {
       console.error("Upload failed:", error);

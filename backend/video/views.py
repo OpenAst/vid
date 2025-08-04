@@ -31,6 +31,7 @@ class VideoUploadView(generics.CreateAPIView):
     parser_classes = [JSONParser, MultiPartParser]
 
     def create(self, request, *args, **kwargs):
+        logger = logging.getLogger(__name__)
         print("Request data:", request.data)
 
         try:
@@ -51,18 +52,17 @@ class VideoUploadView(generics.CreateAPIView):
             }
             
             serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
+
+            if not serializer.is_valid():
+                logger.error("Validation errors: %s", serializer.errors)
+                return Response(serializer.errors, status=400)
+
             self.perform_create(serializer)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
             
         except Exception as e:
-            logger = logging.getLogger(__name__)
-            
-            if serializer:
-                logger.error("Validation errors: %s", serializer.errors)
 
-            logger.error("Request data: %s", request.data)
             logger.exception("Exception occurred during video metadata upload")
 
             return Response(

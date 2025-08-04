@@ -8,6 +8,7 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SITE_ID = 1
 
 SECRET_KEY = config('SECRET_KEY')
 
@@ -15,6 +16,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 INSTALLED_APPS = [
     'daphne',
+    'core',
     'channels',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -23,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'djoser',
+    'django.contrib.sites',
     'corsheaders',
     'rest_framework',
     'social_django',
@@ -80,11 +83,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
     "http://localhost:3001",
     "https://vid-olive.vercel.app",
 ]
 
-FRONTEND_URL = "https://oneclyq.com"
+FRONTEND_URL = config('FRONTEND_URL').split(',')
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
 
@@ -233,20 +237,31 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SAMESITE': None,
 }
 
+ENV = config("ENV", default="production")
+
+if ENV == 'development':
+    FRONTEND_DOMAIN = "localhost:3000"
+    FRONTEND_PROTOCOL = "http"
+else:
+    FRONTEND_DOMAIN = "oneclyq.com"
+    FRONTEND_PROTOCOL = "https"
+
+FRONTEND_URL = f"{FRONTEND_PROTOCOL}://{FRONTEND_DOMAIN}"
+
 DJOSER = {
     'LOGIN_FIELD': 'email',
-    "DOMAIN": "oneclyq.com",
-    "SITE_NAME": "OneClyq",
     'USER_CREATE_PASSWORD_RETYPE': True,
     'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
     'SEND_CONFIRMATION_EMAIL': True,
     'SET_USERNAME_RETYPE': True,
     'SET_PASSWORD_RETYPE': True,
-    'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
+    'PASSWORD_RESET_CONFIRM_URL': "password-confirm?uid={uid}&token={token}",
     'USERNAME_RESET_CONFIRM_URL': 'email/reset/confirm/{uid}/{token}',
     'ACTIVATION_URL': 'activate/{uid}/{token}',
     'SEND_ACTIVATION_EMAIL': True,
+
+
     'EMAIL': {
        'activation': 'accounts.email.CustomActivationEmail',
     },

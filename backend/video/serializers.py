@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Video, Comment, VideoLike, CommentLike
 from django.conf import settings
 from accounts.models import UserAccount
+from urllib.parse import quote
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
@@ -24,6 +25,11 @@ class VideoSerializer(serializers.ModelSerializer):
     ]
     read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at']
   
+  def validate_file_url(self, value):
+    parsed = value.split('/')
+    if parsed:
+      parsed[-1] = quote(parsed[-1])
+    return '/'.join(parsed)
 
   def get_thumbnail_url(self, obj):
     request = self.context.get('request')
