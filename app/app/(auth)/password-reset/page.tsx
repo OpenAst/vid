@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 
 const PasswordResetPage = () => {
-  const [ email, setEmail ] = useState('');
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading ] = useState(false);
   const [isError, setIsError ] = useState(false);
   const [message, setMessage ] = useState('');
@@ -27,6 +26,7 @@ const PasswordResetPage = () => {
         console.log('Password reset successful', response);
         setIsLoading(false);
         setMessage('Check your email for a password reset link.');
+        setEmail('');
       } else {
         const data = await response.json();
         setIsError(data.error || 'Failed to send password reset link');
