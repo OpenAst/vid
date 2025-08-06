@@ -136,7 +136,6 @@ const RegisterPage = () => {
                 required
               />
             </div>
-            <ToastContainer />
             <div className="flex flex-col items-center justify-center mt-8 space-y-4">
             <button
               type="submit"
@@ -231,11 +230,13 @@ const RegisterPage = () => {
         <div className="mt-6">
           <button
             type="submit"
-            className={`btn btn-primary w-full hover:opacity-75 ${isLoading ? 'loading' : ''}`}
+            className= 'btn btn-primary w-full hover:opacity-75'
             disabled={isLoading}
           >
             {isLoading ? (
-              <span className="loading loading-spinner loading-sm">Signing in</span>
+              <span className="loading loading-spinner loading-sm">
+                Signing in
+              </span>
             ) : ( 
               'Register'
             )}
@@ -246,9 +247,10 @@ const RegisterPage = () => {
           Already have an account?{' '}
           <Link href="/login" className="text-blue-500 hover:underline">
             Login
-          </Link>
+          </Link>``
         </p>
       </form>
+      <ToastContainer />
     </AuthLayout>
   );
 };

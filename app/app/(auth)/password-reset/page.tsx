@@ -27,8 +27,7 @@ const PasswordResetPage = () => {
       if (response.ok) {
         console.log('Password reset successful', response);
         setIsLoading(false);
-        setMessage('Redirecting to confirm page...');
-        setTimeout(() => router.push('/password-confirm'), 3000);
+        setMessage('Check your email for a password reset link.');
       } else {
         const data = await response.json();
         setIsError(data.error || 'Failed to send password reset link');

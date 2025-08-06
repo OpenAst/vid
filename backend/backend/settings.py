@@ -145,19 +145,19 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 
-# Cloudflare R2 Configuration (using AWS-compatible variables)
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')  # Your R2 Access Key
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')  # Your R2 Secret Key
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')  # Your R2 Bucket Name
-AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')  # e.g. "https://[account-id].r2.cloudflarestorage.com"
-AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default=None)  # Optional custom domain
 
-# Required R2-specific settings
-AWS_S3_REGION_NAME = 'auto'  # Must be 'auto' for R2
-AWS_S3_ADDRESSING_STYLE = 'virtual'  # Required for R2 compatibility
-AWS_DEFAULT_ACL = 'public-read'  # Set appropriate ACL for your use case
-AWS_QUERYSTRING_AUTH = False  # For public files
-AWS_S3_FILE_OVERWRITE = False  # Prevent overwriting existing files
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')  
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY') 
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')  
+AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL') 
+AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN', default=None) 
+
+
+AWS_S3_REGION_NAME = 'auto'  
+AWS_S3_ADDRESSING_STYLE = 'virtual'  
+AWS_DEFAULT_ACL = 'public-read'  
+AWS_QUERYSTRING_AUTH = False 
+AWS_S3_FILE_OVERWRITE = False  
 
 # Media URL configuration
 if AWS_S3_CUSTOM_DOMAIN:

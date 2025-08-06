@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `JWT ${accessToken}`, 
+          ...(csrfToken && {'X-CSRFToken': csrfToken}),
         },
         body: JSON.stringify({
           file_name: file.name,
@@ -72,15 +73,13 @@ export async function POST(req: NextRequest) {
     );
     
   } catch (error: any) {
+    const errorMessage = typeof error === "object" && error !== null && "message" in error
+    ? (error as { message?: string }).message 
+    : "Internal error";
     console.error('Upload error:', error);
     return NextResponse.json(
-      {
-        error: error.message || 'Upload failed',
-        ...(process.env.NODE_ENV === 'development' && {
-          details: error.stack,
-        }),
-      },
+      {error: errorMessage || "Internal error"},
       { status: 500 }
     );
-  }
+  };
 }

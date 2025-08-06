@@ -43,9 +43,12 @@ export async function POST(req: NextRequest) {
     console.log('Upload response', data);
 
     return NextResponse.json(data, { status: 201 });
-  } catch (err: any) {
+  } catch (err ) {
+    const errorMessage = typeof err === "object" && err !== null && "message" in err
+      ? (err as { message?: string }).message
+      : "Internal server error";
     return NextResponse.json(
-      {error: err.message || "Internal server error"},
+      { error: errorMessage || "Internal server error" },
       { status: 500 }
     );
   }

@@ -6,22 +6,21 @@ import Link from 'next/link';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 
-const ResetPasswordConfirm = () => {
+const ResetPasswordConfirm = ({
+  params,
+}: {
+  params: {uid: string; token: string; }
+}) => {
   const router = useRouter();
 
-  const [uid, setUid] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const {uid, token} = params;
+
   const [newPassword, setNewPassword] = useState('');
   const [reNewPassword, setReNewPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setUid(params.get("uid"));
-    setToken(params.get("token"));
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +41,7 @@ const ResetPasswordConfirm = () => {
           re_new_password: reNewPassword,
         }),
       });
-
+      
       if (!response.ok) {
         throw new Error('Failed to reset password. Check the link again.');
       }

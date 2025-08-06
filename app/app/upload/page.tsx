@@ -19,7 +19,7 @@ const UploadVideo = () => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   
-  // State management
+
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormDataState>({
@@ -29,7 +29,7 @@ const UploadVideo = () => {
   const [isUploading, setIsUploading] = useState(false);
 
   const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
-
+  
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -40,8 +40,21 @@ const UploadVideo = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setVideoFile(file);
+    if (file && file.type.startsWith("video/")) {
+      setVideoFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      toast.error("Selected file is not a valid video");
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    }
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +90,6 @@ const UploadVideo = () => {
         throw new Error(data.error || "Failed to get presigned URL");
       }
 
-      console.log("Upload response data:", data);
-
       function sanitizeFileUrl(fileUrl: string): string {
         const parts = fileUrl.split('/');
         const fileName = parts.pop();
@@ -86,11 +97,11 @@ const UploadVideo = () => {
         return [...parts, encodedFileName].join('/');
       }
       
-      // STEP 2: Save metadata in database via a separate API route
+
       const metadata = {
         title: formData.title,
         description: formData.description || '',
-        file_url: data.file_url,     
+        file_url: sanitizeFileUrl(data.file_url),     
         file_key: data.object_key,    
         file_size: videoFile.size,
         file_type: videoFile.type,
@@ -118,9 +129,9 @@ const UploadVideo = () => {
       
       toast.success("Video upload and metadata saved successfully");
       router.push("/");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Upload failed:", error);
-      toast.error(error.message || "Failed to upload video");
+      toast.error((error as Error).message || "Failed to upload video");
     } finally {
       setIsUploading(false);
     }
@@ -133,6 +144,7 @@ const UploadVideo = () => {
           await dispatch(fetchUser()).unwrap();
         }
       } catch (error) {
+        console.log("Auth user not found", error);
         router.push('/login');
       }
     };
@@ -175,8 +187,6 @@ const UploadVideo = () => {
                 maxLength={100}
               />
             </div>
-            <ToastContainer />
-            {/* Description Input */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                 Description
@@ -192,7 +202,6 @@ const UploadVideo = () => {
               />
             </div>
 
-            {/* Video Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Video File *
@@ -217,19 +226,26 @@ const UploadVideo = () => {
                   {videoFile ? videoFile.name : "No file selected"}
                 </span>
               </div>
+
               {previewUrl && (
-                <div className="mt-4">
-                  <video
-                    src={previewUrl}
-                    controls
-                    className="w-full rounded-md border border-gray-200"
-                  />
+                <div className="mt-3 flex justify-center">
+                  <div className="w-full max-w-xs">
+                    <video
+                      key={previewUrl}
+                      src={previewUrl}
+                      controls
+                      className="w-full h-32 object-cover rounded-md border border-gray-200"
+                    />
+                    <p className="text-xs 
+                    text-center text-gray-500 mt-1">
+                      Video preview
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Submit Button */}
-            <div className="pt-4">
+            <div className="pt-2">
               <button
                 type="submit"
                 className={`w-full flex btn btn-primary justify-center py-3 
@@ -237,10 +253,26 @@ const UploadVideo = () => {
                   hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2
                 focus:ring-orange-500 focus:border-orange-500 ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {isUploading ? 'Uploading...' : 'Upload Video'}
+                {isUploading ? (
+                  <>
+                    <svg 
+                      className="animate-spin
+                      -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
+                      fill="none" viewBox="0 0 24 24"
+                    >
+                      <circle  className="opacity-25" cx="12" 
+                        cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" 
+                        fill="currentColor" d="M4 12a8 8 0 
+                          018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Uploading...
+                  </>
+                ) : 'Upload Video'}
               </button>
             </div>
           </form>
+          <ToastContainer position="bottom-right" autoClose={3000}/>
         </div>
       </div>
     </div>

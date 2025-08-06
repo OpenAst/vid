@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 // Types
 export interface Video {
@@ -61,15 +61,17 @@ export const fetchVideos = createAsyncThunk(
       }
       console.log("Videos fetch response", res);
       return await res.json();
-    } catch (err: any) {
+    } catch (err) { 
+      const errorMessage = typeof err === "object" && err !== null && "message" in err
+      ? (err as {message?: string }) : "Internal error"
       return rejectWithValue(
-        err.message || "Network error while fetching videos"
+        errorMessage || "Network error while fetching videos"
       );
     }
   }
 );
 
-// Slice
+
 const videoSlice = createSlice({
   name: "videos",
   initialState,

@@ -17,12 +17,12 @@ function AboutPage() {
     if (!user) {
       dispatch(fetchUser())
         .unwrap()
-        .catch((err: any) => {
+        .catch((err) => {
           console.error('Error fetching user: ', err);
           router.push("/login")
         })
     }
-  }, [dispatch, user]);
+  }, [dispatch, user, router ]);
 
   if (isLoading) return <p className='text-center'>Loading...</p>;
 
@@ -33,4 +33,4 @@ function AboutPage() {
   )
 }
 
-export default AboutPage
+export default AboutPage;

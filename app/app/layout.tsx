@@ -4,7 +4,7 @@ import Fonts from "./fonts";
 import ClientProvider from "./clientlayout"; 
 import Providers from './store/providers';
 import { Toaster } from 'react-hot-toast';
-import { lusitana, inter } from "./fonts";
+import { inter } from "./fonts";
 
 
 export const metadata: Metadata = {

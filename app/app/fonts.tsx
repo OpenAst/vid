@@ -1,11 +1,6 @@
 'use client';
 
-import { Geist, Geist_Mono, Inter, Lusitana } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import {  Geist_Mono, Inter, Lusitana } from "next/font/google";
 
 export const inter = Inter({
   subsets: ['latin'],

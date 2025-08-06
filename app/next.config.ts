@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+
   images: {
     remotePatterns: [
       {
@@ -12,7 +10,9 @@ const nextConfig: NextConfig = {
         pathname: "/free-icons/**"
       }
     ]
-  }
+  },
+
+
 };
 
 export default nextConfig;

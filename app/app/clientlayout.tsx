@@ -2,23 +2,16 @@
 
 import Link from 'next/link';
 import React, { useState } from 'react';
-import { FiSearch } from 'react-icons/fi';
 import LogoutButton from '@/app/components/layout/LogoutButton'
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store/store';
 import Image from 'next/image';
+import { lusitana } from './fonts';
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Searching for:', searchQuery);
-    setSearchOpen(false);
-  };
 
   return (
     <div className="flex h-screen">
@@ -45,10 +38,9 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         </button>
       )}
 
-      {/* Sidebar/Navbar - Now narrower */}
       {isAuthenticated && (
         <aside
-          className={`
+          className={`${lusitana.className}
             w-[75px] md:w-[80px] h-screen border-r fixed left-0 top-0 bg-white z-20 
             flex flex-col justify-between transition-all duration-300
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -94,7 +86,6 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         </aside>
       )}
 
-      {/* Main Content - Adjusted padding */}
       <div 
         className={`
           flex-1 flex flex-col items-center justify-center p-2 transition-all duration-300
@@ -104,7 +95,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         <div className="w-full max-w-screen-lg mx-auto">{children}</div>
       </div>
 
-      {/* Overlay for mobile menu */}
+
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-25 z-10 md:hidden"
