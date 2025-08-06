@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       {status: 201}
     );
     
-  } catch (error: any) {
+  } catch (error) {
     const errorMessage = typeof error === "object" && error !== null && "message" in error
     ? (error as { message?: string }).message 
     : "Internal error";

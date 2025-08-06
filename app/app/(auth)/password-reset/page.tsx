@@ -10,7 +10,6 @@ const PasswordResetPage = () => {
   const [isLoading, setIsLoading ] = useState(false);
   const [isError, setIsError ] = useState(false);
   const [message, setMessage ] = useState('');
-  const router = useRouter();
   
   
   const handleSubmit = async (e: React.FormEvent) => {
