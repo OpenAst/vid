@@ -1,23 +1,17 @@
 'use client'
 
 import React, { useState } from "react";
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 
-interface Props {
-  params: {
-    uid: string;
-    token: string;
-  }
-}
 
-const ResetPasswordConfirm = async ({
-  params }: Props) => {
+
+const ResetPasswordConfirm = () => {
   const router = useRouter();
 
-  const {uid, token} = params;
+  const {uid, token } = useParams() as { uid: string; token: string };
 
   const [newPassword, setNewPassword] = useState('');
   const [reNewPassword, setReNewPassword] = useState('');
