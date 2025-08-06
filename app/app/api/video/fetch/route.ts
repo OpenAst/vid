@@ -21,12 +21,15 @@ export async function GET(req: NextRequest) {
       },
       credentials: 'include',
     });
-
+    
     if (!response.ok) {
       throw new Error('Failed to fetch video');
     }
+    
+    const data = response.json();
+    console.log("Videos fetched:", data);
 
-    const data = await response.json();
+
     return NextResponse.json(data);
 
   } catch (err) {

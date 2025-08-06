@@ -71,11 +71,14 @@ ROOT_URLCONF = 'backend.urls'
 
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SECURE = True 
-CSRF_USE_SESSIONS = True
+CSRF_USE_SESSIONS = False
+
+SESSION_COOKIE_SECURE = True
+
 CSRF_TRUSTED_ORIGINS = [
+    'https://oneclyq.com',
     "https://vid-olive.vercel.app",
     "http://localhost:3000",
-    "http://localhost:3001",
 ]
 
 MEDIA_URL = '/media/'
