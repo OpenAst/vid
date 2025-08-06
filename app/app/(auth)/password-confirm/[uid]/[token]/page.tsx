@@ -6,11 +6,15 @@ import Link from 'next/link';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 
-const ResetPasswordConfirm = ({
-  params,
-}: {
-  params: {uid: string; token: string; }
-}) => {
+interface Props {
+  params: {
+    uid: string;
+    token: string;
+  }
+}
+
+const ResetPasswordConfirm = async ({
+  params }: Props) => {
   const router = useRouter();
 
   const {uid, token} = params;
@@ -49,7 +53,7 @@ const ResetPasswordConfirm = ({
       setSuccess("Password reset successful. Redirecting to login...");
       toast.success('Password reset successful');
       setTimeout(() => router.push('/login'), 3000);
-    } catch (error: unknown) {
+    } catch (error) {
       const errMessage = (error as Error).message || 'Failed to reset password';
       setError(errMessage);
     }
