@@ -77,6 +77,7 @@ SESSION_COOKIE_SECURE = True
 
 CSRF_TRUSTED_ORIGINS = [
     'https://oneclyq.com',
+    'vid-4yi2.onrender.com'
     "https://vid-olive.vercel.app",
     "http://localhost:3000",
 ]

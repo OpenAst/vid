@@ -28,7 +28,7 @@ class VideoPagination(PageNumberPagination):
 class VideoUploadView(generics.CreateAPIView):
     serializer_class = VideoSerializer
     permission_classes = [IsAuthenticated]
-    parser_classes = [JSONParser, MultiPartParser]
+    parser_classes = [JSONParser]
 
     def create(self, request, *args, **kwargs):
         logger = logging.getLogger(__name__)

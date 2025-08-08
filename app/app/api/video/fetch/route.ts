@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       throw new Error('Failed to fetch video');
     }
     
-    const data = response.json();
+    const data = await response.json();
     console.log("Videos fetched:", data);
 
 
