@@ -11,7 +11,6 @@ import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
   const videos = useSelector((state: RootState) => state.video.videos);
-  const isLoading = useSelector((state: RootState) => state.video.isLoading);
   const isError = useSelector((state: RootState) => state.video.isError);
   const { token, user } = useSelector((state: RootState) => state.auth);
 

@@ -6,7 +6,7 @@ import { fetchUser } from '@/app/store/authSlice';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Feed from './components/video/Feed';
-
+import LoginPage from './(auth)/login/page';
 
 
 function HomePage() {
@@ -48,13 +48,7 @@ function HomePage() {
   );
   
   if (isError) {
-    return (
-      <div className="flex flex-col h-screen items-center justify-center">
-        <p className="text-red-500 text-lg font-semibold mb-5">Unauthorized !</p>
-        <p>Please login or sign up</p>
-        <Link href="/login" className="text-blue-500 underline mt-5">Please Login</Link>
-      </div>
-    )
+    return <LoginPage />
   }
 
   return (

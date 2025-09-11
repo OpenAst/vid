@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Heart, MessageCircle, Share2, X } from "lucide-react";
+import { X } from "lucide-react";
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Comments from "./Comments";
@@ -34,7 +34,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
   (
     {
       id,
-      title,
       thumbnail_url,
       file_url,
       jwtToken,

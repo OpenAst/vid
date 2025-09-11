@@ -246,8 +246,8 @@ export const updateUser = createAsyncThunk(
         throw new Error(data.error || "Failed to update user profile")
       }
       return data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Something went wrong");
+    } catch (err) {
+      return rejectWithValue(err || "Something went wrong");
     }
   }
 );
