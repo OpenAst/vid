@@ -8,11 +8,14 @@ from django.db import models
 from .models import UserAccount, Profile
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from .serializers import CustomTokenObtainPairSerializer, ProfileUpdateSerializer 
+from .serializers import CustomTokenObtainPairSerializer, UserProfileUpdateSerializer, PublicProfileSerializer
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.http import urlsafe_base64_decode
 from .tokens import OneDayActivationTokenGenerator
+import boto3
+from django.conf import settings
+from django.http import JsonResponse
 
 
 
@@ -65,23 +68,59 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
         return response
         
-class ProfileUpdateView(generics.UpdateAPIView):
-    serializer_class = ProfileUpdateSerializer
+class UserDetailProfileUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self):
+        if self.request.method in ["PATCH", "PUT"]:
+            return UserProfileUpdateSerializer
+        return UserDetailSerializer
+
     def get_object(self):
-        profile, created = Profile.objects.get_or_create(user=self.request.user)
-        return profile
-    
-    def update(self, request, *args, **kwargs):
-        try:
-            return super().update(request, *args, **kwargs)
-        except Exception as e:
-            print("Update error", str(e))
-            return Response({
-                "error": "Profile update failed"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+        return self.request.user
+        
+
+class PublicProfileView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = PublicProfileSerializer
+    permission_classes = [permissions.AllowAny]
+
+    lookup_field = "username"
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def get_avatar_url(request):
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name='auto'
+    )
+    file_type = request.data.get("file_type", "image/jpeg")
+    file_name = request.data.get("file_name", f"avatars/{request.user.id}.jpg")
+
+    key = f"avatars/{request.user.id}.{file_type.split('/')[-1]}"
+
+    presigned_url = s3.generate_presigned_url(
+        ClientMethod="put_object",
+        Params={
+            "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+            "Key": key,
+            "ContentType": file_type
+        },
+        ExpiresIn=3600,
+    )
+
+    if hasattr(settings, "AWS_S3_CUSTOM_DOMAIN"):
+        public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
+    else:
+        public_url = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
+        
+    return JsonResponse({
+        "upload_url": presigned_url, "public_url": public_url 
+    })
+
 @ensure_csrf_cookie
 def csrf(request):
     return JsonResponse({'message': 'CSRF cookie set'})

@@ -20,6 +20,8 @@ function HomePage() {
     email: '',
   });
 
+
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -39,8 +41,12 @@ function HomePage() {
     fetchData();
   }, [dispatch]);
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen">🔄 Loading...</div>
-
+  if (isLoading) return (
+    <div className="flex justify-center items-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+    </div>
+  );
+  
   if (isError) {
     return (
       <div className="flex flex-col h-screen items-center justify-center">
@@ -53,10 +59,10 @@ function HomePage() {
 
   return (
     <div className="flex h-screen">
-      <div className="flex-1 flex flex-col items-center p-2">
+      <div className="flex-1 flex flex-col items-center">
         {isAuthenticated && (
-          <div className="w-full max-w-4xl">
-            <div className="text-center fixed top-0 left-0 right-0 z-10 bg-white py-4">
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="text-center items-center fixed top-0 left-0 right-0 z-20 bg-white py-4">
               <p className="text-md">
                 Hello, 
                 <span className="text-xl font-semibold text-center bg-gray-20 ">
@@ -66,7 +72,7 @@ function HomePage() {
               <p className='text-center'>You are welcome to this amazing platform</p>
             </div>
 
-            <div className="mt-12">
+            <div className="mt-12 h-[calc(100vh-4rem)]">
               <Feed jwtToken={token}/>
             </div>
           </div>

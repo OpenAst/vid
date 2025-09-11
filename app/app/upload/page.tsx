@@ -90,18 +90,12 @@ const UploadVideo = () => {
         throw new Error(data.error || "Failed to get presigned URL");
       }
 
-      function sanitizeFileUrl(fileUrl: string): string {
-        const parts = fileUrl.split('/');
-        const fileName = parts.pop();
-        const encodedFileName = encodeURIComponent(fileName || '');
-        return [...parts, encodedFileName].join('/');
-      }
       
 
       const metadata = {
         title: formData.title,
         description: formData.description || '',
-        file_url: sanitizeFileUrl(data.file_url),     
+        file_url: data.file_url,     
         file_key: data.object_key,    
         file_size: videoFile.size,
         file_type: videoFile.type,

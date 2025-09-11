@@ -38,7 +38,9 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
-  profile_picture?: string;
+  avatar?: string;
+  bio?: string;
+  followers?: number;
 }
 
 interface AuthState {
@@ -216,6 +218,7 @@ export const fetchUser = createAsyncThunk(
       throw new Error(error.error) || 'Failed to fetch user profile';
     }  
     const data = await res.json();
+
     return data;
     } catch (error: unknown) {
       console.log('Error', error)
@@ -224,6 +227,30 @@ export const fetchUser = createAsyncThunk(
       }
     }
   );
+
+export const updateUser = createAsyncThunk(
+  'auth/updateUser',
+  async (
+    userUpdates: {avatar?: string; first_name?: string, last_name?: string, bio?: string }, { rejectWithValue }) => {
+    try {
+      const res = await fetch("api/auth/user_details", {
+        method: 'PATCH',
+        headers: { "Content-Type": "application/json" }, 
+        credentials: "include",
+        body: JSON.stringify(userUpdates),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update user profile")
+      }
+      return data;
+    } catch (err: any) {
+      return rejectWithValue(err.message || "Something went wrong");
+    }
+  }
+);
 
 export const fetchPublicUser = createAsyncThunk(
   "auth/fetchPublicUser",
@@ -236,24 +263,7 @@ export const fetchPublicUser = createAsyncThunk(
       return thunkAPI.rejectWithValue(error instanceof Error ? error.message: "Error fetching user profile")
     }
   }
-)
-
-export const updateProfile = createAsyncThunk(
-  'auth/updateProfile',
-  async (formData: FormData, { rejectWithValue }) => {
-    try {
-      const res = await fetch('/api/auth/profile_update/', {
-        method: 'PUT',
-        body: formData,
-        credentials: 'include',
-      });
-      return await res.json();
-
-    } catch (err) {
-      return rejectWithValue(err || 'Failed to update profile');
-    }
-  }
-)
+);
 
 
 const authSlice = createSlice({
@@ -269,6 +279,9 @@ const authSlice = createSlice({
     setUnAuthenticated(state) {
       state.isAuthenticated = false;
       state.user = null;
+    },
+    resetError: (state) => {
+      state.isError = false;
     }
   },
   extraReducers: (builder) => {
@@ -329,15 +342,29 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.isError = false;
       })
-      .addCase(fetchUser.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.user = action.payload.user;
-        state.isAuthenticated = true;
-        state.token = action.payload.token;
-      })
       .addCase(fetchUser.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
+      })
+      .addCase(fetchUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.token = action.payload.token;
+      })
+      .addCase(updateUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.errorMessage = action.payload as string;
+      })
+      .addCase(updateUser.fulfilled, (state, action) => {
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        } else {
+          state.user = action.payload;
+        }
+        state.isLoading = false;
+        state.isError = false;
       })
       .addCase(fetchPublicUser.pending, (state) => { 
         state.isLoading = true;
@@ -365,22 +392,8 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isError = true;
       })
-      .addCase(updateProfile.pending, (state) => {
-        state.isLoading = true;
-        state.isError = false;
-      })
-      .addCase(updateProfile.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.user = action.payload.user;
-        state.isAuthenticated = true;
-      }) 
-      .addCase(updateProfile.rejected, (state) => {
-        state.isLoading = false;
-        state.isError = true;
-      })
-      
   }
 });
 
-export const { setAuthenticated, setUser, setUnAuthenticated } = authSlice.actions;
+export const { setAuthenticated, setUnAuthenticated, setUser, resetError } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,73 +1,168 @@
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchVideos } from '../../store/videoSlice';
-import { RootState, AppDispatch } from "../../store/store";
-import VideoCard from './VideoCard';
-import Comments from "./Comments";
-import { Video } from "@/app/store/videoSlice";
+"use client";
 
-const Feed = ({ jwtToken }: { jwtToken: string}) => {
+import { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchVideos } from "../../store/videoSlice";
+import { RootState, AppDispatch } from "../../store/store";
+import VideoCard, { VideoCardHandle } from "./VideoCard";
+import CommentsDrawer from "./CommentsDrawer";
+import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
+
+const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
   const videos = useSelector((state: RootState) => state.video.videos);
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
   const isError = useSelector((state: RootState) => state.video.isError);
   const { token, user } = useSelector((state: RootState) => state.auth);
 
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
 
-  
+  const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
+  const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const videos =  dispatch(fetchVideos({ page: 1, limit: 10 }))
-        .unwrap()
-        console.log("Videos fetched:", videos)
-      } catch (err) {
-        console.log("Error fetching videos", err);
-      }
-    };
-
-    fetchData();
+    dispatch(fetchVideos({ page: 1, limit: 10 }));
   }, [dispatch]);
 
-  return (
-    <div className="flex justify-center">
-      {isLoading && (
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      )}
-      {isError && <p className="text-red-500 text-center">{isError}</p>}
-      <div className="flex flex-col items-center gap-"> 
-        {Array.isArray(videos) && videos.map((video: Video) => (
-          <div key={video.id} className="w-full max-w-2xl">
-            <VideoCard
-              id={video.id}
-              title={video.title}
-              thumbnail={video.thumbnail_url || null}
-              file_url={video.file_url || ""}
-              views={video.views || 0}
-              timestamp={video.timestamp || "N/A"}
-              jwtToken={jwtToken}
-            />
+  useEffect(() => {
+    if (!Array.isArray(videos) || videos.length === 0) return;
 
-             <div className="mt-2">
-              <Comments
-                jwtToken={token}
-                roomId={video.id}
-                currentUser={{
-                  id: user?.id || "",
-                  name: user?.username || "Anonymous",
-                  avatar: user?.profile_picture
-                }}
-              />
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const indexAttr = entry.target.getAttribute("data-index");
+            const index = indexAttr ? Number(indexAttr) : NaN;
+            if (!Number.isNaN(index)) setCurrentIndex(index);
+          }
+        });
+      },
+      { threshold: 0.65 }
+    );
+
+    wrapperRefs.current.forEach((el) => el && observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [videos]);
+
+  useEffect(() => {
+    videoRefs.current.forEach((card, idx) => {
+      const video = card?.video;
+      if (!video) return;
+
+      video.muted = true;
+
+      if (idx === currentIndex && !card.isUserPaused) {
+        void video.play();
+      } else {
+        video.pause();
+        video.currentTime = 0;
+      }
+    });
+  }, [currentIndex]);
+
+  return (
+    <div className="flex justify-center relative">
+      {isError && <p className="text-red-500 text-center">{String(isError)}</p>}
+
+      <div className="flex w-12 flex-col items-center justify-center gap-2 ml-2 mr-4 space-y-4"></div>
+
+      <div className="h-[95vh] w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-white">
+        {Array.isArray(videos) &&
+          videos.map((video, idx) => (
+            <div
+              key={video.id}
+              data-index={String(idx)}
+              ref={(el) => {
+                wrapperRefs.current[idx] = el;
+              }}
+              className="h-[95%] w-full snap-start flex justify-center relative"
+            >
+              <div className="flex-1 max-w-sm mx-auto flex flex-col items-center justify-center mb-4 relative">
+                <VideoCard
+                  ref={(el) => {
+                    videoRefs.current[idx] = el;
+                  }}
+                  id={video.id}
+                  title={video.title}
+                  thumbnail_url={video.thumbnail_url || null}
+                  file_url={video.file_url || ""}
+                  views={video.views || 0}
+                  timestamp={video.timestamp || "N/A"}
+                  jwtToken={jwtToken}
+                  currentUser={{
+                    id: user?.id || "",
+                    name: user?.username || "",
+                    avatar: user?.avatar,
+                  }}
+                  isCommentsOpen={openCommentsFor === video.id}
+                  onCloseComments={() => setOpenCommentsFor(null)}
+                />
+
+                {/* username + views wrapper always here, content conditional */}
+                <div className="absolute bottom-4 left-4 w-[90%] text-white z-20">
+                  {openCommentsFor !== video.id && (
+                    <>
+                      <div className="flex items-center gap-2 text-sm opacity-90">
+                        <span className="font-semibold">
+                          @{video.uploader?.username || "Unknown"}
+                        </span>
+                        <span className="text-xs">{video.timestamp}</span>
+                      </div>
+                      <p className="text-sm mt-1">{video.title}</p>
+                      <div className="flex items-center gap-1 text-xs opacity-80 mt-1">
+                        <Eye className="w-4 h-4" />
+                        <span>{video.views || 0} views</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {openCommentsFor === video.id && (
+                  <div className="absolute bottom-0 w-full">
+                    <CommentsDrawer
+                      videoId={video.id}
+                      jwtToken={token}
+                      currentUser={{
+                        id: user?.id || "",
+                        name: user?.username || "Anonymous",
+                        avatar: user?.avatar,
+                      }}
+                      onClose={() => setOpenCommentsFor(null)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex w-12 flex-col items-center justify-center gap-2 ml-2 mr-4 space-y-4">
+                <button className="flex flex-col items-center hover:scale-110 transition">
+                  <Heart className="w-8 h-8" />
+                  <span className="text-xs mt-1">Like</span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    setOpenCommentsFor((prev) =>
+                      prev === video.id ? null : video.id
+                    )
+                  }
+                  className="flex flex-col items-center hover:scale-110 transition"
+                >
+                  <MessageCircle className="w-8 h-8" />
+                  <span className="text-xs mt-1">Comments</span>
+                </button>
+
+                <button className="flex flex-col items-center hover:scale-110 transition">
+                  <Share2 className="w-8 h-8" />
+                  <span className="text-xs mt-1">Share</span>
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );
 };
 
 export default Feed;
-

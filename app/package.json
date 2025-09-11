@@ -3,13 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@next/font": "^14.2.15",
     "@qdrant/js-client-rest": "^1.14.1",
     "@reduxjs/toolkit": "^2.5.0",
     "@tanstack/react-query": "^5.62.7",
@@ -18,9 +17,10 @@
     "cookie": "^1.0.2",
     "cookies": "^0.9.1",
     "daisyui": "^4.12.22",
+    "framer-motion": "^12.23.12",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.487.0",
-    "next": "15.1.0",
+    "next": "^15.5.2",
     "qdrant-client": "^0.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -29,6 +29,7 @@
     "react-icons": "^5.5.0",
     "react-redux": "^9.2.0",
     "react-toastify": "^11.0.5",
+    "safe-chain-test": "^0.0.1-security",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "uuid": "^11.0.3"

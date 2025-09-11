@@ -8,7 +8,7 @@ from urllib.parse import quote
 class UserPublicSerializer(serializers.ModelSerializer):
   class Meta:
     model = UserAccount
-    fields = ['id', 'email']
+    fields = ['id', 'email', 'username', 'first_name', 'last_name']
 
 class VideoSerializer(serializers.ModelSerializer):
   uploader = UserPublicSerializer(read_only=True)

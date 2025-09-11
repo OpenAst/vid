@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
-import { register } from '@/app/store/authSlice';
+import { register, resetError } from '@/app/store/authSlice';
 import Link from 'next/link';
 import AuthLayout from '../../components/layout/AuthLayout';
 import { toast, ToastContainer } from 'react-toastify';
@@ -25,7 +25,11 @@ const RegisterPage = () => {
     confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  
+
+  useEffect(() => {
+    dispatch(resetError());
+  }, [dispatch]);
+
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
 

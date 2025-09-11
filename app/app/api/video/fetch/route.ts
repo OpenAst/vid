@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     }
     
     const data = await response.json();
-    console.log("Videos fetched:", data);
+    console.log("Videos fetched:", JSON.stringify(data, null, 2));
 
 
     return NextResponse.json(data);

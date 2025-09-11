@@ -105,12 +105,15 @@ const LoginPage = () => {
 
   return (
     <AuthLayout title="Sign In">
-      <p className="text-center mb-6">Sign into your Account</p>
+      <div className='max-w-md mx-auto p-8 bg-white/10 backdrop-blur-lg rounded border border-white/20 shadow-xl'>
+
+      </div>
+      <p className="text-center mb-6 text-white">Sign into your Account</p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="form-control">
           <input
-            className="input input-bordered w-full"
+            className="input input-bordered w-full bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-blue"
             type="email"
             placeholder="Email"
             name="email"
@@ -121,7 +124,7 @@ const LoginPage = () => {
         </div>
         <div className="form-control">
           <input
-            className="input input-bordered w-full"
+            className="input input-bordered w-full bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-blue"
             type="text"
             placeholder="Username"
             name="username"  
@@ -133,7 +136,7 @@ const LoginPage = () => {
         
         <div className="form-control relative">
           <input
-            className="input w-full"
+            className="input w-full bg-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-blue"
             type={showPassword ? 'text' : 'password'}
             placeholder="Password"
             name="password"
@@ -151,7 +154,7 @@ const LoginPage = () => {
         </div>
 
         {isError && errorMessage && (
-          <div className="bg-red-500 text-white text-sm text-center p-2 rounded-md">
+          <div className="bg-red-500/80 backdrop-blur-sm text-white text-sm text-center p-2 rounded-md">
             {errorMessage}
           </div>
         )}

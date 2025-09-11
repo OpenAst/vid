@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     
     try {
       data = await apiRes.json();
+      console.log("Login details", data);
     } catch (err) {
       console.log("Error", err);
       const text = await apiRes.text();

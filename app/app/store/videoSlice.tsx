@@ -14,6 +14,7 @@ export interface Video {
   uploader: {
     id: string;
     email: string;
+    username: string;
   };
 }
 

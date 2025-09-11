@@ -8,7 +8,7 @@ const AuthLayout = ({
   title: string;
 }) => {
   return (
-    <div className="flex justify-center items-center min-h-screen">
+    <div className="flex justify-center items-center mt-4 min-h-screen">
       <div className="bg-white p-8 rounded-md shadow-sm w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center">{title}</h1>
         {children}

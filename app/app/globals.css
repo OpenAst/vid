@@ -14,13 +14,29 @@
   }
 }
 
-body {
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+html, body {
   color: var(--foreground);
   background: var(--background);
+  overflow: hidden;
   font-family: Helvetica, sans-serif;
   padding: 1rem;
 }
 
 h1 {
   font-family: var(--font-gt-super, Arial);
+}
+
+#__next, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }

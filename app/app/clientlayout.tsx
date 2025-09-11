@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import LogoutButton from '@/app/components/layout/LogoutButton'
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store/store';
@@ -11,14 +11,26 @@ import { lusitana } from './fonts';
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme')|| "light";
+    setDarkMode(storedTheme === "dark");
+    document.documentElement.setAttribute("data-theme", storedTheme);
+  }, []);
+
+  useEffect(() => {
+      const theme = darkMode ? "dark" : "light";
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', 'light');
+  }, [darkMode]);
 
   return (
-    <div className="flex h-screen">
-      {/* Mobile Hamburger Button */}
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed top-2 left-4 z-30 p-2 rounded-md bg-white shadow-sm"
+          className="md:hidden fixed top-2 left-4 z-30 p-2 rounded-md dark:bg-gray-800 bg-white shadow-sm"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <svg
@@ -42,14 +54,14 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         <aside
           className={`${lusitana.className}
             w-[75px] md:w-[80px] h-screen border-r fixed left-0 top-0 bg-white z-20 
-            flex flex-col justify-between transition-all duration-300
+            dark:bg-gray-900 flex flex-col justify-between transition-all duration-300
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
-          <nav className="space-y-8 p-2 mt-16">
+          <nav className="space-y-8 p-2 mt-20">
             <Link 
               href="/" 
-              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
+              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Image src="/home.svg" alt="Home" width={18} height={18} />
@@ -57,7 +69,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             </Link>
             <Link 
               href="/about" 
-              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
+              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Image src="/globe.svg" alt="About" width={18} height={18} />
@@ -65,23 +77,33 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             </Link>
             <Link 
               href="/upload" 
-              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
+              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <Image src="file.svg" alt="Upload" width={18} height={18} />
+              <Image src="/file.svg" alt="Upload" width={18} height={18} />
               <span className="hidden md:inline mt-1 md:mt-0 md:ml-2">Upload</span>
             </Link>
             <Link 
               href="/profile" 
-              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
+              className="flex flex-col md:flex-row items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Image src="/user_icon.png" alt="Profile" width={24} height={24} />
               <span className="hidden md:inline mt-1 md:mt-0 md:ml-2">Profile</span>
             </Link>
           </nav>
-          <div className="p-2 hover:bg-gray-100 mb-2 rounded">
-            <LogoutButton />
+
+          <div className='p-2 mb-2 space-y-2'>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className='w-full text-xs flex items-center justify-center px-2 py-1 rounded by-gray-200 dark:bg-gray-700'
+            >
+              {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+            </button>
+
+            <div className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+              <LogoutButton />
+            </div>
           </div>
         </aside>
       )}
@@ -104,4 +126,4 @@ export default function ClientProvider({ children }: { children: React.ReactNode
       )}
     </div>
   );
-}
+}``

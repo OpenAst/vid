@@ -174,11 +174,41 @@ class CommentLikeViewSet(viewsets.ViewSet):
 logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def initiate_multipart_upload(request):
+    file_name = request.data['file_name']
+    object_key = f"user_{request.user.id}/{uuid.uuid4()}_{file_name}"
+
+    s3 = boto3.client(
+        's3',
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name='auto'
+    )
+    response = s3.create_multipart_upload(
+        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+        Key=object_key,
+        ACL='public-read',
+        ContentType='application/octet-stream'
+    )
+    public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{object_key}"
+
+    return Response(
+        {
+            'upload_id': response['UploadId'],
+            'object_key': object_key,
+            'public_url': public_url
+        })
+
+@api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
-def get_presigned_url(request):
+def get_presigned_part_url(request):
     try:
-        file_name = request.data['file_name']
+        object_key = request.data['object_key']
         file_type = request.data['file_type']
+        part_number = int(request.data['part_number'])
+        upload_id = request.data['upload_id']
         
         s3 = boto3.client(
             's3',
@@ -191,16 +221,14 @@ def get_presigned_url(request):
                 s3={'addressing_style': 'virtual'}
             )
         )
-
-        object_key = f"user_{request.user.id}/{uuid.uuid4()}_{file_name}"
         
         presigned_url = s3.generate_presigned_url(
-            'put_object',
+            'upload_part',
             Params={
                 'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
                 'Key': object_key,
-                'ContentType': file_type,
-                'ACL': 'public-read'
+                'UploadId': upload_id,
+                'PartNumber': part_number,
             },
             ExpiresIn=3600 
         )
@@ -219,6 +247,63 @@ def get_presigned_url(request):
         logger.error(f"Error generating presigned URL: {e}")
         return Response({'error': str(e)}, status=500)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def complete_multipart_upload(request):
+    try:
+        object_key = request.data['object_key']
+        upload_id = request.data['upload_id']
+        parts = request.data['parts']
+
+        s3 = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name='auto'
+        )
+
+        response = s3.complete_multipart_upload(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=object_key,
+            UploadId=upload_id,
+            MultipartUpload={'Parts': parts}
+        )
+
+        public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{object_key}"
+
+        return Response({
+            'message': 'Upload complete',
+            'location': response.get('Location'),
+            'object_key': object_key,
+            'public_url': public_url
+            })
+    except Exception as e:
+        logger.exception("Error completing multipart upload")
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def abort_multipart_upload(request):
+    object_key = request.data['object_key']
+    upload_id = request.data['upload_id']
+
+    s3 = boto3.client(
+        's3',
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name='auto'
+    )
+
+    s3.abort_multipart_upload(
+        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+        Key=object_key,
+        UploadId=upload_id
+    )
+
+    return Response({'message': 'Upload aborted'})
 
 def extract_and_upload_thumbnail(video_url, video_instance):
     temp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name

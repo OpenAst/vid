@@ -3,6 +3,10 @@ from . import views
 
 urlpatterns = [
     path('videos/save-metadata/', views.VideoUploadView.as_view(), name='video-upload'),
+    path('videos/get_presigned_part_url/', views.get_presigned_part_url, name='presigned_part_url'),
+    path('videos/initiate_multipart_upload/', views.initiate_multipart_upload, name='initiate_upload'),
+    path('videos/complete_multipart_upload/', views.complete_multipart_upload, name='complete_upload'),
+    path('videos/abort_multipart_uplaod/', views.abort_multipart_upload, name='abort_multipart_upload'),
     path('videos/', views.VideoListView.as_view(), name='video-list'),
     path('videos/<int:pk>/', views.VideoDetailView.as_view(), name='video-detail'),
 
