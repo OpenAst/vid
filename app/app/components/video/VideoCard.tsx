@@ -44,7 +44,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     ref
   ) => {
     const [isPortrait, setIsPortrait] = useState(false);
-    const [isMuted, setIsMuted] = useState(true);
+    const [isMuted, setIsMuted] = useState(false);
     const [isUserPaused, setIsUserPaused] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -92,7 +92,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
         <motion.div
           animate={{ height: isCommentsOpen ? "60%" : "100%" }}
           transition={{ duration: 0.3 }}
-          className="relative w-full h-[90vh] max-w-sm rounded-xl aspect-[9/16] overflow-hidden shadow-lg"
+          className="relative w-full h-[95vh] sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
         >
           <video
             id={id}
@@ -105,7 +105,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
             playsInline
             autoPlay
             loop
-            muted={isMuted}
+            muted={true}
             onClick={handleVideoClick}
             onLoadedMetadata={(e) => {
               const video = e.currentTarget;
@@ -114,7 +114,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           />
           <button
             onClick={toggleMute}
-            className="absolute top-4 left-4 bg-black/50 p-3 rounded-full hover:bg-black/70 transition z-20"
+            className="absolute top-4 left-4 bg-black/50 p-3 sm:p-3 rounded-full hover:bg-black/70 transition z-20"
           >
             {isMuted ? "🔇" : "🔊"}
           </button>
@@ -123,13 +123,13 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
         <AnimatePresence>
           {isCommentsOpen && (
             <motion.div
-              className="bg-white w-full max-w-sm flex-1 rounded-t-2xl shadow-lg mt-2 flex flex-col"
+              className="bg-white w-full max-w-sm sm:max-w-sm md:max-w-md flex-1 rounded-t-2xl shadow-lg mt-2 flex flex-col"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ duration: 0.3 }}
             >
-              <div className="flex justify-between items-center p-3 border-b">
+              <div className="flex justify-between items-center p-3 sm:p-4 border-b">
                 <h2 className="font-semibold">Comments</h2>
                 <button
                   onClick={onCloseComments}

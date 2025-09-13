@@ -271,7 +271,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setAuthenticated(state, action) {
-      state.isAuthenticated = action.payload.user;
+      state.isAuthenticated = !!action.payload;
     },
     setUser(state, action) {
       state.user = action.payload.user;
@@ -293,6 +293,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
+        state.isAuthenticated = true;
       })
       .addCase(login.rejected, (state) => {
         state.isLoading = false;
@@ -386,7 +387,6 @@ const authSlice = createSlice({
       .addCase(verify.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
-        state.isAuthenticated = true;
       })
       .addCase(verify.rejected, (state) => {
         state.isLoading = false;

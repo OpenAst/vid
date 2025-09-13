@@ -53,6 +53,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       video.muted = true;
 
       if (idx === currentIndex && !card.isUserPaused) {
+        video.muted = false;
         void video.play();
       } else {
         video.pause();
@@ -65,7 +66,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     <div className="flex justify-center relative">
       {isError && <p className="text-red-500 text-center">{String(isError)}</p>}
 
-      <div className="flex w-12 flex-col items-center justify-center gap-2 ml-2 mr-4 space-y-4"></div>
 
       <div className="h-[95vh] w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-white">
         {Array.isArray(videos) &&
@@ -76,9 +76,9 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               ref={(el) => {
                 wrapperRefs.current[idx] = el;
               }}
-              className="h-[95%] w-full snap-start flex justify-center relative"
+              className="h-[92vh] w-full snap-start flex justify-center relative"
             >
-              <div className="flex-1 max-w-sm mx-auto flex flex-col items-center justify-center mb-4 relative">
+              <div className="flex-1 w-full sm:max-w-sm mx-auto flex flex-col items-center justify-center mb-4 relative">
                 <VideoCard
                   ref={(el) => {
                     videoRefs.current[idx] = el;
@@ -100,7 +100,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 />
 
                 {/* username + views wrapper always here, content conditional */}
-                <div className="absolute bottom-4 left-4 w-[90%] text-white z-20">
+                <div className="absolute bottom-4 left-4 w-[100%] text-white z-20">
                   {openCommentsFor !== video.id && (
                     <>
                       <div className="flex items-center gap-2 text-sm opacity-90">
@@ -134,9 +134,9 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 )}
               </div>
 
-              <div className="flex w-12 flex-col items-center justify-center gap-2 ml-2 mr-4 space-y-4">
+              <div className="absolute right-10 md:right-28 bottom-28 flex flex-col items-center gap-6">
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <Heart className="w-8 h-8" />
+                  <Heart className="w-6 h-6 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Like</span>
                 </button>
 
@@ -148,12 +148,12 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                   }
                   className="flex flex-col items-center hover:scale-110 transition"
                 >
-                  <MessageCircle className="w-8 h-8" />
+                  <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Comments</span>
                 </button>
 
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <Share2 className="w-8 h-8" />
+                  <Share2 className="w-6 h-6 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Share</span>
                 </button>
               </div>
