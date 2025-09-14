@@ -159,12 +159,12 @@ const UploadVideo = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen md:max-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white shadow rounded-lg p-6 sm:p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Upload New Video</h1>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 relative">
             {/* Title Input */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -228,7 +228,7 @@ const UploadVideo = () => {
                       key={previewUrl}
                       src={previewUrl}
                       controls
-                      className="w-full h-32 object-cover rounded-md border border-gray-200"
+                      className="w-full h-32 object-cover rounded-md border border-blue-400"
                     />
                     <p className="text-xs 
                     text-center text-gray-500 mt-1">
@@ -239,10 +239,10 @@ const UploadVideo = () => {
               )}
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 mb-2 sticky bottom-0 bg-white">
               <button
                 type="submit"
-                className={`w-full flex btn btn-primary justify-center py-3 
+                className={`w-full mb-8 flex btn btn-primary justify-center py-3 
                   px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
                   hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2
                 focus:ring-orange-500 focus:border-orange-500 ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}`}

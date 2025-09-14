@@ -7,9 +7,11 @@ import { RootState, AppDispatch } from "../../store/store";
 import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
 import { Heart, Eye, Share2, MessageSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
   const videos = useSelector((state: RootState) => state.video.videos);
   const isError = useSelector((state: RootState) => state.video.isError);
   const { token, user } = useSelector((state: RootState) => state.auth);
@@ -50,7 +52,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       const video = card?.video;
       if (!video) return;
 
-
       if (idx === currentIndex) {
         if (!card.isUserPaused) {
           void video.play();
@@ -64,10 +65,12 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     });
   }, [currentIndex]);
 
+  if (isError) {
+    router.push('/login');
+  }
+
   return (
     <div className="flex justify-center relative">
-      {isError && <p className="text-red-500 text-center">Unauthorized</p>}
-
 
       <div className="h-[95vh] w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-white">
         {Array.isArray(videos) &&
@@ -78,65 +81,64 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               ref={(el) => {
                 wrapperRefs.current[idx] = el;
               }}
-              className="h-[92vh] w-full snap-start flex justify-center relative"
+              className="h-[90vh] snap-start flex justify-center relative mb-2"
             >
-              <div className="flex-1 w-full sm:max-w-sm mx-auto flex flex-col items-center justify-center mb-4 relative">
-                <VideoCard
-                  ref={(el) => {
-                    videoRefs.current[idx] = el;
-                  }}
-                  id={video.id}
-                  title={video.title}
-                  thumbnail_url={video.thumbnail_url || null}
-                  file_url={video.file_url || ""}
-                  views={video.views || 0}
-                  timestamp={video.timestamp || "N/A"}
-                  jwtToken={jwtToken}
-                  currentUser={{
-                    id: user?.id || "",
-                    name: user?.username || "",
-                    avatar: user?.avatar,
-                  }}
-                  isCommentsOpen={openCommentsFor === video.id}
-                  onCloseComments={() => setOpenCommentsFor(null)}
-                />
+              <VideoCard
+                ref={(el) => {
+                  videoRefs.current[idx] = el;
+                }}
+                id={video.id}
+                title={video.title}
+                thumbnail_url={video.thumbnail_url || null}
+                file_url={video.file_url || ""}
+                views={video.views || 0}
+                timestamp={video.timestamp || "N/A"}
+                jwtToken={jwtToken}
+                currentUser={{
+                  id: user?.id || "",
+                  name: user?.username || "",
+                  avatar: user?.avatar,
+                }}
+                isCommentsOpen={openCommentsFor === video.id}
+                onCloseComments={() => setOpenCommentsFor(null)}
+              />
 
-                {/* username + views wrapper always here, content conditional */}
-                <div className="absolute bottom-4 left-8 w-[100%] text-white z-20">
-                  {openCommentsFor !== video.id && (
-                    <>
-                      <div className="flex items-center gap-2 text-sm opacity-90">
-                        <span className="font-semibold">
-                          @{video.uploader?.username || "Unknown"}
-                        </span>
-                        <span className="text-xs">{video.timestamp}</span>
-                      </div>
-                      <p className="text-sm mt-1">{video.title}</p>
-                      <div className="flex items-center gap-1 text-xs opacity-80 mt-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{video.views || 0} views</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {openCommentsFor === video.id && (
-                  <div className="absolute bottom-0 w-full">
-                    <CommentsDrawer
-                      videoId={video.id}
-                      jwtToken={token}
-                      currentUser={{
-                        id: user?.id || "",
-                        name: user?.username || "Anonymous",
-                        avatar: user?.avatar,
-                      }}
-                      onClose={() => setOpenCommentsFor(null)}
-                    />
-                  </div>
+              {/* username + views wrapper always here, content conditional */}
+              <div className="absolute bottom-4 w-[50vh] text-white z-20">
+                {openCommentsFor !== video.id && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm opacity-90">
+                      <span className="font-semibold">
+                        @{video.uploader?.username || "Unknown"}
+                      </span>
+                      <span className="text-xs">{video.timestamp}</span>
+                    </div>
+                    <p className="text-sm mt-1">{video.title}</p>
+                    <div className="flex items-center gap-1 text-xs opacity-80 mt-1">
+                      <Eye className="w-4 h-4" />
+                      <span>{video.views || 0} views</span>
+                    </div>
+                  </>
                 )}
               </div>
 
-              <div className="absolute inset-y-0 right-16 md:right-52 bottom-28 flex flex-col items-center justify-center gap-6 pb-20">
+              {openCommentsFor === video.id && (
+                <div className="absolute bottom-0 w-full">
+                  <CommentsDrawer
+                    videoId={video.id}
+                    jwtToken={token}
+                    currentUser={{
+                      id: user?.id || "",
+                      name: user?.username || "Anonymous",
+                      avatar: user?.avatar,
+                    }}
+                    onClose={() => setOpenCommentsFor(null)}
+                  />
+                </div>
+              )}
+
+              {/* right side buttons */}
+              <div className="absolute inset-y-0 right-2 md:right-52 bottom-28 flex flex-col items-center justify-center gap-6 pb-20">
                 <button className="flex flex-col items-center hover:scale-110 transition">
                   <Heart className="w-6 h-6 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Like</span>
