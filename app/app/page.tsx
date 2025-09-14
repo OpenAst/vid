@@ -5,7 +5,6 @@ import { fetchUser } from '@/app/store/authSlice';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Feed from './components/video/Feed';
-import LoginPage from './(auth)/login/page';
 import { usePathname, useRouter } from 'next/navigation';
 
 
@@ -59,7 +58,6 @@ function HomePage() {
       <div className="flex-1 flex flex-col items-center">
         {isAuthenticated && (
           <div className="w-full max-w-4xl mx-auto">
-            {/* Greeting */}
             <div className="text-center items-center fixed top-0 left-0 right-0 z-20 bg-white py-4">
               <p className="text-md">
                 Hello,{' '}
@@ -70,7 +68,6 @@ function HomePage() {
               <p className="text-center">You are welcome to this amazing platform</p>
             </div>
 
-            {/* Feed */}
             <div className="mt-12 h-[calc(100vh-4rem)]">
               <Feed jwtToken={token} />
             </div>

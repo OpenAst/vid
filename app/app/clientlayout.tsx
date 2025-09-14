@@ -93,7 +93,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           </nav>
 
           {/* Bottom Controls */}
-          <div className="p-2 mb-8 space-y-2 flex flex-col items-center">
+          <div className="p-2 mb-20 space-y-4 flex flex-col items-center">
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="w-full text-xs flex items-center justify-center px-2 py-1 rounded dark:bg-gray-700"

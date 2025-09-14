@@ -47,7 +47,7 @@ export default function LogoutButton() {
        justify-center hover:bg-gray-100 text-xs w-full"
     >
       <Image src="new_logout.svg" alt="Logout" width={18} height={20} />
-      <span className="hidden md:inline mt-1 md:mt-0 md:ml-2">Logout</span>
+      <span className="mt-1 md:mt-0 md:ml-2">Logout</span>
     </button>
   )
 }
