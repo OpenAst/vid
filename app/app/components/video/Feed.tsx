@@ -6,7 +6,7 @@ import { fetchVideos } from "../../store/videoSlice";
 import { RootState, AppDispatch } from "../../store/store";
 import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
-import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
+import { Heart, Eye, Share2, MessageSquare } from "lucide-react";
 
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -66,7 +66,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
   return (
     <div className="flex justify-center relative">
-      {isError && <p className="text-red-500 text-center">{String(isError)}</p>}
+      {isError && <p className="text-red-500 text-center">Unauthorized</p>}
 
 
       <div className="h-[95vh] w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-white">
@@ -102,7 +102,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 />
 
                 {/* username + views wrapper always here, content conditional */}
-                <div className="absolute bottom-4 left-4 w-[100%] text-white z-20">
+                <div className="absolute bottom-4 left-8 w-[100%] text-white z-20">
                   {openCommentsFor !== video.id && (
                     <>
                       <div className="flex items-center gap-2 text-sm opacity-90">
@@ -136,7 +136,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 )}
               </div>
 
-              <div className="absolute inset-y-0 right-10 md:right-28 bottom-28 flex flex-col items-center justify-center gap-6 pb-20">
+              <div className="absolute inset-y-0 right-16 md:right-52 bottom-28 flex flex-col items-center justify-center gap-6 pb-20">
                 <button className="flex flex-col items-center hover:scale-110 transition">
                   <Heart className="w-6 h-6 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Like</span>
@@ -150,7 +150,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                   }
                   className="flex flex-col items-center hover:scale-110 transition"
                 >
-                  <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Comments</span>
                 </button>
 

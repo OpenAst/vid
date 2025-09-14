@@ -93,12 +93,12 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     }
 
     return (
-      <div className="relative w-full h-full flex flex-col items-center justify-center bg-white">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-white">
         {/* Video Section */}
         <motion.div
           animate={{ height: isCommentsOpen ? "60%" : "100%" }}
           transition={{ duration: 0.3 }}
-          className="relative w-full h-[95vh] sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
+          className="relative h-[95vh] sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
         >
           <video
             id={id}
