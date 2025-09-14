@@ -60,10 +60,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       if (clickTimeout.current) {
         clearTimeout(clickTimeout.current);
         clickTimeout.current = null;
-        togglePlayPause();
+        handleLike();
       } else {
         clickTimeout.current = setTimeout(() => {
-          toggleMute();
+          togglePlayPause();
           clickTimeout.current = null;
         }, 250);
       }
@@ -71,12 +71,14 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
 
     const toggleMute = () => {
       if (!videoRef.current) return;
+      
       videoRef.current.muted = !videoRef.current.muted;
       setIsMuted(videoRef.current.muted);
-    };
+    }
 
     const togglePlayPause = () => {
       if (!videoRef.current) return;
+
       if (videoRef.current.paused) {
         videoRef.current.play();
         setIsUserPaused(false);
@@ -85,6 +87,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
         setIsUserPaused(true);
       }
     };
+
+    const handleLike = () => {
+      console.log("Video liked ❤️", id);
+    }
 
     return (
       <div className="relative w-full h-full flex flex-col items-center justify-center bg-white">

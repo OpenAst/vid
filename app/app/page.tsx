@@ -6,14 +6,16 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Feed from './components/video/Feed';
 import LoginPage from './(auth)/login/page';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+
 
 function HomePage() {
   const { isAuthenticated, isLoading, token } = useSelector((state: RootState) => state.auth);
   const dispatch: AppDispatch = useDispatch();
   const pathname = usePathname();
   const [authChecked, setAuthChecked] = useState(false);
-  
+  const router = useRouter();
+
   const [userDetails, setUserDetails] = useState({
     firstName: '',
     lastName: '',
@@ -49,7 +51,7 @@ function HomePage() {
   }
 
   if (!isLoading && !isAuthenticated && pathname === '/') {
-    return <LoginPage />;
+    router.push('/login')
   }
 
   return (

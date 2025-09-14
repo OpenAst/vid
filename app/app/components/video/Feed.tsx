@@ -50,14 +50,16 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       const video = card?.video;
       if (!video) return;
 
-      video.muted = true;
 
-      if (idx === currentIndex && !card.isUserPaused) {
-        video.muted = false;
-        void video.play();
+      if (idx === currentIndex) {
+        if (!card.isUserPaused) {
+          void video.play();
+        }
+        video.muted = card.isUserPaused ? true : false;
       } else {
         video.pause();
         video.currentTime = 0;
+        video.muted = true;
       }
     });
   }, [currentIndex]);
@@ -134,7 +136,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 )}
               </div>
 
-              <div className="absolute right-10 md:right-28 bottom-28 flex flex-col items-center gap-6">
+              <div className="absolute inset-y-0 right-10 md:right-28 bottom-28 flex flex-col items-center justify-center gap-6 pb-20">
                 <button className="flex flex-col items-center hover:scale-110 transition">
                   <Heart className="w-6 h-6 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Like</span>
