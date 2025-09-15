@@ -78,7 +78,7 @@ const UploadVideo = () => {
       body.append('description', formData.description);
 
 
-      const res = await fetch("/api/video/upload/", {
+      const res = await fetch("/api/video/upload", {
         method: "POST",
         credentials: "include",
         body,
@@ -103,7 +103,7 @@ const UploadVideo = () => {
 
       console.log("Metadata being sent", metadata);
 
-      const metaRes = await fetch("/api/video/save-metadata/", {
+      const metaRes = await fetch("/api/video/save-metadata", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
