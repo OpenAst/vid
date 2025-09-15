@@ -15,6 +15,8 @@ interface FormDataState {
   thumbnail?: File;
 }
 
+const CHUNK_SIZE = 10 * 1024 * 1024;
+
 const UploadVideo = () => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -72,31 +74,89 @@ const UploadVideo = () => {
     try {
       setIsUploading(true);
 
-      const body = new FormData();
-      body.append('file', videoFile);
-      body.append('title', formData.title);
-      body.append('description', formData.description);
 
-
-      const res = await fetch("/api/video/upload", {
+      const initRes = await fetch("/api/video/initiate", {
         method: "POST",
         credentials: "include",
-        body,
+        body: JSON.stringify({
+          file_name: videoFile.name,
+          file_type: videoFile.type, 
+        })
       });
-      
-      const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to get presigned URL");
+      if (!initRes.ok) {
+        throw new Error("Failed to initiate upload");
       }
 
+      const { upload_id, object_key, public_url } = await initRes.json();
       
+      let partNumber = 1;
+      let start = 0;
+      const parts: { ETag: string; PartNumber: number }[] = [];
 
+      while (start < videoFile.size) {
+        const end = Math.min(start + CHUNK_SIZE, videoFile.size);
+        const chunk = videoFile.slice(start, end);
+
+        const presignedRes = await fetch(
+          "/api/video/presigned",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              object_key,
+              file_type: videoFile.type,
+              upload_id,
+              part_number: partNumber,
+            }),
+          }
+        );
+
+        if (!presignedRes.ok) throw new Error("Failed to get presigned URL");
+
+        const { url } = await presignedRes.json();
+
+        // Upload chunk directly to R2
+        const uploadRes = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": videoFile.type },
+          body: chunk,
+        });
+
+        if (!uploadRes.ok) throw new Error(`Chunk ${partNumber} upload failed`);
+
+        const eTag = uploadRes.headers.get("ETag");
+        if (!eTag) throw new Error("Missing ETag from upload response");
+
+        parts.push({ ETag: eTag.replace(/"/g, ""), PartNumber: partNumber });
+
+        partNumber++;
+        start = end;
+      }
+
+      // Complete multipart upload
+      const completeRes = await fetch(
+        "/api/video/complete_multipart",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json"},
+          credentials: "include",
+          body: JSON.stringify({ object_key, upload_id, parts }),
+        }
+      );
+
+      if (!completeRes.ok) throw new Error("Failed to complete upload");
+
+      const completeData = await completeRes.json();
+      const finalUrl = completeData.public_url || public_url;
+
+      // Save metadata
       const metadata = {
         title: formData.title,
         description: formData.description || '',
-        file_url: data.file_url,     
-        file_key: data.object_key,    
+        file_url: finalUrl,     
+        file_key: object_key,   
         file_size: videoFile.size,
         file_type: videoFile.type,
       };
