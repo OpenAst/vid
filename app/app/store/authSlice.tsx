@@ -12,6 +12,7 @@ export interface registerSuccessResponse {
 export interface DjoserErrorResponse {
   email?: string[];
   password?: string[];
+  username?: string[];
   non_field_errors?: string[];
   detail?: string;
   [key: string]: unknown;
