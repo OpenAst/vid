@@ -24,14 +24,6 @@ export interface ApiResponse<T = unknown> {
   error?: DjoserErrorResponse | string;
 }
 
-function isRegisterResponse(payload: unknown): payload is registerSuccessResponse {
-  return (
-    typeof payload === 'object' &&
-    payload !== null &&
-    'user' in payload &&
-    (payload).user !== undefined
-  );
-}
 
 interface User {
   id: string;
