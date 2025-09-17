@@ -101,33 +101,34 @@ export const login = createAsyncThunk(
 );
 
 
-export const register = createAsyncThunk(
-  'auth/register',
-  async (credentials: {
-    email: string, password: string, re_password: string,
-    first_name: string, last_name: string, username: string
-  }, { rejectWithValue }) => {
+export const register = createAsyncThunk<
+  registerSuccessResponse, 
+  { email: string; password: string; re_password: string; first_name: string; last_name: string; username: string }, // input type
+  { rejectValue: DjoserErrorResponse | string } // reject type
+>(
+  "auth/register",
+  async (credentials, { rejectWithValue }) => {
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
-      
-      const result: ApiResponse = await res.json();
+
+      const result: ApiResponse<registerSuccessResponse> = await res.json();
 
       if (!res.ok || !result.success) {
-        return rejectWithValue(result.error || 'Registration failed') ;
-      }  
-
-      return result.data;
-    } catch (error: unknown) {
-      const err = error as Error;
-      return rejectWithValue(err.message || 'Network error'); 
+        return rejectWithValue(result.error || "Registration failed");
       }
+
+      return result.data as registerSuccessResponse;
+    } catch (err: unknown) {
+      const error = err as Error;
+      return rejectWithValue(error.message || "Network error");
     }
-  );
-  
+  }
+);
+
 
   export const activate = createAsyncThunk(
     'auth/activate',
@@ -300,19 +301,25 @@ const authSlice = createSlice({
         state.isError = true;
       })
       .addCase(register.pending, (state) => {
-        state.isLoading = false;
-        state.isError = false;
         state.isLoading = true;
+        state.isError = false;
+        state.errorMessage = "";
       })
       .addCase(register.fulfilled, (state, action) => {
-        if (isRegisterResponse(action.payload)) {
-          state.user = action.payload.user;
-        }
+        state.user = action.payload.user;
+        state.isLoading = false;
+        state.registerSuccess = true;
         state.isLoading = false;
       })
-      .addCase(register.rejected, (state) => {
+      .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
+
+        if (action.payload && typeof action.payload === "object") {
+          state.errorMessage = JSON.stringify(action.payload);
+        } else {
+          state.errorMessage = action.payload as string;
+        };
       })
       .addCase(activate.pending, (state) => {
         state.isLoading = true;

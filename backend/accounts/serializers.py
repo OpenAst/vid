@@ -4,13 +4,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from .models import Profile
+from djoser.serializers import UserCreateSerializer
 import logging
 
 logger = logging.getLogger(__name__)
 
 user = get_user_model()
 
-class UserCreateSerializer(serializers.ModelSerializer):
+class UserCreateSerializer(UserCreateSerializer):
   class Meta:
     model = UserAccount
     fields = ('id', 'first_name', 'last_name', 'email', 'username',
@@ -18,7 +19,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
     extra_kwargs = { 'password': {'write_only': True}}
   
   def create(self, validated_data):
-    return UserAccount.objects.create_user(**validated_data)
+    try:
+      return UserAccount.objects.create_user(**validated_data)
+    except Exception as e:
+      if 'unique' in str(e):
+        raise serializers.ValidationError({'username': 'This username has been taken.'})
+      raise serializers.ValidationError(str(e))
   
     
 class UserDetailSerializer(serializers.ModelSerializer):

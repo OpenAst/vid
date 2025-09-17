@@ -85,7 +85,16 @@ const RegisterPage = () => {
 
       router.push('/check-email'); 
     } catch (error) {
-      console.error('Registration failed:', error);
+      if ( error &&typeof error === "object") {
+          if ("username" in error) toast.error((error as any).username[0]);
+          if ("email" in error) toast.error((error as any).email[0]);
+          if ("password" in error) toast.error((error as any).password[0]);
+          if ("detail" in error) toast.error((error as any).detail as string);
+        } else if (typeof error === "string") {
+            toast.error(error);
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
     }
   };
 

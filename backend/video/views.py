@@ -285,9 +285,10 @@ def complete_multipart_upload(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def abort_multipart_upload(request):
-    object_key = request.data['object_key']
-    upload_id = request.data['upload_id']
+def cleanup_multipart_upload(request):
+    """
+    Delete all incomplete multipart uploads for this bucket.
+    """
 
     s3 = boto3.client(
         's3',
@@ -297,13 +298,28 @@ def abort_multipart_upload(request):
         region_name='auto'
     )
 
-    s3.abort_multipart_upload(
-        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-        Key=object_key,
-        UploadId=upload_id
-    )
+    aborted = []
+    paginator = s3.get_paginator("list_multipart_uploads")
 
-    return Response({'message': 'Upload aborted'})
+    for page in paginator.paginate(Bucket=settings.AWS_STORAGE_BUCKET_NAME):
+        uploads = page.get("Uploads", [])
+        for u in uploads:
+            object_key = u["Key"]
+            upload_id = u["UploadId"]
+            try:
+                s3.abort_multipart_upload(
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                    Key=object_key,
+                    UploadId=upload_id
+                )
+                aborted.append({"key": object_key, "upload_id": upload_id})
+            except Exception as e:
+                print(f"Failed to abort {object_key} - {upload_id}: {e}")
+
+    return Response({
+        'message': f'Aborted {len(aborted)} incomplete multipart uploads',
+        'aborted': aborted
+        })
 
 def extract_and_upload_thumbnail(video_url, video_instance):
     temp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name

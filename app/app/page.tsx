@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Feed from './components/video/Feed';
 import { usePathname, useRouter } from 'next/navigation';
-
+import { setUnAuthenticated } from '@/app/store/authSlice';
 
 function HomePage() {
   const { isAuthenticated, isLoading, token } = useSelector((state: RootState) => state.auth);
@@ -50,7 +50,10 @@ function HomePage() {
   }
 
   if (!isLoading && !isAuthenticated && pathname === '/') {
-    router.push('/login')
+    dispatch(setUnAuthenticated());
+    router.replace('/login')
+
+    return null;
   }
 
   return (
