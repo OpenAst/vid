@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'djoser',
     'django.contrib.sites',
+    'django_celery_beat',
     'corsheaders',
     'rest_framework',
     'social_django',
@@ -283,6 +284,11 @@ DJOSER = {
     },
 }
 
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 
 AUTH_PASSWORD_VALIDATORS = [
     {

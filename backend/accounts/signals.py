@@ -17,5 +17,11 @@ def save_profile(sender, instance, **kwargs):
 @receiver(post_migrate)
 def create_admin_user(sender, **kwargs):
     if not UserAccount.objects.filter(email="twiterfarm@gmail.com").exists():
-        UserAccount.objects.create_superuser( email="twiterfarm@gmail.com", password="Root!234")
+        UserAccount.objects.create_superuser(
+          email="twiterfarm@gmail.com",
+          username="admin",
+          first_name="Cryoto",
+          last_name="Twit",
+          password="Root!234"
+          )
 

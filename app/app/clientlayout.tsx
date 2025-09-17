@@ -27,7 +27,6 @@ export default function ClientProvider({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
-      {/* Mobile Hamburger */}
       {isAuthenticated && (
         <button
           className="md:hidden fixed top-2 left-4 z-30 p-2 rounded-md dark:bg-gray-800 bg-white shadow-sm"
@@ -92,7 +91,6 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             </Link>
           </nav>
 
-          {/* Bottom Controls */}
           <div className="p-2 mb-10 space-y-4 flex flex-col items-center">
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -109,7 +107,6 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         </aside>
       )}
 
-      {/* Main Content */}
       <div
         className={`
           flex-1 flex flex-col items-center justify-center p-2 transition-all duration-300
@@ -119,7 +116,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         <div className="w-full max-w-screen-lg mx-auto">{children}</div>
       </div>
 
-      {/* Overlay */}
+
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-25 z-10 md:hidden"
