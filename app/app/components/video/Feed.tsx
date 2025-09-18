@@ -143,8 +143,8 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 z-30 text-black
               ">
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <Heart className="w-7 h-7 sm:w-8 sm:h-8" />
-                  <span className="text-xs mt-1">Like</span>
+                  <Heart className="w-8 h-8" />
+                  <span className=" hidden sm:block text-xs mt-1">Like</span>
                 </button>
 
                 <button
@@ -153,13 +153,13 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                   }
                   className="flex flex-col items-center hover:scale-110 transition"
                 >
-                  <MessageCircle className="w-7 h-7 sm:w-8 sm:h-8" />
-                  <span className="text-xs mt-1">Comments</span>
+                  <MessageCircle className="w-8 h-8" />
+                  <span className="hidden sm:block text-xs mt-1">Comments</span>
                 </button>
 
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <Share2 className="w-7 h-7 sm:w-8 sm:h-8" />
-                  <span className="text-xs mt-1">Share</span>
+                  <Share2 className="w-8 h-8" />
+                  <span className="hidden sm:block text-xs mt-1">Share</span>
                 </button>
               </div>
             </div>
