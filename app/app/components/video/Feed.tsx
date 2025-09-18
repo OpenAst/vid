@@ -6,7 +6,7 @@ import { fetchVideos } from "../../store/videoSlice";
 import { RootState, AppDispatch } from "../../store/store";
 import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
-import { Heart, Eye, Share2, MessageSquare } from "lucide-react";
+import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
@@ -123,7 +123,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               </div>
 
               {openCommentsFor === video.id && (
-                <div className="absolute bottom-0 w-full">
+                <div className="absolute bottom-0 w-[40vh]">
                   <CommentsDrawer
                     videoId={video.id}
                     jwtToken={token}
@@ -137,27 +137,28 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 </div>
               )}
 
-              {/* right side buttons */}
-              <div className="absolute inset-y-0 right-2 md:right-52 bottom-28 flex flex-col items-center justify-center gap-6 pb-20">
+              <div className="
+                absolute bottom-24 right-14
+                flex flex-col justify-center items-center gap-6
+                z-30 text-black
+              ">
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <Heart className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <Heart className="w-7 h-7 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Like</span>
                 </button>
 
                 <button
                   onClick={() =>
-                    setOpenCommentsFor((prev) =>
-                      prev === video.id ? null : video.id
-                    )
+                    setOpenCommentsFor((prev) => (prev === video.id ? null : video.id))
                   }
                   className="flex flex-col items-center hover:scale-110 transition"
                 >
-                  <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <MessageCircle className="w-7 h-7 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Comments</span>
                 </button>
 
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <Share2 className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <Share2 className="w-7 h-7 sm:w-8 sm:h-8" />
                   <span className="text-xs mt-1">Share</span>
                 </button>
               </div>

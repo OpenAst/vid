@@ -144,7 +144,7 @@ const LoginPage = () => {
           />
           <span
             onClick={togglePassword}
-            className="absolute right-3 top-4 text-gray-500 cursor-pointer"
+            className="absolute right-3 top-4 cursor-pointer"
           >
             {showPassword ? <FaEyeSlash /> : <FaEye />}
           </span>

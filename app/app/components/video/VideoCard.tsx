@@ -94,9 +94,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
 
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-white">
-        {/* Video Section */}
         <motion.div
-          animate={{ height: isCommentsOpen ? "60%" : "100%" }}
+          animate={{ 
+            height: isCommentsOpen ? "60%" : "100%"
+          }}
           transition={{ duration: 0.3 }}
           className="relative h-[95vh] sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
         >
@@ -120,40 +121,11 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           />
           <button
             onClick={toggleMute}
-            className="absolute top-4 left-4 bg-black/50 p-3 sm:p-3 rounded-full hover:bg-black/70 transition z-20"
+            className="absolute top-4 left-4 p-3 sm:p-3 rounded-full transition z-20"
           >
             {isMuted ? "🔇" : "🔊"}
           </button>
         </motion.div>
-
-        <AnimatePresence>
-          {isCommentsOpen && (
-            <motion.div
-              className="bg-white w-full max-w-sm sm:max-w-sm md:max-w-md flex-1 rounded-t-2xl shadow-lg mt-2 flex flex-col"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="flex justify-between items-center p-3 sm:p-4 border-b">
-                <h2 className="font-semibold">Comments</h2>
-                <button
-                  onClick={onCloseComments}
-                  className="hover:rotate-90 transition-transform"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <Comments
-                  jwtToken={jwtToken}
-                  roomId={id}
-                  currentUser={currentUser}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     );
   }
