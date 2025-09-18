@@ -1,9 +1,8 @@
 "use client";
 
-import { X } from "lucide-react";
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Comments from "./Comments";
+import { motion } from "framer-motion";
+
 
 interface Video {
   id: string;
