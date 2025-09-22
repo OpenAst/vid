@@ -32,12 +32,13 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const socketRef = useRef<Socket | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCommentInput, setShowCommentInput] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL_DEV || "http://localhost:3001"}/comments`, {
+    const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL_DEV ?? "http://localhost:3001"}/comments`, {
       auth: { token: jwtToken },
       transports: ["websocket"],
     });
@@ -58,9 +59,12 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
       setNewComment("");
     });
 
-    socket.on("comment-liked", ({commentId, likes}) => {
-      setComments((prev) => prev.map(p))
-    })
+    socket.on("comment-liked", ({_commentId, _likes}) => {
+      setComments((prev) => prev.map((comment) =>
+          comment.id === _commentId ? { ...comment, _likes } : comment
+        ))
+        console.log("Comment likes", _commentId, _likes)
+    });
 
     socket.on("new-reply", ({ parentId, reply }: { parentId: string; reply: Comment }) => {
       setComments((prev) =>
@@ -115,6 +119,12 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
     setReplyingTo(null);
   };
 
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [comments])
+
   return (
     <div className="w-full bg-white rounded-lg">
       <div
@@ -142,7 +152,7 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
               <div className="flex space-x-2">
                 <button
                   onClick={handleSendComment}
-                  className="bg-blue-500 text-white text-sm px-4 py-2 rounded hover:bg-blue-700"
+                  className="bg-blue-500 text-white text-sm px-4 py-2 rounded-xl hover:bg-blue-700"
                 >
                   Post Comment
                 </button>

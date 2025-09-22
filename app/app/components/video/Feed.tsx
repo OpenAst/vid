@@ -136,7 +136,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               )}
 
               <div className="
-                absolute bottom-24 right-0 flex flex-col justify-center items-center gap-6
+                absolute bottom-20 right-0 flex flex-col justify-center items-center gap-6
                 z-30 text-white
               ">
                 <button className="flex flex-col items-center hover:scale-110 transition">

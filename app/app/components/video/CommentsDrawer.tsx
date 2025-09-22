@@ -18,7 +18,7 @@ const CommentsDrawer = ({ videoId, jwtToken, currentUser, onClose }: CommentsDra
   return (
     <AnimatePresence>
       <motion.div
-        className="w-full flex flex-col shadow-lg bg-white rounded-t-2xl justify-end"
+        className="w-full flex flex-col no-scrollbar shadow-lg bg-white rounded-t-2xl justify-end"
         initial={{ height: 0, opacity: 0 }}
         animate={{ height: "40vh", opacity: 1 }}
         exit={{ height: 0, opacity: 0 }}
