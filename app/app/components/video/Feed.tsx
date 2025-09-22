@@ -121,7 +121,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               </div>
 
               {openCommentsFor === video.id && (
-                <div className="absolute bottom-0 w-[40vh]">
+                <div className="absolute no-scrollbar bottom-0 w-[40vh]">
                   <CommentsDrawer
                     videoId={video.id}
                     jwtToken={token}
