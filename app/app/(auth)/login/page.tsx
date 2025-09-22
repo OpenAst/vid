@@ -104,10 +104,10 @@ const LoginPage = () => {
   const togglePassword = () => setShowPassword(!showPassword);
 
   return (
-    <AuthLayout title="Sign In">
-      <p className="text-center mb-6">Sign into your Account</p>
+    <AuthLayout title="Welcome back !">
+      <p className="text-center">Signin to OneClyq</p>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 p-8">
         <div className="form-control">
           <input
             className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
@@ -169,13 +169,13 @@ const LoginPage = () => {
         </button>
       </form>
       <ToastContainer />
-      <p className="text-center mt-4">
+      <p className="text-center mt-4 mb-2">
       Don&apos;t have an account?{' '}
         <Link className="text-primary-blue hover:underline" href="/register">
           Sign Up
         </Link>
       </p>
-      <p className="text-center mt-2">
+      <p className="text-center mt-2 mb-2">
         Forgot your password?{' '}
         <Link className="text-primary-blue hover:underline" href="/password-reset">
           Reset Password

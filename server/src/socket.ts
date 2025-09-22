@@ -134,3 +134,7 @@ export const setupCommentSocket = (
     });
   });
 };
+
+export const likeSystem = () => {
+  
+}

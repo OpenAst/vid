@@ -2,16 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root{
+  --purple: rgb(68, 13, 156);
+  --orange: rgb(246, 163, 19);
 }
 
 .no-scrollbar {
@@ -21,22 +21,4 @@
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-html, body {
-  color: var(--foreground);
-  background: var(--background);
-  overflow: hidden;
-  font-family: Helvetica, sans-serif;
-  padding: 1rem;
-}
-
-h1 {
-  font-family: var(--font-gt-super, Arial);
-}
-
-#__next, #root {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
 }

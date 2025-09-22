@@ -57,28 +57,22 @@ function HomePage() {
   }
 
   return (
-    <div className="flex h-screen">
-      <div className="flex-1 flex flex-col items-center">
-        {isAuthenticated && (
-          <div className="w-full max-w-4xl mx-auto">
-            <div className="text-center items-center fixed top-0 left-0 right-0 z-20 bg-white py-4">
-              <p className="text-md">
-                Hello,{' '}
-                <span className="text-xl font-semibold bg-gray-200">
-                  {userDetails.firstName}, {userDetails.lastName}
-                </span>
-              </p>
-              <p className="text-center">You are welcome to this amazing platform</p>
-            </div>
+      <div className="flex flex-col items-center justify-center">
+        <div className="text-center items-center fixed top-0 left-0 right-0 z-20 bg-white py-4">
+          <p className="text-md ">
+            Hello,{' '}
+            <span className="text-xl font-semibold">
+              {userDetails.firstName}, {userDetails.lastName}
+            </span>
+          </p>
+          <p className="text-center">You are welcome to OneClyq</p>
+        </div>
 
-            <div className="mt-12 h-[calc(100vh-4rem)]">
-              <Feed jwtToken={token} />
-            </div>
-          </div>
-        )}
+        <div className="mt-2 h-[calc(100vh-10rem)]">
+          <Feed jwtToken={token} />
+        </div>
       </div>
-    </div>
-  );
+    );
 }
 
 export default HomePage;

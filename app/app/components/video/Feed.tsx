@@ -70,9 +70,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }
 
   return (
-    <div className="flex justify-center relative">
-
-      <div className="h-[95vh] w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-white">
+      <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
         {Array.isArray(videos) &&
           videos.map((video, idx) => (
             <div
@@ -81,7 +79,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               ref={(el) => {
                 wrapperRefs.current[idx] = el;
               }}
-              className="h-[90vh] snap-start flex justify-center relative mb-2"
+              className="h-full w-full snap-start flex justify-center relative mb-2"
             >
               <VideoCard
                 ref={(el) => {
@@ -104,7 +102,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               />
 
               {/* username + views wrapper always here, content conditional */}
-              <div className="absolute bottom-4 w-[50vh] text-white z-20">
+              <div className="absolute bottom-2 w-full text-white z-20">
                 {openCommentsFor !== video.id && (
                   <>
                     <div className="flex items-center gap-2 text-sm opacity-90">
@@ -138,9 +136,8 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               )}
 
               <div className="
-                absolute bottom-24 right-14
-                flex flex-col justify-center items-center gap-6
-                z-30 text-black
+                absolute bottom-24 right-0 flex flex-col justify-center items-center gap-6
+                z-30 text-white
               ">
                 <button className="flex flex-col items-center hover:scale-110 transition">
                   <Heart className="w-8 h-8" />
@@ -165,7 +162,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             </div>
           ))}
       </div>
-    </div>
   );
 };
 

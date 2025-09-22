@@ -120,7 +120,7 @@ const RegisterPage = () => {
                 placeholder="Firstname"
                 value={formData.firstname}
                 onChange={handleChange}
-                className="input input-bordered w-full"
+                className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
                 required
               />
             </div>
@@ -134,7 +134,7 @@ const RegisterPage = () => {
                 placeholder="Lastname"
                 value={formData.lastname}
                 onChange={handleChange}
-                className="input input-bordered w-full"
+                className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
                 required
               />
             </div>
@@ -149,14 +149,14 @@ const RegisterPage = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleChange}
-                className="input input-bordered w-full"
+                className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
                 required
               />
             </div>
             <div className="flex flex-col items-center justify-center mt-8 space-y-4">
             <button
               type="submit"
-              className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-600 text-white hover:bg-purple-400 transition"
+              className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-700 text-white hover:bg-purple-600 transition"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -190,7 +190,7 @@ const RegisterPage = () => {
                 placeholder="Username"
                 value={formData.username}
                 onChange={handleChange}
-                className="input input-bordered w-full"
+                className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
                 required
               />
             </div>
@@ -206,7 +206,7 @@ const RegisterPage = () => {
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="input input-bordered w-full pr-10"
+                  className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full pr-10"
                   minLength={6}
                   required
                 />
@@ -230,7 +230,7 @@ const RegisterPage = () => {
                 placeholder="Confirm Password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="input input-bordered w-full"
+                className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
                 minLength={6}
                 required
               />

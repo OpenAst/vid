@@ -9,7 +9,7 @@ const AuthLayout = ({
 }) => {
   return (
     <div className="flex justify-center items-center mt-4 min-h-screen">
-      <div className="bg-white p-8 rounded-md shadow-sm w-full max-w-md">
+      <div className="bg-white rounded-md shadow-sm w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center">{title}</h1>
         {children}
       </div>

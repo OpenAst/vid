@@ -26,10 +26,10 @@ export default function ClientProvider({ children }: { children: React.ReactNode
   }, [darkMode]);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
+    <div className="flex h-screen transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed top-2 left-4 z-30 p-2 rounded-md dark:bg-gray-800 bg-white shadow-sm"
+          className="md:hidden fixed top-2 left-4 z-30 p-2 rounded-md bg-white shadow-sm"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <svg
@@ -47,8 +47,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
       {isAuthenticated && (
         <aside
           className={`${lusitana.className}
-            w-[70px] md:w-[100px] h-screen border-r fixed left-0 top-0 bg-white z-20 
-            dark:bg-gray-900 flex flex-col justify-between transition-all duration-300
+            w-[80px] md:w-[100px] h-screen border-r fixed left-0 top-0 bg-white z-20 flex flex-col justify-between transition-all duration-300
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
@@ -56,7 +55,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           <nav className="space-y-10 p-2 mt-20 flex flex-col items-center">
             <Link
               href="/"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Image src="/home.svg" alt="Home" width={22} height={22} />
@@ -65,7 +64,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
 
             <Link
               href="/about"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100  rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Image src="/globe.svg" alt="About" width={22} height={22} />
@@ -74,7 +73,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
 
             <Link
               href="/upload"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100  rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Image src="/file.svg" alt="Upload" width={22} height={22} />
@@ -83,7 +82,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
 
             <Link
               href="/profile"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Image src="/user_icon.png" alt="Profile" width={28} height={28} />
@@ -94,7 +93,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           <div className="p-2 mb-10 space-y-4 flex flex-col items-center">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="w-full text-xs flex items-center justify-center px-2 py-1 rounded dark:bg-gray-700"
+              className="w-full text-xs flex items-center justify-center px-2 py-1 rounded"
             >
               {darkMode ? '☀️' : '🌙'}
               <span className="hidden md:inline ml-1">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
@@ -108,18 +107,15 @@ export default function ClientProvider({ children }: { children: React.ReactNode
       )}
 
       <div
-        className={`
-          flex-1 flex flex-col items-center justify-center p-2 transition-all duration-300
-          ${isAuthenticated ? 'md:pl-[100px]' : ''}
-        `}
+        className='flex-1 flex flex-col items-center justify-center transition-all duration-300'
       >
-        <div className="w-full max-w-screen-lg mx-auto">{children}</div>
+        <div className="w-full mt-12 mx-auto">{children}</div>
       </div>
 
 
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-25 z-10 md:hidden"
+          className="fixed inset-0 bg-opacity-25 z-10 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

@@ -89,20 +89,19 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     }
 
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-white">
         <motion.div
           animate={{ 
             height: isCommentsOpen ? "70%" : "100%"
           }}
           transition={{ duration: 0.3 }}
-          className="relative h-[95vh] sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
+          className="relative h-full sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
         >
           <video
             id={id}
             ref={videoRef}
             src={file_url}
             poster={thumbnail_url || undefined}
-            className={`absolute inset-0 w-full h-full bg-black rounded-2xl ${
+            className={`absolute h-full bg-black rounded-2xl ${
               isPortrait ? "object-cover" : "object-contain"
             }`}
             playsInline
@@ -122,7 +121,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
             {isMuted ? "🔇" : "🔊"}
           </button>
         </motion.div>
-      </div>
     );
   }
 );

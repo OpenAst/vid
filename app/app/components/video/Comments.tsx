@@ -32,12 +32,12 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const socketRef = useRef<Socket | null>(null);
-  const [isExpanded, setIsExpanded] = useState(true); // expanded by default
+  const [isExpanded, setIsExpanded] = useState(true);
   const [showCommentInput, setShowCommentInput] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL_DEV || "http://localhost:4000", {
+    const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL_DEV || "http://localhost:3001"}/comments`, {
       auth: { token: jwtToken },
       transports: ["websocket"],
     });
@@ -58,11 +58,9 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
       setNewComment("");
     });
 
-    socket.on("comment-liked", ({ commentId, likes }) => {
-      setComments((prev) =>
-        prev.map((comment) => (comment.id === commentId ? { ...comment, likes } : comment))
-      );
-    });
+    socket.on("comment-liked", ({commentId, likes}) => {
+      setComments((prev) => prev.map(p))
+    })
 
     socket.on("new-reply", ({ parentId, reply }: { parentId: string; reply: Comment }) => {
       setComments((prev) =>

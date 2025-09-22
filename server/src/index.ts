@@ -3,7 +3,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { initializeRedisAdapter } from './redis';
 import { setupCommentSocket } from './socket';
-import { RedisAdapter } from '@socket.io/redis-adapter';
 
 const app = express();
 const httpServer = createServer(app);
