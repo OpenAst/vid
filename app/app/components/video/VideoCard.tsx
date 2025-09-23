@@ -2,7 +2,7 @@
 
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { motion } from "framer-motion";
-
+import { VolumeX, Volume2} from "lucide-react";
 
 interface Video {
   id: string;
@@ -116,9 +116,13 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           />
           <button
             onClick={toggleMute}
-            className="absolute top-4 left-4 p-3 sm:p-3 rounded-full transition z-20"
+            className="absolute top-4 left-4 p-3 sm:p-3 rounded-full bg-black/60 transition z-20"
           >
-            {isMuted ? "🔇" : "🔊"}
+            {isMuted ? (
+              <VolumeX className="w-6 h-6 text-white fill-white " />
+              ) : (
+              <Volume2 className="w-6 h-6 text-white fill-white" />
+            )}
           </button>
         </motion.div>
     );

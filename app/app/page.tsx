@@ -68,7 +68,7 @@ function HomePage() {
           <p className="text-center">You are welcome to OneClyq</p>
         </div>
 
-        <div className="mt-2 h-[calc(100vh-10rem)]">
+        <div className="h-[calc(100vh-8rem)]">
           <Feed jwtToken={token} />
         </div>
       </div>
