@@ -105,17 +105,11 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           </div>
         </aside>
       )}
-
-      <div
-        className='flex-1 flex flex-col items-center justify-center transition-all duration-300'
-      >
-        <div className="w-full mt-12 mx-auto">{children}</div>
-      </div>
-
+      <div className="w-full h-full mx-auto">{children}</div>
 
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-opacity-25 z-10 md:hidden"
+          className="fixed inset-0 bg-opacity-25 z-25 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

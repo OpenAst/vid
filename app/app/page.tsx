@@ -7,6 +7,7 @@ import { RootState, AppDispatch } from '@/app/store/store';
 import Feed from './components/video/Feed';
 import { usePathname, useRouter } from 'next/navigation';
 import { setUnAuthenticated } from '@/app/store/authSlice';
+import { Plus } from "lucide-react";
 
 function HomePage() {
   const { isAuthenticated, isLoading, token } = useSelector((state: RootState) => state.auth);
@@ -68,11 +69,18 @@ function HomePage() {
           <p className="text-center">You are welcome to OneClyq</p>
         </div>
 
-        <div className="h-[calc(100vh-8rem)]">
+        <div className="mt-20 h-[calc(100vh-5rem)]">
           <Feed jwtToken={token} />
+
+          <button
+            onClick={() => router.push("/upload")}
+            className="fixed bottom-2 sm:justify-center sm:items-center  border-0 btn w-24 bg-black/60 right-60 rounded-full flex items-centerhover:scale-80 transition z-30"
+          >
+            <Plus className="w-80 h-12 rounded-full text-white" fill="currentColor" />
+          </button>
         </div>
       </div>
-    );
+    )
 }
 
 export default HomePage;
