@@ -70,7 +70,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }
 
   return (
-      <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
+      <div className="h-[85vh] w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
         {Array.isArray(videos) &&
           videos.map((video, idx) => (
             <div
@@ -102,7 +102,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               />
 
               {/* username + views wrapper always here, content conditional */}
-              <div className="absolute bottom-4 w-[90%] text-white z-20">
+              <div className="absolute bottom-4 w-[95%] text-white z-20">
                 {openCommentsFor !== video.id && (
                   <>
                     <div className="flex items-center gap-2 text-sm opacity-90">
