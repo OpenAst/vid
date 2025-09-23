@@ -109,7 +109,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
 
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-opacity-25 z-25 md:hidden"
+          className="fixed inset-0 bg-opacity-25 z-30 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

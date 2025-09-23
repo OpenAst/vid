@@ -90,7 +90,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
 
     return (
         <motion.div
-          animate={{ 
+          animate={{
             height: isCommentsOpen ? "70%" : "100%"
           }}
           transition={{ duration: 0.3 }}
