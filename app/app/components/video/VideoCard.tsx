@@ -3,20 +3,8 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { VolumeX, Volume2} from "lucide-react";
+import { Video } from '../../store/videoSlice';
 
-interface Video {
-  id: string;
-  title: string;
-  thumbnail_url?: string | null;
-  file_url: string;
-  views?: number;
-  timestamp?: string;
-  currentUser: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-}
 
 interface VideoCardProps extends Video {
   jwtToken: string;
@@ -33,8 +21,14 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
   (
     {
       id,
-      thumbnail_url,
       file_url,
+      title,
+      description,
+      likes,
+      dislikes,
+      user_vote,
+      uploader,
+      thumbnail_url,
       isCommentsOpen,
     },
     ref

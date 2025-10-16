@@ -2,6 +2,8 @@
 import { Server, Socket } from 'socket.io';
 import { RedisClientType } from 'redis';
 import { randomUUID } from 'crypto';
+import axios from 'axios';
+
 
 interface Comment {
   id: string;
@@ -23,8 +25,16 @@ export const setupCommentSocket = (
   const commentIo = io.of('/comments');
 
   commentIo.use((socket: Socket, next) => {
-    const token = socket.handshake.auth.token;
+    const cookieHeader = socket.handshake.headers.cookie || '';
+    const cookies = Object.fromEntries(
+      cookieHeader
+        .split(';')
+        .map(c => c.trim().split('=').map(decodeURIComponent))
+    );
+    const token = cookies.access;
     if (!token) return next(new Error('Authentication required'));
+
+    socket.data.token = token;
     next();
   });
 
@@ -50,18 +60,36 @@ export const setupCommentSocket = (
         likes: 0,
         createdAt: new Date().toISOString()
       };
-
-      // Broadcast to room
-      commentIo.to(roomId).emit('new-comment', newComment);
-
+      
       // Save to Redis
       const comments = await redisClient.get(`comments:${roomId}`);
       const updatedComments = comments 
-        ? [...JSON.parse(comments), newComment] 
-        : [newComment];
+      ? [...JSON.parse(comments), newComment] 
+      : [newComment];
       
       await redisClient.set(`comments:${roomId}`, JSON.stringify(updatedComments));
+      
+      // Broadcast to room
+      commentIo.to(roomId).emit('new-comment', newComment);
 
+      try {
+        await axios.post(`${process.env.DJANGO_API_URL}/comments/create/{roomId}/`,
+        {
+          video: roomId,
+          user: user.id,
+          content: text,
+        },
+        {
+          headers: {
+            Authorization: `JWT ${socket.data.token}`,
+            'Content-Type': 'application/json',
+          },
+          withCredentials: true,
+        }
+      );
+      } catch (err) {
+        console.error('Failed to sync comment to Django', err);
+      }
     });
 
     // Like comment handler

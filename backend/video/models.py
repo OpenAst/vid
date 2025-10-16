@@ -3,7 +3,7 @@ from accounts.models import UserAccount
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from accounts.models import UserAccount
-
+from uuid import uuid4
 
 class Video(models.Model):
   uploader = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="videos")
@@ -12,7 +12,7 @@ class Video(models.Model):
   file_url = models.URLField(max_length=1000)
   thumbnail = models.URLField(blank=True, null=True)
   created_at = models.DateTimeField(auto_now_add=True)
-  views = models.IntegerField(default=0)
+  views = models.IntegerField(default=0, db_index=True)
 
 
 
@@ -27,24 +27,39 @@ class Video(models.Model):
     return self.comments.count()
   
 class Comment(models.Model):
-  video = models.ForeignKey('Video', related_name='comments', on_delete=models.CASCADE)
+  video = models.ForeignKey('Video', db_index=True, related_name='comments', on_delete=models.CASCADE)
   user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
   content = models.TextField()
   created_at = models.DateTimeField(auto_now_add=True)
+  parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies")
 
   def __str__(self):
     return f"Comment by {self.user} on {self.video}"
 
-class VideoLike(models.Model):
-    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name="likes")
-    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+class VideoVote(models.Model):
+  VOTE_CHOICES = (
+    (1, "Like"),
+    (-1, "Dislike")
+  )
+  id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+  video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name="votes")
+  user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+  value = models.SmallIntegerField(choices=VOTE_CHOICES)
+  created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('video', 'user')
+  class Meta:
+      unique_together = ('video', 'user')
 
-class CommentLike(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="likes")
-    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+class CommentVote(models.Model):
+  VOTE_CHOICES = (
+    (1, "Like"),
+    (-1, "Dislike"),
+  )
+  id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+  comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="votes")
+  value = models.SmallIntegerField(choices=VOTE_CHOICES)
+  user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+  created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ('comment', 'user')
+  class Meta:
+    unique_together = ('comment', 'user')

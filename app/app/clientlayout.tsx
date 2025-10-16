@@ -29,7 +29,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
     <div className="flex h-screen transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed top-2 left-4 z-30 p-2 rounded-md bg-white shadow-sm"
+          className="md:hidden fixed top-3 left-4 z-50 p-2 rounded-md bg-white shadow-sm"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <svg
@@ -39,7 +39,11 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            {isMobileMenuOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
           </svg>
         </button>
       )}
@@ -47,7 +51,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
       {isAuthenticated && (
         <aside
           className={`${lusitana.className}
-            w-[80px] md:w-[100px] h-screen border-r fixed left-0 top-0 bg-white z-20 flex flex-col justify-between transition-all duration-300
+            w-[80px] md:w-[100px] h-screen border-r fixed left-0 top-0 bg-white z-40 flex flex-col justify-between transition-all duration-300
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >

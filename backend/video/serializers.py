@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Video, Comment, VideoLike, CommentLike
+from .models import Video, Comment, VideoVote, CommentVote
 from django.conf import settings
 from accounts.models import UserAccount
 from urllib.parse import quote
@@ -13,15 +13,16 @@ class UserPublicSerializer(serializers.ModelSerializer):
 class VideoSerializer(serializers.ModelSerializer):
   uploader = UserPublicSerializer(read_only=True)
   timestamp = serializers.SerializerMethodField()
-  like_count = serializers.IntegerField(read_only=True)
-  has_liked = serializers.SerializerMethodField()
+  likes = serializers.SerializerMethodField(read_only=True)
+  dislikes = serializers.SerializerMethodField()
+  user_vote = serializers.SerializerMethodField()
   thumbnail_url = serializers.SerializerMethodField()
 
   class Meta:
     model = Video
     fields = [
       'id', 'title', 'description', 'thumbnail_url',
-       'timestamp', 'file_url',  'uploader', "like_count", "has_liked"
+       'timestamp', 'file_url',  'uploader', "likes", "dislikes", "user_vote"
     ]
     read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at']
   
@@ -37,39 +38,55 @@ class VideoSerializer(serializers.ModelSerializer):
       return request.build_absolute_uri(obj.thumbnail)
     return None
 
-  def get_like_count(self, obj):
-     return obj.likes.count()
+  def get_likes(self, obj):
+    return obj.votes.filter(value=1).count()
+
+  def get_dislikes(self, obj):
+    return obj.votes.filter(value=-1).count()
   
   def get_timestamp(self, obj):
     return obj.created_at.strftime('%b %d, %Y')
   
     
-  def get_has_liked(self, obj):
-     request = self.context.get("request")
-     if request and request.user.is_authenticated:
-        return obj.likes.filter(id=request.user.id).exists()
-     return False
+  def get_user_vote(self, obj):
+    request = self.context.get("request")
+    if request and request.user.is_authenticated:
+      vote = obj.votes.filter(user=request.user).first()
+      return vote.value if vote else 0
+    return 0
   
 class CommentSerializer(serializers.ModelSerializer):
   user = serializers.StringRelatedField(read_only=True)
   likes = serializers.SerializerMethodField()
+  dislikes = serializers.SerializerMethodField()
+  user_vote = serializers.SerializerMethodField()
 
   class Meta:
     model = Comment
-    fields = ['id', 'video', 'user', 'content', 'likes', 'created_at']
+    fields = ['id', 'video', 'user', 'content', 
+      'likes', 'dislikes', 'user_vote', 'created_at'
+    ]
     read_only_fields = ['user', 'created_at']
 
   def get_likes(self, obj):
-     return obj.likes.count()
+    return obj.likes.count()
 
-class VideoLikeSerializer(serializers.ModelSerializer):
+  def get_user_vote(self, obj):
+    request = self.context.get("request")
+    if request and request.user.is_authenticated:
+      vote = obj.votes.filter(user=request.user).first()
+      return vote.value if vote else 0
+    return 0
+
+
+class VideoVoteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = VideoLike
+        model = VideoVote
         fields = ['id', 'video', 'user']
         read_only_fields = ['user']
 
-class CommentLikeSerializer(serializers.ModelSerializer):
+class CommentVoteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CommentLike
+        model = CommentVote
         fields = ['id', 'comment', 'user']
         read_only_fields = ['user']

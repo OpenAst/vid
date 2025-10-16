@@ -12,8 +12,8 @@ from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework import generics, permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Video, Comment, VideoLike, CommentLike
-from .serializers import VideoSerializer, CommentSerializer
+from .models import Video, Comment, VideoVote, CommentVote
+from .serializers import VideoSerializer, CommentSerializer, VideoVoteSerializer, CommentVoteSerializer
 from rest_framework.pagination import PageNumberPagination
 from accounts.permissions import IsOwnerOrReadOnly
 from django.views.decorators.csrf import csrf_exempt
@@ -85,14 +85,14 @@ class VideoListView(generics.ListAPIView):
     return {"request": self.request}
   
   def get_queryset(self):
-        return Video.objects.annotate(like_count=Count("likes")).order_by('-created_at')
+    return Video.objects.order_by('-created_at')
 
 class VideoDetailView(generics.RetrieveAPIView):
   serializer_class = VideoSerializer
   permission_classes = [permissions.AllowAny]    
 
   def get_queryset(self):
-        return Video.objects.annotate(like_count=Count("likes")).order_by('-created_at')
+    return Video.objects.order_by('-created_at')
 
 class CommentListAPIView(generics.ListAPIView):
    serializer_class = CommentSerializer
@@ -129,47 +129,55 @@ class CommentDeleteAPIView(generics.DestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = "pk"
 
-class VideoLikeViewSet(viewsets.ViewSet):
-   permission_classes = [permissions.IsAuthenticated]
-   queryset = Video.objects.annotate(like_count=Count("likes"))
-
-   def create(self, request):
-      video_id = request.data.get('video')
-      video = Video.objects.get(id=video_id)
-      like, created = VideoLike.objects.get_or_create(video=video, user=request.user)
-      if not created:
-        return Response({"detail": "Already liked"}, status=400)
-      return Response({"detail": "Liked"}, status=201)
-   
-   def destroy(self, request, pk=None):
-      try:
-         like = VideoLike.objects.get(video_id=pk, user=request.user)
-         like.delete()
-         return Response({"detail": "Unliked"}, status=204)
-      except VideoLike.DoesNotExist:
-         return Response({"detail": "Like does not exist"}, status=404)
-      
-class CommentLikeViewSet(viewsets.ViewSet):
+class VideoVoteAPIView(generics.CreateAPIView):
+    serializer = VideoVoteSerializer
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Comment.objects.annotate(like_count=Count("likes"))
 
-    def create(self, request):
-        comment_id = request.data.get("comment")
-        comment = Comment.objects.get(id=comment_id)
-        like, created = CommentLike.objects.get_or_create(comment=comment, user=request.user)
+    def post(self, request, *args, **kwargs):
+        video_id = request.data.get("video")
+        value = int(request.data.get("value", 0))
 
-        if not created:
-            return Response({"detail": "Already liked"}, status=400)
-        return Response({"detail": "Liked"}, status=201)
-
-    def destroy(self, request, pk=None):
-        try:
-            like = CommentLike.objects.get(comment_id=pk, user=request.user)
-            like.delete()
-            return Response({"detail": "Unliked"}, status=204)
-        except CommentLike.DoesNotExist:
-            return Response({"detail": "Like does not exist"}, status=404)      
+        if value not in [1, -1]:
+            return Response({"detail": "Invalid vote vallue"}, status=status.HTTP_400_BAD_REQUEST)
         
+        existing_vote = VideoVote.objects.filter(video_id=video_id, user=request.user).first()
+
+        if existing_vote:
+            if existing_vote.value == value:
+                existing_vote.delete()
+                return Response({"detail": "Vote removed", "value": "0"}, status=status.HTTP_200_OK)
+            else:
+                existing_vote.value = value
+                existing_vote.save()
+                return Response({"detail": "Vote updated", "value": value}, status=status.HTTP_200_OK)
+        
+        VideoVote.objects.create(video_id=video_id, user=request.user, value=value)
+        return Response({"detail": "Vote recorded", "value": value}, status=status.HTTP_201_CREATED)
+
+class CommentVoteAPIView(generics.CreateAPIView):
+    serializer_class = CommentVoteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        comment_id = request.data.get("comment")
+        value = int(request.data.get("value", 0))
+
+        if value not in [1, -1]:
+            return Response({"detail": "Invalid vote value"}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing_vote = CommentVote.objects.filter(comment_id=comment_id, user=request.user).first()
+
+        if existing_vote:
+            if existing_vote.value == value:
+                existing_vote.delete()
+                return Response({"detail": "Vote removed", "value": 0}, status=status.HTTP_200_OK)
+            else:
+                existing_vote.value = value
+                existing_vote.save()
+                return Response({"detail": "Vote updated", "value": value}, status=status.HTTP_200_OK)
+
+        CommentVote.objects.create(comment_id=comment_id, user=request.user, value=value)
+        return Response({"detail": "Vote recorded", "value": value}, status=status.HTTP_201_CREATED)
 
 logger = logging.getLogger(__name__)
 

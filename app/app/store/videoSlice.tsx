@@ -11,10 +11,15 @@ export interface Video {
   views: number;
   duration?: number;
   timestamp: string;
+  likes: number;
+  dislikes: number;
+  user_vote: number;
   uploader: {
     id: string;
     email: string;
     username: string;
+    first_name: string;
+    last_name: string;
   };
 }
 

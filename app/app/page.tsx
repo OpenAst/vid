@@ -8,6 +8,8 @@ import Feed from './components/video/Feed';
 import { usePathname, useRouter } from 'next/navigation';
 import { setUnAuthenticated } from '@/app/store/authSlice';
 import { Plus } from "lucide-react";
+import Header from './components/layout/Header';
+
 
 function HomePage() {
   const { isAuthenticated, isLoading, token } = useSelector((state: RootState) => state.auth);
@@ -59,15 +61,7 @@ function HomePage() {
 
   return (
       <div className="flex flex-col items-center justify-center">
-        <div className="text-center items-center fixed top-0 left-0 right-0 z-20 bg-white py-4">
-          <p className="text-md ">
-            Hello,{' '}
-            <span className="text-xl font-semibold">
-              {userDetails.firstName}, {userDetails.lastName}
-            </span>
-          </p>
-          <p className="text-center">You are welcome to OneClyq</p>
-        </div>
+        <Header />
 
         <div className="mt-20 h-[calc(100vh-5rem)]">
           <Feed jwtToken={token} />
