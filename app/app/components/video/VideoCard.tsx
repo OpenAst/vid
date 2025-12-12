@@ -37,12 +37,6 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     {
       id,
       file_url,
-      title,
-      description,
-      likes,
-      dislikes,
-      user_vote,
-      uploader,
       thumbnail_url,
       isCommentsOpen,
     },

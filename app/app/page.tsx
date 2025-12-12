@@ -23,6 +23,7 @@ function HomePage() {
     lastName: '',
     email: '',
   });
+  console.log("The user details", userDetails);
 
   useEffect(() => {
     const fetchData = async () => {
