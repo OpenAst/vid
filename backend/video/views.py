@@ -9,6 +9,7 @@ from django.conf import settings
 from rest_framework import status
 from django.db.models import Count
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import generics, permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -159,25 +160,52 @@ class CommentVoteAPIView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        comment_id = request.data.get("comment")
-        value = int(request.data.get("value", 0))
+        comment_id = request.data.get("comment") or request.data.get("commentId")
+        value = int(request.data.get("value", 1))
 
-        if value not in [1, -1]:
-            return Response({"detail": "Invalid vote value"}, status=status.HTTP_400_BAD_REQUEST)
+        print("Received data", request.data)
+        
+        if not comment_id:
+            return Response({
+                "detail": "Comment ID and vote value are required."
+            }, status=status.HTTP_400_BAD_REQUEST
+        )
 
-        existing_vote = CommentVote.objects.filter(comment_id=comment_id, user=request.user).first()
+        try:
+            comment_uuid = uuid.UUID(comment_id)
+        except (ValueError, TypeError):
+            return Response({
+                "detail": "Invalid comment ID format."
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        if existing_vote:
-            if existing_vote.value == value:
-                existing_vote.delete()
-                return Response({"detail": "Vote removed", "value": 0}, status=status.HTTP_200_OK)
-            else:
-                existing_vote.value = value
-                existing_vote.save()
-                return Response({"detail": "Vote updated", "value": value}, status=status.HTTP_200_OK)
+        
+        comment = get_object_or_404(Comment, pk=comment_uuid)
 
-        CommentVote.objects.create(comment_id=comment_id, user=request.user, value=value)
-        return Response({"detail": "Vote recorded", "value": value}, status=status.HTTP_201_CREATED)
+
+        existing_like = CommentVote.objects.filter(comment=comment, user=request.user, value=1).first()
+
+        if existing_like:
+            existing_like.delete()
+            total_likes = CommentVote.objects.filter(comment=comment, value=1).count()
+
+            return Response(
+                {
+                    "detail": "Like removed",
+                    "liked": False,
+                    "total_likes": total_likes
+                }, status=status.HTTP_200_OK
+            )
+
+        CommentVote.objects.create(comment=comment, user=request.user, value=1)
+        total_likes = CommentVote.objects.filter(comment=comment, value=1).count()
+
+        return Response(
+            {
+                "detail": "Liked successfully",
+                "liked": True,
+                "total_likes": total_likes
+            }, status=status.HTTP_201_CREATED
+        )
 
 logger = logging.getLogger(__name__)
 

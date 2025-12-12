@@ -8,16 +8,9 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "media.oneclyq.com",
         pathname: "/**",
-      }
-    ]
+      },
+    ],
   },
-  webpackDevMiddleware: (config: any) => {
-    config.watchOptions = {
-      poll: 1000, 
-      aggregateTimeout: 300,
-    };
-    return config;
-  }
 
 };
 

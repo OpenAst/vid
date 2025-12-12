@@ -26,19 +26,25 @@ class UserCreateSerializer(UserCreateSerializer):
         raise serializers.ValidationError({'username': 'This username has been taken.'})
       raise serializers.ValidationError(str(e))
   
-    
+class ProfileSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = Profile
+    fields = ['avatar', 'bio', 'birth_date', 'followers']
+    read_only_fields = ["followers"]
+    extra_kwargs = {
+      'avatar': {'required': False, 'allow_blank': True }
+    }
+
 class UserDetailSerializer(serializers.ModelSerializer):
-  avatar = serializers.URLField(source="profile.avatar", read_only=True, allow_blank=True)
-  bio = serializers.CharField(source="profile.bio", read_only=True, allow_blank=True)
-  birth_date = serializers.DateField(source="profile.birth_date", read_only=True)
-  followers = serializers.IntegerField(source="profile.followers", read_only=True)
+  profile = ProfileSerializer(read_only=True)
 
   class Meta:
-      model = UserAccount
-      fields = ('id', 'email', 
-                'first_name', 'last_name', 'username',
-                'is_active', 'is_deactivated', 'date_joined',
-                'avatar', 'bio', 'birth_date', 'followers')
+    model = UserAccount
+    fields = ('id', 'email', 
+              'first_name',
+              'last_name', 'username','is_active', 
+              'is_deactivated', 'date_joined', 'profile'
+            )
                 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -73,49 +79,31 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
-class UserProfileUpdateSerializer(serializers.ModelSerializer):
+class UserUpdateSerializer(serializers.ModelSerializer):
   bio = serializers.CharField(source="profile.bio", required=False, allow_blank=True)
   avatar = serializers.URLField(source="profile.avatar", required=False, allow_blank=True)
 
   class Meta:
     model = UserAccount
     fields = ["first_name", "last_name", "username", "bio", "avatar"]
-
+  
   def update(self, instance, validated_data):
-    print("Incoming validated_data:", validated_data)
-    logger.debug("Incoming validated_data: %s", validated_data)
-
     profile_data = validated_data.pop("profile", {})
 
-    instance.first_name = validated_data.get("first_name", instance.first_name)
-    instance.last_name = validated_data.get("last_name", instance.last_name)
-    instance.username = validated_data.get("username", instance.username)
+    for attr, value in validated_data.items():
+      setattr(instance, attr, value)
     instance.save()
 
-    if profile_data:
-      profile = instance.profile
-      profile.bio = profile_data.get("bio", profile.bio)
-      profile.avatar = profile_data.get("avatar", profile.avatar)
-      profile.save()
+    profile = instance.profile
+    for attr, value in profile_data.items():
+      setattr(profile, attr, value)
+    profile.save()
 
-    response_data = UserProfileUpdateSerializer(instance).data
+    instance.refresh_from_db()
+    profile.refresh_from_db()
     
-    print("Updated UserProfile response:", response_data)
-
-    logger.debug("Updated UserProfile response: %s", response_data)
-
     return instance
-
-
-class PublicProfileSerializer(serializers.ModelSerializer):
-  first_name = serializers.CharField(source="user.first_name")
-  last_name = serializers.CharField(source="user.last_name")
-  username = serializers.CharField(source="user.username")
-
-  class Meta:
-    model = user
-    fields = ("id", "username", "first_name", "last_name", "avatar", "bio", 'followers')
-  
+    
 class UserDeleteSerializer(serializers.ModelSerializer):
   class Meta:
     model = UserAccount
@@ -125,4 +113,3 @@ class UserDeleteSerializer(serializers.ModelSerializer):
     user = UserAccount.objects.get(id=validated_data['id'])
     user.delete()
     return user
-      

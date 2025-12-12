@@ -32,9 +32,9 @@ function ProfilePage() {
         last_name: user.last_name || '',
         username: user.username || '',
         email: user.email || '',
-        avatar: user.avatar || '/dog5.jpg',
-        bio: user.bio || '',
-        followers: user.followers ? String(user.followers) : ''
+        avatar: user.profile?.avatar || '/dog5.jpg',
+        bio: user.profile?.bio || '',
+        followers: user.profile?.followers ? String(user.profile?.followers) : ''
       });
     }
   }, [user]);
@@ -92,15 +92,16 @@ function ProfilePage() {
           bio: userDetails.bio,
         })
       ).unwrap();
-
+      await new Promise(r => setTimeout(r, 500));
       await dispatch(fetchUser()).unwrap();
+      console.log('avatar url:', avatarUrl);
 
       toast.success("Profile updated successfully!");
-      const cacheBustedAvatar = `${updatedRes.avatar}?t=${Date.now()}`;
+      const newAvatar = updatedRes?.profile?.avatar || avatarUrl
 
+      const cacheBustedAvatar = `${newAvatar}?t=${Date.now()}`;
       setUserDetails((prev) => ({ ...prev, avatar: cacheBustedAvatar }));
       setPreviewImage(null);
-      setSelectedFile(null);
 
     } catch (err) {
       console.error("Update failed:", err);
@@ -112,14 +113,18 @@ function ProfilePage() {
   if (isLoading) return <p className="text-center">Loading...</p>;
   if (isError) return <p className="text-center text-red-500">Error loading profile</p>;
 
+  const imageSrc: string = (previewImage && previewImage.trim() !== "") ? previewImage :
+    (userDetails.avatar && userDetails.avatar.trim() !== "") ? userDetails.avatar : '/dog5.jpg';
+
   return (
     <div className="flex flex-col items-center mt-10">
       <div className="relative w-32 h-32 rounded-full justify-end items-end overflow-hidden border-4 border-gray-300">
         <Image
-          src={previewImage || userDetails.avatar || "/dog5.jpg"}
+          src={imageSrc}
           alt="Profile"
           width={128}
           height={128}
+          unoptimized={true}
           className="w-full h-full object-cover"
         />
       </div>

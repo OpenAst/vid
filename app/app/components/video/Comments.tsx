@@ -2,13 +2,16 @@
 import { useState, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import Image from "next/image";
+import { useSelector } from "react-redux";
+import { RootState } from "@/app/store/store";
+
 
 type Comment = {
   id: string;
   text: string;
   user: {
     id: string;
-    name: string;
+    username: string;
     avatar?: string;
   };
   likes: number;
@@ -16,12 +19,12 @@ type Comment = {
   replies?: Comment[];
 };
 
-type Props = {
+export type Props = {
   jwtToken: string;
   roomId: string;
   currentUser: {
     id: string;
-    name: string;
+    username: string;
     avatar?: string;
   };
 };
@@ -37,6 +40,8 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
   const [showCommentInput, setShowCommentInput] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const { user } = useSelector((state: RootState) => state.auth);
+
   useEffect(() => {
     const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL_DEV ?? "http://localhost:3001"}/comments`, {
       auth: { token: jwtToken },
@@ -47,6 +52,7 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
 
     socket.on("connect", () => {
       socket.emit("join-room", roomId);
+      console.log("The roomId", roomId);
     });
 
     socket.on("comments-history", (history: Comment[]) => {
@@ -59,11 +65,11 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
       setNewComment("");
     });
 
-    socket.on("comment-liked", ({_commentId, _likes}) => {
+    socket.on("comment-liked", ({commentId, likes}) => {
       setComments((prev) => prev.map((comment) =>
-          comment.id === _commentId ? { ...comment, _likes } : comment
+          comment.id === commentId ? { ...comment, likes } : comment
         ))
-        console.log("Comment likes", _commentId, _likes)
+        console.log("Comment likes", commentId, likes)
     });
 
     socket.on("new-reply", ({ parentId, reply }: { parentId: string; reply: Comment }) => {
@@ -102,7 +108,8 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
   };
 
   const handleLike = (commentId: string) => {
-    socketRef.current?.emit("like-comment", { commentId, roomId });
+    if (!user) return;
+    socketRef.current?.emit("vote-comment", { commentId, roomId, userId: user.id,  });
   };
 
   const handleSendReply = () => {
@@ -189,18 +196,18 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
                         src={comment.user.avatar}
                         height={32}
                         width={32}
-                        alt={comment.user.name}
+                        alt={comment.user.username}
                         className="rounded-full"
                       />
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span>{comment.user.name.charAt(0)}</span>
+                        <span>{comment.user.username.charAt(0)}</span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between">
-                      <span className="font-medium">{comment.user.name}</span>
+                      <span className="font-medium">{comment.user.username}</span>
                       <span className="text-xs text-gray-500">
                         {new Date(comment.createdAt).toLocaleString()}
                       </span>
@@ -248,18 +255,18 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
                                 src={reply.user.avatar}
                                 height={24}
                                 width={24}
-                                alt={reply.user.name}
+                                alt={reply.user.username}
                                 className="rounded-full"
                               />
                             ) : (
                               <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
-                                <span>{reply.user.name.charAt(0)}</span>
+                                <span>{reply.user.username.charAt(0)}</span>
                               </div>
                             )}
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between">
-                              <span className="text-sm font-medium">{reply.user.name}</span>
+                              <span className="text-sm font-medium">{reply.user.username}</span>
                               <span className="text-xs text-gray-500">
                                 {new Date(reply.createdAt).toLocaleString()}
                               </span>

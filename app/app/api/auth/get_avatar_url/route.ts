@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("Cloudflare upload status:", uploadRes.status);
-
+    console.log('The image url', public_url);
+    
     return NextResponse.json(
       { avatar_url: public_url },
       { status: 200 }

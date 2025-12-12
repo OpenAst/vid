@@ -24,6 +24,11 @@ export interface ApiResponse<T = unknown> {
   error?: DjoserErrorResponse | string;
 }
 
+interface Profile {
+  avatar?: string;
+  bio?: string;
+  followers?: number;
+}
 
 interface User {
   id: string;
@@ -31,9 +36,7 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
-  avatar?: string;
-  bio?: string;
-  followers?: number;
+  profile?: Profile;
 }
 
 interface AuthState {
@@ -227,7 +230,7 @@ export const updateUser = createAsyncThunk(
   async (
     userUpdates: {avatar?: string; first_name?: string, last_name?: string, bio?: string }, { rejectWithValue }) => {
     try {
-      const res = await fetch("api/auth/user_details", {
+      const res = await fetch("api/auth/profile_update", {
         method: 'PATCH',
         headers: { "Content-Type": "application/json" }, 
         credentials: "include",
@@ -358,9 +361,19 @@ const authSlice = createSlice({
         state.isError = true;
         state.errorMessage = action.payload as string;
       })
+      .addCase(updateUser.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(updateUser.fulfilled, (state, action) => {
         if (state.user) {
-          state.user = { ...state.user, ...action.payload };
+          state.user = {
+            ...state.user, 
+            ...action.payload,
+            profile: {
+              ...(state.user.profile || {}),
+              ...(action.payload.profile || {}),
+            },
+          };
         } else {
           state.user = action.payload;
         }

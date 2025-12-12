@@ -68,7 +68,7 @@ function HomePage() {
 
           <button
             onClick={() => router.push("/upload")}
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 border-0 btn w-24 bg-black/60 rounded-full flex items-center hover:scale-80 transition p-3 z-30"
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 border-0 w-12 bg-black/60 rounded-full flex items-center transition z-30"
           >
             <Plus className="w-80 h-12 rounded-full text-white" fill="currentColor" />
           </button>

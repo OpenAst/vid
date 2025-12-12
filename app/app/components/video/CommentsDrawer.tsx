@@ -8,7 +8,7 @@ interface CommentsDrawerProps {
   jwtToken: string;
   currentUser: {
     id: string;
-    name: string;
+    username: string;
     avatar?: string;
   };
   onClose: () => void;

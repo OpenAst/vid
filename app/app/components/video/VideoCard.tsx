@@ -3,11 +3,26 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { VolumeX, Volume2} from "lucide-react";
-import { Video } from '../../store/videoSlice';
 
 
-interface VideoCardProps extends Video {
+interface VideoCardProps {
+  id: string;
+  title: string;
+  file_url: string;
+  thumbnail_url: string | null;
+  views: number;
+  duration?: number;
+  timestamp: string;
+  likes?: number;
+  dislikes?: number;
+  user_vote?: number;
   jwtToken: string;
+  description?: string,
+  uploader: {
+    id: string;
+    avatar?: string;
+    username: string;
+  }
   isCommentsOpen: boolean;
   onCloseComments: () => void;
 }
@@ -110,12 +125,12 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           />
           <button
             onClick={toggleMute}
-            className="absolute top-4 left-4 p-3 sm:p-3 rounded-full bg-black/60 transition z-20"
+            className="absolute top-2 left-2 p-3 sm:p-3 rounded-full bg-black/60 transition z-20"
           >
             {isMuted ? (
-              <VolumeX className="w-6 h-6 text-white fill-white " />
+              <VolumeX className="w-4 h-4 text-white fill-white " />
               ) : (
-              <Volume2 className="w-6 h-6 text-white fill-white" />
+              <Volume2 className="w-4 h-4 text-white fill-white" />
             )}
           </button>
         </motion.div>

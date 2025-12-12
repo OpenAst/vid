@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Video, Comment, VideoVote, CommentVote
 from django.conf import settings
 from accounts.models import UserAccount
+from accounts.serializers import UserDetailSerializer
 from urllib.parse import quote
 
 
@@ -56,7 +57,7 @@ class VideoSerializer(serializers.ModelSerializer):
     return 0
   
 class CommentSerializer(serializers.ModelSerializer):
-  user = serializers.StringRelatedField(read_only=True)
+  user = UserDetailSerializer(read_only=True)
   likes = serializers.SerializerMethodField()
   dislikes = serializers.SerializerMethodField()
   user_vote = serializers.SerializerMethodField()
@@ -64,12 +65,15 @@ class CommentSerializer(serializers.ModelSerializer):
   class Meta:
     model = Comment
     fields = ['id', 'video', 'user', 'content', 
-      'likes', 'dislikes', 'user_vote', 'created_at'
+      'likes', 'dislikes', 'parent', 'user_vote', 'created_at'
     ]
     read_only_fields = ['user', 'created_at']
 
   def get_likes(self, obj):
-    return obj.likes.count()
+    return obj.votes.filter(value=1).count()
+  
+  def get_dislikes(self, obj):
+    return obj.votes.filter(value=-1).count()
 
   def get_user_vote(self, obj):
     request = self.context.get("request")

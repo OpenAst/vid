@@ -6,6 +6,7 @@ from accounts.models import UserAccount
 from uuid import uuid4
 
 class Video(models.Model):
+  id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
   uploader = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="videos")
   title = models.CharField(max_length=255)
   description = models.TextField(blank=True)
@@ -27,8 +28,9 @@ class Video(models.Model):
     return self.comments.count()
   
 class Comment(models.Model):
+  id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
   video = models.ForeignKey('Video', db_index=True, related_name='comments', on_delete=models.CASCADE)
-  user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+  user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments')
   content = models.TextField()
   created_at = models.DateTimeField(auto_now_add=True)
   parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies")

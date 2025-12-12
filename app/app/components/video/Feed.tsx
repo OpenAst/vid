@@ -92,10 +92,10 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 views={video.views || 0}
                 timestamp={video.timestamp || "N/A"}
                 jwtToken={jwtToken}
-                currentUser={{
+                uploader={{
                   id: user?.id || "",
-                  name: user?.username || "",
-                  avatar: user?.avatar,
+                  username: user?.username || "",
+                  avatar: user?.profile?.avatar || "",
                 }}
                 isCommentsOpen={openCommentsFor === video.id}
                 onCloseComments={() => setOpenCommentsFor(null)}
@@ -127,8 +127,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                     jwtToken={token}
                     currentUser={{
                       id: user?.id || "",
-                      name: user?.username || "Anonymous",
-                      avatar: user?.avatar,
+                      username: user?.username || "Anonymous",
                     }}
                     onClose={() => setOpenCommentsFor(null)}
                   />
@@ -136,12 +135,12 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               )}
 
               <div className="
-                absolute bottom-20 right-0 flex flex-col justify-center items-center gap-6
+                absolute bottom-10 right-0 flex flex-col justify-center items-center gap-6
                 z-30
               ">
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <div className="p-2 rounded-full bg-black/60">
-                    <Heart className="w-7 h-7 text-white" fill="currentColor" />
+                  <div className="p-1 rounded-full bg-black/60">
+                    <Heart className="w-6 h-6 text-white" fill="currentColor" />
                   </div>
                   <span className="hidden sm:block text-xs mt-1 text-white">Like</span>
                 </button>
@@ -152,15 +151,15 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                   }
                   className="flex flex-col items-center hover:scale-110 transition"
                 >
-                  <div className="p-2 rounded-full bg-black/60">
-                    <MessageCircle className="w-7 h-7 text-white" fill="currentColor " />
+                  <div className="p-1 rounded-full bg-black/60">
+                    <MessageCircle className="w-6 h-6 text-white" fill="currentColor " />
                   </div>
                   <span className="hidden sm:block text-xs mt-1 text-white">Comments</span>
                 </button>
 
                 <button className="flex flex-col items-center hover:scale-110 transition">
-                  <div className="p-2 rounded-full bg-black/60">
-                    <Share2 className="w-7 h-7 text-white" fill="currentColor" />
+                  <div className="p-1 rounded-full bg-black/60">
+                    <Share2 className="w-6 h-6 text-white" fill="currentColor" />
                   </div>
                   <span className="hidden sm:block text-xs mt-1 text-white">Share</span>
                 </button>

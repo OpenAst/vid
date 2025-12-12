@@ -8,12 +8,13 @@ from django.db import models
 from .models import UserAccount, Profile
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from .serializers import CustomTokenObtainPairSerializer, UserProfileUpdateSerializer, PublicProfileSerializer
+from .serializers import CustomTokenObtainPairSerializer, UserUpdateSerializer, ProfileSerializer, UserDetailSerializer
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.http import urlsafe_base64_decode
 from .tokens import OneDayActivationTokenGenerator
 import boto3
+import time
 from django.conf import settings
 from django.http import JsonResponse
 
@@ -68,21 +69,53 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
         return response
         
-class UserDetailProfileUpdateView(generics.RetrieveUpdateAPIView):
+class UserDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserDetailSerializer
+    
+    def get_object(self):
+        return self.request.user
 
-    def get_serializer_class(self):
-        if self.request.method in ["PATCH", "PUT"]:
-            return UserProfileUpdateSerializer
-        return UserDetailSerializer
+    
+class ProfileUpdateView(generics.UpdateAPIView):
+    """PATCH /auth/users/profile/update/"""
+    serializer_class = UserUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user
-        
+    
+    def get_serializer_class(self):
+        if self.request.method in ('PATCH', 'PUT'):
+            return UserUpdateSerializer
+        return UserDetailSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        instance.refresh_from_db()
+        if hasattr(instance, "profile"):
+            instance.profile.refresh_from_db()
+
+        read_serializer = UserDetailSerializer(instance, context=self.get_serializer_context())
+        return Response(read_serializer.data, status=status.HTTP_200_OK)
+
+    
+class ProfileView(generics.RetrieveAPIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.profile
 
 class PublicProfileView(generics.RetrieveAPIView):
     queryset = User.objects.all()
-    serializer_class = PublicProfileSerializer
+    serializer_class = ProfileSerializer
     permission_classes = [permissions.AllowAny]
 
     lookup_field = "username"
@@ -97,10 +130,20 @@ def get_avatar_url(request):
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         region_name='auto'
     )
+    
     file_type = request.data.get("file_type", "image/jpeg")
-    file_name = request.data.get("file_name", f"avatars/{request.user.id}.jpg")
+    file_name = request.data.get("file_name", f"avatar_{request.user.id}")
+    
+    if file_type == "image/svg+xml":
+        file_type = "image/png"
+        file_extension = "png"
+    else: 
+        file_extension = file_type.split('/')[-1]
 
-    key = f"avatars/{request.user.id}.{file_type.split('/')[-1]}"
+    # user Id with cache busting
+    timestamp = int(time.time())
+    
+    key = f"avatars/{request.user.id}_{timestamp}.{file_extension}"
 
     presigned_url = s3.generate_presigned_url(
         ClientMethod="put_object",
@@ -118,7 +161,9 @@ def get_avatar_url(request):
         public_url = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
         
     return JsonResponse({
-        "upload_url": presigned_url, "public_url": public_url 
+        "upload_url": presigned_url, 
+        "public_url": public_url,
+        "file_name": key
     })
 
 @ensure_csrf_cookie

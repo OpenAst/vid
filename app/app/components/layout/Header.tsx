@@ -1,50 +1,45 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { useState } from "react";
+import { Search, X } from "lucide-react";
 
 export default function Header() {
-  const [searchTerm, setSearchTerm] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-20 flex items-center justify-between px-4 md:px-6 py-3">
-      {/* Center text */}
-      <p className="text-md md:text-lg font-semibold text-center flex-1">
-        You are welcome to OneClyq
-      </p>
+    <header className="fixed top-0 left-0 right-0 z-20 bg-white py-4 px-6 flex items-center justify-center">
+      <h1 className="relative text-lg font-semibold text-center flex-1 text-gray-800">
+        OneClyq
+      </h1>
 
-      {/* Search Area */}
-      <div className="relative flex items-center">
-        {/* Desktop search bar */}
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="hidden md:block border border-gray-300 rounded-full px-4 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 transition-all duration-200"
-        />
-
-        {/* Mobile Search Icon + Expandable input */}
-        <div className="md:hidden flex items-center">
+      <div className="absolute right-1">
+        {!showSearch ? (
           <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="text-gray-600 p-2 rounded-full hover:bg-gray-100"
+            onClick={() => setShowSearch(true)}
+            className="p-2 text-gray-700 hover:text-gray-900"
           >
             <Search size={20} />
           </button>
-
-          {showSearch && (
+        ) : (
+          <div className="flex items-center">
             <input
               type="text"
               placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="absolute right-0 top-0 border border-gray-300 rounded-full px-3 py-1 text-sm focus:outline-none bg-white shadow-sm w-40 transition-all duration-300"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="border border-gray-300 rounded-full px-4 py-1 w-40 sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300"
               autoFocus
             />
-          )}
-        </div>
+            <button
+              onClick={() => {
+                setShowSearch(false);
+                setSearchValue("");
+              }}
+              className="ml-1 p-2 text-gray-600 hover:text-gray-900"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

@@ -4,7 +4,7 @@ services:
     container_name: postgres-db
     restart: always
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT:-5433}:5433"
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -20,12 +20,15 @@ services:
       - "6379:6379"
 
   web:
-    build: ./backend
+    build:
+      context: ./backend
     container_name: django-web
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             python manage.py runserver --bind 0.0.0.0:8000"
+      sh -c "
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        python manage.py runserver --bind 0.0.0.0:8000
+      "
     volumes:
       - ./backend:/app
     ports:
@@ -37,7 +40,8 @@ services:
       - redis
 
   celery:
-    build: ./backend
+    build:
+      context: ./backend
     container_name: celery-worker
     command: celery -A backend worker -l info
     volumes:
@@ -50,7 +54,8 @@ services:
       - web
 
   celery-beat:
-    build: ./backend
+    build:
+      context: ./backend
     container_name: celery-beat
     command: celery -A backend beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
@@ -63,12 +68,17 @@ services:
       - web
 
   node-server:
-    build: ./server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-development}
     container_name: node-server
     command: npm run dev
     working_dir: /usr/src/app
     volumes:
       - ./server:/usr/src/app
+      - ./server/node_modules:/usr/src/app/node_modules
     ports:
       - "4000:4000"
     env_file:
@@ -77,5 +87,6 @@ services:
       - db
       - redis
       - web
+
 volumes:
   postgres_data:
