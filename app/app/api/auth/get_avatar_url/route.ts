@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const accessToken = req.cookies.get("access")?.value;
   const csrfToken = req.cookies.get("csrftoken")?.value;
@@ -9,6 +12,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
@@ -26,6 +30,7 @@ export async function POST(req: NextRequest) {
           "Authorization": `JWT ${accessToken}`,
           ...(csrfToken && { "X-CSRFToken": csrfToken }),
         },
+        credentials: "include",
         body: JSON.stringify({ file_name: file.name, file_type: file.type }),
       }
     );
@@ -49,7 +54,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!uploadRes.ok) {
-      throw new Error('Failed to upload to R2: ${errorText}' + uploadRes.status);
+      throw new Error(`Failed to upload to R2: Status: ${uploadRes.status}`)
     }
 
     console.log("Cloudflare upload status:", uploadRes.status);
