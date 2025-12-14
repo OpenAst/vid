@@ -28,20 +28,24 @@ export async function PATCH(req: NextRequest) {
         }),
     });
 
-    const data = await apiRes.json();
+    const text = await apiRes.text();
+    
+    let data;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = { error: text };
+    }
     console.log("The updated profile", data);
     
-    if (apiRes.ok) {
-      return NextResponse.json(data, {
-        status: 200,
-      });
-    } else {
-      return new Response(JSON.stringify(data), {
-        status: apiRes.status,
-        headers: { "Content-Type": "application/json" },
-      })
+    if (!apiRes.ok) {
+      console.error("Django error:", data);
+      return NextResponse.json(data, { status: apiRes.status });
     }
-  } catch (err) {
+
+    return NextResponse.json(data, { status: 200 });
+  
+    } catch (err) {
       console.error("Update user error:", err);
       return new Response(
         JSON.stringify({ error: "Something went wrong while updating profile" }),
