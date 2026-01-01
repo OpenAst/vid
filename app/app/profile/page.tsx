@@ -45,8 +45,8 @@ function ProfilePage() {
         router.push('/login');
       })
     }
-  })
-  
+  }, [user, dispatch, router]);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
@@ -64,22 +64,32 @@ function ProfilePage() {
   const handleUpdateProfile = async () => {
     try {
       let avatarUrl = userDetails.avatar;
-      
+
       if (selectedFile) {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-        
-        const res = await fetch("/api/auth/get_avatar_url/", {
+        // 1. Get Presigned URL
+        const res = await fetch("/api/auth/get_avatar_url", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_name: selectedFile.name,
+            file_type: selectedFile.type
+          }),
         });
 
-        if (!res.ok) throw new Error("Failed to upload avatar");
+        if (!res.ok) throw new Error("Failed to get upload URL");
 
-        const { avatar_url } = await res.json();
+        const { upload_url, avatar_url } = await res.json();
+
+        // 2. Upload directly to S3/R2
+        const uploadRes = await fetch(upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": selectedFile.type },
+          body: selectedFile,
+        });
+
+        if (!uploadRes.ok) throw new Error("Failed to upload image");
 
         avatarUrl = avatar_url;
-
       }
 
       console.log("The avatar_url", avatarUrl);
@@ -92,16 +102,20 @@ function ProfilePage() {
           bio: userDetails.bio,
         })
       ).unwrap();
-      await new Promise(r => setTimeout(r, 500));
+
+      await new Promise(r => setTimeout(r, 200));
       await dispatch(fetchUser()).unwrap();
       console.log('avatar url:', avatarUrl);
 
       toast.success("Profile updated successfully!");
-      const newAvatar = updatedRes?.profile?.avatar || avatarUrl
 
+      // Cache busting
+      const newAvatar = updatedRes?.profile?.avatar || avatarUrl
       const cacheBustedAvatar = `${newAvatar}?t=${Date.now()}`;
+
       setUserDetails((prev) => ({ ...prev, avatar: cacheBustedAvatar }));
       setPreviewImage(null);
+      setSelectedFile(null); // Clear file selection after upload
 
     } catch (err) {
       console.error("Update failed:", err);

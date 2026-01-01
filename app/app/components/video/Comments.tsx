@@ -201,7 +201,7 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
                       />
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span>{comment.user.username.charAt(0)}</span>
+                        <span>{comment.user.username}</span>
                       </div>
                     )}
                   </div>

@@ -12,12 +12,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const body = await req.json();
+    const { file_name, file_type } = body;
 
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (!file_name || !file_type) {
+      return NextResponse.json({ error: "Missing file metadata" }, { status: 400 });
     }
 
     // Ask Django for presigned URL
@@ -30,8 +29,7 @@ export async function POST(req: NextRequest) {
           "Authorization": `JWT ${accessToken}`,
           ...(csrfToken && { "X-CSRFToken": csrfToken }),
         },
-        credentials: "include",
-        body: JSON.stringify({ file_name: file.name, file_type: file.type }),
+        body: JSON.stringify({ file_name, file_type }),
       }
     );
 
@@ -42,30 +40,12 @@ export async function POST(req: NextRequest) {
 
     const { upload_url, public_url } = await presignedRes.json();
 
-    if (!upload_url || !public_url) {
-      throw new Error("Missing presigned URL or avatar_url from backend");
-    }
-
-    // Upload file directly to Cloudflare R2
-    const uploadRes = await fetch(upload_url, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
-
-    if (!uploadRes.ok) {
-      throw new Error(`Failed to upload to R2: Status: ${uploadRes.status}`)
-    }
-
-    console.log("Cloudflare upload status:", uploadRes.status);
-    console.log('The image url', public_url);
-    
     return NextResponse.json(
-      { avatar_url: public_url },
+      { upload_url, avatar_url: public_url },
       { status: 200 }
     );
   } catch (err) {
-    console.error("Avatar upload error:", err);
+    console.error("Presigned URL error:", err);
     return NextResponse.json(
       { error: (err as Error).message || "Something went wrong" },
       { status: 500 }
