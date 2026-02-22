@@ -3,8 +3,9 @@ import boto3
 import logging
 import subprocess
 import tempfile
+import threading
+import requests
 from botocore.config import Config
-from botocore.client import Config
 from django.conf import settings
 from rest_framework import status
 from django.db.models import Count
@@ -59,6 +60,14 @@ class VideoUploadView(generics.CreateAPIView):
                 return Response(serializer.errors, status=400)
 
             self.perform_create(serializer)
+            video_instance = serializer.instance
+            
+            # Trigger thumbnail extraction in the background
+            threading.Thread(
+                target=extract_and_upload_thumbnail, 
+                args=(video_instance.file_url, video_instance)
+            ).start()
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
             
@@ -77,6 +86,8 @@ class VideoUploadView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(uploader=self.request.user)
 
+from django.db.models import Q
+
 class VideoListView(generics.ListAPIView):
   serializer_class = VideoSerializer
   permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -86,7 +97,20 @@ class VideoListView(generics.ListAPIView):
     return {"request": self.request}
   
   def get_queryset(self):
-    return Video.objects.order_by('-created_at')
+    queryset = Video.objects.order_by('-created_at')
+    search_query = self.request.query_params.get('search', None)
+    username = self.request.query_params.get('username', None)
+    
+    if search_query:
+      queryset = queryset.filter(
+        Q(title__icontains=search_query) | 
+        Q(description__icontains=search_query)
+      )
+    
+    if username:
+      queryset = queryset.filter(uploader__username=username)
+      
+    return queryset
 
 class VideoDetailView(generics.RetrieveAPIView):
   serializer_class = VideoSerializer
@@ -254,7 +278,7 @@ def get_presigned_part_url(request):
             region_name='auto',
             config=Config(
                 signature_version='s3v4',
-                s3={'addressing_style': 'virtual'}
+                s3={'addressing_style': 'path'}
             )
         )
         
@@ -296,7 +320,11 @@ def complete_multipart_upload(request):
             endpoint_url=settings.AWS_S3_ENDPOINT_URL,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name='auto'
+            region_name='auto',
+            config=Config(
+                signature_version='s3v4',
+                s3={'addressing_style': 'path'}
+            )
         )
 
         response = s3.complete_multipart_upload(
@@ -358,34 +386,76 @@ def cleanup_multipart_upload(request):
         })
 
 def extract_and_upload_thumbnail(video_url, video_instance):
-    temp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
-    subprocess.call([
-        'ffmpeg',
-        '-i', temp_video.name,
-        '-ss', '00:00:03.000',
-        '-vframes', '1',
-        thumbnail_path
-    ])
-    s3 = boto3.client('s3', 
-        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name='auto',
-        config=Config(
-            signature_version='s3v4', 
-            s3={'addressing_style': 'virtual'}
-        )
-    )
-    key = f"thumbnails/{video_instance.id}_thumb.jpg"
-    with open(thumbnail_path, 'rb') as f:
-        s3.put_object(
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
-            Key=key,
-            Body=f,
-            ACL='public-read',
-            ContentType='image/jpeg'
-        )
+    """
+    Downloads the first part of the video, extracts a thumbnail using ffmpeg,
+    and uploads it to R2.
+    """
+    temp_video = None
+    temp_thumb = None
+    try:
+        # Create temp files
+        temp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+        temp_thumb = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False).name
 
-    public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
-    video_instance.thumbnail = public_url
-    video_instance.save()
+        # Download video (first 2MB should be enough for metadata and frame at 3s)
+        # However, for simplicity and reliability with S3 urls, we'll download enough or use stream if ffmpeg supports it.
+        # Deep diving: ffmpeg can take a URL directly, but it might be slow or fail without headers.
+        # For now, let's download the first bit using requests.
+        response = requests.get(video_url, stream=True, timeout=10)
+        with open(temp_video, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024*1024):
+                f.write(chunk)
+                if f.tell() > 5 * 1024 * 1024: # 5MB limit for thumbnail extraction
+                    break
+        
+        # Extract frame
+        subprocess.call([
+            'ffmpeg',
+            '-y', # Overwrite 
+            '-i', temp_video,
+            '-ss', '00:00:03.000',
+            '-vframes', '1',
+            '-f', 'image2',
+            temp_thumb
+        ])
+
+        # Verify thumb was created
+        if not os.path.exists(temp_thumb) or os.path.getsize(temp_thumb) == 0:
+            print(f"Thumbnail extraction failed for video {video_instance.id}")
+            return
+
+        # Upload to S3/R2
+        s3 = boto3.client('s3', 
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name='auto',
+            config=Config(
+                signature_version='s3v4', 
+                s3={'addressing_style': 'path'} # Match the fixed style
+            )
+        )
+        key = f"thumbnails/{video_instance.id}_thumb.jpg"
+        
+        with open(temp_thumb, 'rb') as f:
+            s3.put_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=key,
+                Body=f,
+                ACL='public-read',
+                ContentType='image/jpeg'
+            )
+
+        public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
+        video_instance.thumbnail = public_url
+        video_instance.save()
+        print(f"Successfully generated and uploaded thumbnail for {video_instance.id}")
+
+    except Exception as e:
+        print(f"Error in extract_and_upload_thumbnail: {str(e)}")
+    finally:
+        # Cleanup
+        if temp_video and os.path.exists(temp_video):
+            os.remove(temp_video)
+        if temp_thumb and os.path.exists(temp_thumb):
+            os.remove(temp_thumb)

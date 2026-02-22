@@ -35,6 +35,12 @@ class ProfileSerializer(serializers.ModelSerializer):
       'avatar': {'required': False, 'allow_blank': True }
     }
 
+class PublicProfileSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = Profile
+    fields = ['avatar', 'bio', 'followers']
+    read_only_fields = ['avatar', 'bio', 'followers']
+
 class UserDetailSerializer(serializers.ModelSerializer):
   profile = ProfileSerializer(read_only=True)
 
@@ -45,6 +51,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
               'last_name', 'username','is_active', 
               'is_deactivated', 'date_joined', 'profile'
             )
+
+class UserPublicSerializer(serializers.ModelSerializer):
+  profile = PublicProfileSerializer(read_only=True)
+
+  class Meta:
+    model = UserAccount
+    fields = ('id', 'username', 'first_name', 'last_name', 'profile')
                 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -88,20 +101,22 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     fields = ["first_name", "last_name", "username", "bio", "avatar"]
   
   def update(self, instance, validated_data):
-    profile_data = validated_data.pop("profile", {})
+    # Extract profile data from source mapping
+    profile_data = {}
+    if "profile" in validated_data:
+        profile_data = validated_data.pop("profile")
 
+    # Update UserAccount fields
     for attr, value in validated_data.items():
       setattr(instance, attr, value)
     instance.save()
 
+    # Update Profile fields
     profile = instance.profile
     for attr, value in profile_data.items():
       setattr(profile, attr, value)
     profile.save()
 
-    instance.refresh_from_db()
-    profile.refresh_from_db()
-    
     return instance
     
 class UserDeleteSerializer(serializers.ModelSerializer):

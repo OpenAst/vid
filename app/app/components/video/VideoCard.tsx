@@ -2,7 +2,7 @@
 
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { VolumeX, Volume2} from "lucide-react";
+import { VolumeX, Volume2 } from "lucide-react";
 
 
 interface VideoCardProps {
@@ -25,6 +25,7 @@ interface VideoCardProps {
   }
   isCommentsOpen: boolean;
   onCloseComments: () => void;
+  onLike?: () => void;
 }
 
 export type VideoCardHandle = {
@@ -39,6 +40,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       file_url,
       thumbnail_url,
       isCommentsOpen,
+      onLike,
     },
     ref
   ) => {
@@ -59,7 +61,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       if (clickTimeout.current) {
         clearTimeout(clickTimeout.current);
         clickTimeout.current = null;
-        handleLike();
+        if (onLike) onLike();
       } else {
         clickTimeout.current = setTimeout(() => {
           togglePlayPause();
@@ -70,7 +72,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
 
     const toggleMute = () => {
       if (!videoRef.current) return;
-      
+
       videoRef.current.muted = !videoRef.current.muted;
       setIsMuted(videoRef.current.muted);
     }
@@ -88,46 +90,45 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     };
 
     const handleLike = () => {
-      console.log("Video liked ❤️", id);
+      if (onLike) onLike();
     }
 
     return (
-        <motion.div
-          animate={{
-            height: isCommentsOpen ? "70%" : "100%"
-          }}
-          transition={{ duration: 0.3 }}
-          className="relative h-full sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
-        >
-          <video
-            id={id}
-            ref={videoRef}
-            src={file_url}
-            poster={thumbnail_url || undefined}
-            className={`absolute h-full bg-black rounded-2xl ${
-              isPortrait ? "object-cover" : "object-contain"
+      <motion.div
+        animate={{
+          height: isCommentsOpen ? "70%" : "100%"
+        }}
+        transition={{ duration: 0.3 }}
+        className="relative h-full sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
+      >
+        <video
+          id={id}
+          ref={videoRef}
+          src={file_url}
+          poster={thumbnail_url || undefined}
+          className={`absolute h-full bg-black rounded-2xl ${isPortrait ? "object-cover" : "object-contain"
             }`}
-            playsInline
-            autoPlay
-            loop
-            muted={true}
-            onClick={handleVideoClick}
-            onLoadedMetadata={(e) => {
-              const video = e.currentTarget;
-              setIsPortrait(video.videoHeight > video.videoWidth);
-            }}
-          />
-          <button
-            onClick={toggleMute}
-            className="absolute top-2 left-2 p-3 sm:p-3 rounded-full bg-black/60 transition z-20"
-          >
-            {isMuted ? (
-              <VolumeX className="w-4 h-4 text-white fill-white " />
-              ) : (
-              <Volume2 className="w-4 h-4 text-white fill-white" />
-            )}
-          </button>
-        </motion.div>
+          playsInline
+          autoPlay
+          loop
+          muted={true}
+          onClick={handleVideoClick}
+          onLoadedMetadata={(e) => {
+            const video = e.currentTarget;
+            setIsPortrait(video.videoHeight > video.videoWidth);
+          }}
+        />
+        <button
+          onClick={toggleMute}
+          className="absolute top-4 left-4 p-2 rounded-full bg-white/80 backdrop-blur-md border border-white transition-all z-20 hover:scale-110 active:scale-90 shadow-lg"
+        >
+          {isMuted ? (
+            <VolumeX className="w-5 h-5 text-black" />
+          ) : (
+            <Volume2 className="w-5 h-5 text-black" />
+          )}
+        </button>
+      </motion.div>
     );
   }
 );

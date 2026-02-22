@@ -28,6 +28,9 @@ export default function LogoutButton() {
 
       if (res.ok) {
         dispatch(setUnAuthenticated());
+        // Reset theme to light on logout
+        localStorage.setItem('theme', 'light');
+        document.documentElement.setAttribute('data-theme', 'light');
         router.push('/login');
       } else {
         const data = await res.json();
@@ -44,10 +47,10 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       className="flex flex-col md:flex-row items-center
-       justify-center hover:bg-gray-100 text-xs w-full"
+       justify-center hover:bg-base-200 text-xs w-full py-2 rounded-lg transition-colors text-base-content"
     >
-      <Image src="new_logout.svg" alt="Logout" width={18} height={20} />
-      <span className="mt-1 md:mt-0 md:ml-2">Logout</span>
+      <Image src="new_logout.svg" alt="Logout" width={18} height={20} className="dark:invert" />
+      <span className="mt-1 md:mt-0 md:ml-2 font-medium">Logout</span>
     </button>
   )
 }

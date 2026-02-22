@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import "./globals.css";
-import Fonts from "./fonts"; 
-import ClientProvider from "./clientlayout"; 
+import Fonts from "./fonts";
+import ClientProvider from "./clientlayout";
 import Providers from './store/providers';
 import { Toaster } from 'react-hot-toast';
 import { inter } from "./fonts";
@@ -16,14 +16,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.className}`}>
       <head>
-        <meta 
+        <meta
           name="viewport"
           content="width=device-width, initial-scale=1.0 user-scalable=no"
         />
       </head>
-      <body data-theme="light">
+      <body>
         <Providers>
-          <Fonts /> 
+          <Fonts />
           <ClientProvider>
             {children}
             <Toaster position="top-center" reverseOrder={false} />

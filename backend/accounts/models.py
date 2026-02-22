@@ -4,16 +4,20 @@ from django.utils import timezone
 from uuid import uuid4
 
 class UserAccountManager(BaseUserManager):
-    def create_user(self, email, username, first_name, last_name, password=None, **extra_fields):
+    def create_user(self, email, username=None, first_name=None, last_name=None, password=None, **extra_fields):
         if not email:
             raise ValueError('Users must have an email address')
 
         email = self.normalize_email(email)
+        
+        first_name = first_name or extra_fields.pop('first_name', '')
+        last_name = last_name or extra_fields.pop('last_name', '')
+        username = username or extra_fields.pop('username', email.split('@')[0]) # Fallback to email prefix
+
         user = self.model(email=email, username=username, first_name=first_name, last_name=last_name, **extra_fields)
 
         user.set_password(password)
         user.save()
-        Profile.objects.create(user=user)
         
         return user
     

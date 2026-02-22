@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     });
 
     let data;
-    
+
     try {
       data = await apiRes.json();
       console.log("Login details", data);
@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
         const setCookieHeaders = csrfRes.headers.getSetCookie?.() || csrfRes.headers.get('Set-Cookie');
 
         if (setCookieHeaders) {
-          const cookieString = Array.isArray(setCookieHeaders) ? 
-          setCookieHeaders.find(cookie => cookie.startsWith('csrftoken=')) : setCookieHeaders;
+          const cookieString = Array.isArray(setCookieHeaders) ?
+            setCookieHeaders.find(cookie => cookie.startsWith('csrftoken=')) : setCookieHeaders;
 
           if (cookieString) {
             const tokenMatch = cookieString.match(/csrftoken=([^;]+)/);
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
               )
             }
           }
-         
+
         }
       } catch (e) {
         console.warn('CSRF token fetch failed:', e);
@@ -86,16 +86,9 @@ export async function POST(req: NextRequest) {
         { status: 200, headers }
       );
     } else {
-      let errorMessage = 'Authentication failed.';
-
-      if (data.detail) {
-        errorMessage = data.detail;
-      } else if (data.error) {
-        errorMessage = data.error;
-      }
-
+      // Forward the backend error response directly
       return new Response(
-        JSON.stringify({ error: errorMessage }),
+        JSON.stringify(data),
         {
           status: apiRes.status,
           headers: { 'Content-Type': 'application/json' },

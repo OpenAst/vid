@@ -2,35 +2,37 @@
 
 import React, { useState } from 'react';
 import { login } from '@/app/store/authSlice';
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Link from 'next/link';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import AuthLayout from '../../components/layout/AuthLayout';
 import { ToastContainer, toast } from 'react-toastify';
+import SocialButton from '../../components/auth/SocialButton';
 
 const LoginPage = () => {
-  
+
   interface ApiError {
     status?: number;
     message?: string;
   }
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
 
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, isError } = useSelector((state: RootState) => state.auth);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null); 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
 
   interface AuthErrorResponse {
     email?: string;
     username?: string;
+    password?: string;
     detail?: string;
     error?: string;
     status?: number;
@@ -38,7 +40,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(null); 
+    setErrorMessage(null);
 
     try {
       const res = await dispatch(login({ email, password, username })).unwrap();
@@ -54,29 +56,25 @@ const LoginPage = () => {
 
       const defaultMsg = 'Your login credentials are incorrect. Please try again.';
 
-      if (typeof err === 'object' && typeof err !== null) {
+      if (typeof err === 'object' && err !== null) {
         const e = err as AuthErrorResponse;
         console.log(e);
-
 
         if (e.email) {
           setErrorMessage(`Email Error: ${e.email}`);
         } else if (e.username) {
           setErrorMessage(`Username Error: ${e.username}`);
+        } else if (e.password) {
+          setErrorMessage(`Password Error: ${e.password}`);
         } else if (e.detail) {
-          setErrorMessage(e.detail)
+          setErrorMessage(e.detail);
+        } else if ('error' in e) {
+          setErrorMessage(e.error as string);
         } else {
           setErrorMessage(defaultMsg);
         }
       } else {
         setErrorMessage(defaultMsg);
-      }
-
-      
-      if (typeof e === 'object' && e !== null && 'error' in e) {
-        setErrorMessage(e.error as string);
-      } else {
-        setErrorMessage('Your login credentials are incorrect. Please try again.');
       }
 
 
@@ -124,13 +122,13 @@ const LoginPage = () => {
             className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
             type="text"
             placeholder="Username"
-            name="username"  
+            name="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
           />
         </div>
-        
+
         <div className="form-control relative">
           <input
             className="input w-full input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue"
@@ -163,14 +161,49 @@ const LoginPage = () => {
         >
           {isLoading ? (
             <span className="loading loading-spinner loading-sm">Signing in</span>
-          ) : ( 
+          ) : (
             'Login'
           )}
         </button>
+
+        <div className="divider text-sm text-gray-400 my-4">OR</div>
+
+        <SocialButton
+          provider="google"
+          onClick={async () => {
+            // Redirect string contains the backend URL which returns a JSON with the actual auth URL
+            try {
+              const redirectUri = `${window.location.origin}/auth/google`;
+              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/o/google-oauth2/?redirect_uri=${redirectUri}`;
+
+              const res = await fetch(backendUrl, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+              });
+
+              if (res.ok) {
+                const data = await res.json();
+                if (data.authorization_url) {
+                  window.location.href = data.authorization_url;
+                } else {
+                  toast.error("Failed to get authorization URL");
+                }
+              } else {
+                toast.error("Failed to initiate Google Login");
+              }
+            } catch (err) {
+              console.error(err);
+              toast.error("An error occurred");
+            }
+          }}
+        />
       </form>
       <ToastContainer />
       <p className="text-center mt-4 mb-2">
-      Don&apos;t have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Link className="text-primary-blue hover:underline" href="/register">
           Sign Up
         </Link>

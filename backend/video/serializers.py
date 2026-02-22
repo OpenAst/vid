@@ -36,6 +36,8 @@ class VideoSerializer(serializers.ModelSerializer):
   def get_thumbnail_url(self, obj):
     request = self.context.get('request')
     if obj.thumbnail:
+      if obj.thumbnail.startswith(('http://', 'https://')):
+        return obj.thumbnail
       return request.build_absolute_uri(obj.thumbnail)
     return None
 

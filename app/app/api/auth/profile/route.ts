@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
-    
+
     const url = new URL(req.url);
     const username = url.searchParams.get("username");
 
@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/${username}/`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/users/${username}/`, {
       method: "GET",
       headers: {
         Authorization: `JWT ${req.cookies.get('access')?.value}`,

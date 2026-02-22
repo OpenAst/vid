@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { initializeRedisAdapter } from './redis';
-import { setupCommentSocket } from './socket';
+import { setupCommentSocket, likeSystem } from './socket';
 
 const app = express();
 const httpServer = createServer(app);
@@ -21,6 +21,7 @@ async function startServer() {
     io.adapter(adapter);
 
     setupCommentSocket(io, client);
+    likeSystem(io, client);
 
     httpServer.listen(3001, () => {
       console.log('Server running on port 3001');

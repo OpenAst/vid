@@ -71,13 +71,20 @@ ROOT_URLCONF = 'backend.urls'
 
 
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SECURE = True 
+
+ENV = config("ENV", default="production")
+
+if ENV == "development":
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
+else:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+
 CSRF_USE_SESSIONS = False
 
-SESSION_COOKIE_SECURE = True
-
 CSRF_TRUSTED_ORIGINS = [
-    'https://oneclyq.com',
+    'https://www.oneclyq.com',
     'https://vid-4yi2.onrender.com',
     "https://vid-olive.vercel.app",
     "http://localhost:3000",
@@ -89,6 +96,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    'https://www.oneclyq.com',
     "http://localhost:3001",
     "https://vid-olive.vercel.app",
 ]
@@ -249,12 +257,15 @@ if ENV == 'development':
     FRONTEND_DOMAIN = "localhost:3000"
     FRONTEND_PROTOCOL = "http"
 else:
-    FRONTEND_DOMAIN = "oneclyq.com"
+    FRONTEND_DOMAIN = "www.oneclyq.com"
     FRONTEND_PROTOCOL = "https"
 
 FRONTEND_URL = f"{FRONTEND_PROTOCOL}://{FRONTEND_DOMAIN}"
 
 DJOSER = {
+    'DOMAIN': FRONTEND_DOMAIN,
+    'SITE_NAME': 'OneClyq',
+    'PROTOCOL': FRONTEND_PROTOCOL,
     'LOGIN_FIELD': 'email',
     'USER_CREATE_PASSWORD_RETYPE': True,
     'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
@@ -272,7 +283,7 @@ DJOSER = {
        'activation': 'accounts.email.CustomActivationEmail',
     },
     'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
-    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': ['http://localhost:8000/google', 'http://localhost:8000/facebook'],
+    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': ['http://localhost:3000/auth/google', 'https://www.oneclyq.com/auth/google'],
     'SERIALIZERS': {
         'user_create': 'accounts.serializers.UserCreateSerializer',
         'user': 'accounts.serializers.UserDetailSerializer',
@@ -283,6 +294,24 @@ DJOSER = {
         'set_password': ["rest_framework.permissions.IsAuthenticated"],
     },
 }
+
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.social_auth.associate_by_email',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+)
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
+SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
 
 CELERY_BROKER_URL = "redis://redis:6379/0"
 CELERY_RESULT_BACKEND = "redis://redis:6379/0"

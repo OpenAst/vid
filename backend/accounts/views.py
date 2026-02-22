@@ -8,7 +8,10 @@ from django.db import models
 from .models import UserAccount, Profile
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from .serializers import CustomTokenObtainPairSerializer, UserUpdateSerializer, ProfileSerializer, UserDetailSerializer
+from .serializers import (
+    CustomTokenObtainPairSerializer, UserUpdateSerializer, ProfileSerializer, 
+    UserDetailSerializer, UserPublicSerializer
+)
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.http import urlsafe_base64_decode
@@ -64,7 +67,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     status=status.HTTP_401_UNAUTHORIZED
                 )
         except User.DoesNotExist:
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_400_BAD_REQUEST)
+            # Let the serializer handle invalid credentials
+            pass
 
         response = super().post(request, *args, **kwargs)
         return response
@@ -115,7 +119,7 @@ class ProfileView(generics.RetrieveAPIView):
 
 class PublicProfileView(generics.RetrieveAPIView):
     queryset = User.objects.all()
-    serializer_class = ProfileSerializer
+    serializer_class = UserPublicSerializer
     permission_classes = [permissions.AllowAny]
 
     lookup_field = "username"

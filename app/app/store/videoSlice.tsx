@@ -46,30 +46,33 @@ const initialState: VideoState = {
 export const fetchVideos = createAsyncThunk(
   "videos/fetchVideos",
   async (
-    { page = 1, limit = 10 }: { page?: number; limit?: number },
+    { page = 1, limit = 10, search = "", append = false }: { page?: number; limit?: number; search?: string, append?: boolean },
     { rejectWithValue }
   ) => {
     try {
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
+      const url = `/api/video/fetch?page=${page}&limit=${limit}${searchParam}`;
+      console.log("DEBUG: fetchVideos URL:", url, "append:", append);
+
       const res = await fetch(
-        `/api/video/fetch?page=${page}&limit=${limit}`,
+        url,
         {
           credentials: 'include',
         }
       );
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         return rejectWithValue(
-          errorData.error?.message || 
-          errorData.message || 
+          errorData.error?.message ||
+          errorData.message ||
           "Failed to fetch videos"
         );
       }
-      console.log("Videos fetch response", res);
       return await res.json();
-    } catch (err) { 
+    } catch (err) {
       const errorMessage = typeof err === "object" && err !== null && "message" in err
-      ? (err as {message?: string }) : "Internal error"
+        ? (err as { message?: string }) : "Internal error"
       return rejectWithValue(
         errorMessage || "Network error while fetching videos"
       );
@@ -88,6 +91,26 @@ const videoSlice = createSlice({
       state.errorMessage = null;
     },
     resetVideoState: () => initialState,
+    videoLiked: (state, action) => {
+      const { videoId } = action.payload;
+      if (state.videos) {
+        const video = state.videos.find(v => v.id === videoId);
+        if (video) {
+          video.likes += 1;
+          video.user_vote = 1;
+        }
+      }
+    },
+    videoUnliked: (state, action) => {
+      const { videoId } = action.payload;
+      if (state.videos) {
+        const video = state.videos.find(v => v.id === videoId);
+        if (video && video.likes > 0) {
+          video.likes -= 1;
+          video.user_vote = 0;
+        }
+      }
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -98,9 +121,13 @@ const videoSlice = createSlice({
       })
       .addCase(fetchVideos.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.videos = action.payload.results;
+        const newVideos = action.payload.results;
+        if (action.meta.arg.append && state.videos) {
+          state.videos = [...state.videos, ...newVideos];
+        } else {
+          state.videos = newVideos;
+        }
         state.next = action.payload.next;
-
       })
       .addCase(fetchVideos.rejected, (state, action) => {
         state.isLoading = false;
@@ -110,9 +137,11 @@ const videoSlice = createSlice({
   },
 });
 
-export const { 
+export const {
   clearUploadStatus,
-  resetVideoState 
+  resetVideoState,
+  videoLiked,
+  videoUnliked
 } = videoSlice.actions;
 
 export default videoSlice.reducer;

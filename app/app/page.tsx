@@ -61,7 +61,7 @@ function HomePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-base-100 transition-colors">
       <Header />
 
       <div className="mt-20 h-[calc(100vh-5rem)]">
@@ -69,9 +69,9 @@ function HomePage() {
 
         <button
           onClick={() => router.push("/upload")}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 border-0 w-12 bg-black/60 rounded-full flex items-center transition z-30"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 border-0 w-14 h-14 bg-primary text-primary-content rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all z-30"
         >
-          <Plus className="w-80 h-12 rounded-full text-white" fill="currentColor" />
+          <Plus className="w-8 h-8" />
         </button>
       </div>
     </div>

@@ -15,7 +15,7 @@ import { DjoserErrorResponse } from '@/app/store/authSlice';
 const RegisterPage = () => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstname: '',
@@ -54,9 +54,9 @@ const RegisterPage = () => {
     }
 
   }
-  
+
   const { isLoading, isError } = useSelector((state: RootState) => state.auth);
-  
+
   const togglePassword = () => setShowPassword(!showPassword);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,21 +84,21 @@ const RegisterPage = () => {
         })
       ).unwrap();
 
-      router.push('/check-email'); 
+      router.push('/check-email');
     } catch (error) {
-       const isDjoserError = (err: unknown): err is DjoserErrorResponse =>
-    typeof err === 'object' && err !== null;
+      const isDjoserError = (err: unknown): err is DjoserErrorResponse =>
+        typeof err === 'object' && err !== null;
 
-  if (isDjoserError(error)) {
-    if (error.username) toast.error(error.username[0]);
-    if (error.email) toast.error(error.email[0]);
-    if (error.password) toast.error(error.password[0]);
-    if (error.detail) toast.error(error.detail);
-  } else if (typeof error === 'string') {
-    toast.error(error);
-  } else {
-    toast.error('An unexpected error occurred.');
-  }
+      if (isDjoserError(error)) {
+        if (error.username) toast.error(error.username[0]);
+        if (error.email) toast.error(error.email[0]);
+        if (error.password) toast.error(error.password[0]);
+        if (error.detail) toast.error(error.detail);
+      } else if (typeof error === 'string') {
+        toast.error(error);
+      } else {
+        toast.error('An unexpected error occurred.');
+      }
     }
   };
 
@@ -154,26 +154,26 @@ const RegisterPage = () => {
               />
             </div>
             <div className="flex flex-col items-center justify-center mt-8 space-y-4">
-            <button
-              type="submit"
-              className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-700 text-white hover:bg-purple-600 transition"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <button
+                type="submit"
+                className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-content hover:opacity-90 transition shadow-lg"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
 
-            <div className="flex gap-4">
-              <span className="h-2 w-2 rounded-full bg-purple-500" />
-              <span className="h-2 w-2 rounded-full bg-gray-300" />
+              <div className="flex gap-4">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+                <span className="h-2 w-2 rounded-full bg-base-300" />
+              </div>
             </div>
-          </div>
 
           </div>
         )}
@@ -213,7 +213,7 @@ const RegisterPage = () => {
                 <button
                   type="button"
                   onClick={togglePassword}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-base-content/50"
                 >
                   {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
                 </button>
@@ -247,14 +247,14 @@ const RegisterPage = () => {
         <div className="mt-6">
           <button
             type="submit"
-            className= 'btn btn-primary w-full hover:opacity-75'
+            className='btn btn-primary w-full hover:opacity-75'
             disabled={isLoading}
           >
             {isLoading ? (
               <span className="loading loading-spinner loading-sm">
                 Signing in
               </span>
-            ) : ( 
+            ) : (
               'Register'
             )}
           </button>

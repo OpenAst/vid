@@ -8,14 +8,14 @@ import { RootState } from "@/app/store/store";
 
 type Comment = {
   id: string;
-  text: string;
+  content: string;
   user: {
     id: string;
     username: string;
     avatar?: string;
   };
   likes: number;
-  createdAt: string;
+  created_at: string;
   replies?: Comment[];
 };
 
@@ -65,11 +65,11 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
       setNewComment("");
     });
 
-    socket.on("comment-liked", ({commentId, likes}) => {
+    socket.on("comment-liked", ({ commentId, likes }) => {
       setComments((prev) => prev.map((comment) =>
-          comment.id === commentId ? { ...comment, likes } : comment
-        ))
-        console.log("Comment likes", commentId, likes)
+        comment.id === commentId ? { ...comment, likes } : comment
+      ))
+      console.log("Comment likes", commentId, likes)
     });
 
     socket.on("new-reply", ({ parentId, reply }: { parentId: string; reply: Comment }) => {
@@ -109,7 +109,7 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
 
   const handleLike = (commentId: string) => {
     if (!user) return;
-    socketRef.current?.emit("vote-comment", { commentId, roomId, userId: user.id,  });
+    socketRef.current?.emit("vote-comment", { commentId, roomId, userId: user.id, });
   };
 
   const handleSendReply = () => {
@@ -133,22 +133,22 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
   }, [comments])
 
   return (
-    <div className="w-full bg-white rounded-lg">
+    <div className="w-full bg-base-100 rounded-lg text-base-content transition-colors">
       <div
-        className="flex items-center justify-between cursor-pointer p-2"
+        className="flex items-center justify-between cursor-pointer p-4 hover:bg-base-200 transition-colors rounded-t-lg"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <h2 className="text-sm font-semibold">Comments ({comments.length})</h2>
-        <span>{isExpanded ? "▲" : "▼"}</span>
+        <h2 className="text-sm font-bold">Comments ({comments.length})</h2>
+        <span className="opacity-60">{isExpanded ? "▲" : "▼"}</span>
       </div>
 
       {isExpanded && (
         <>
           {showCommentInput ? (
-            <div className="mb-4 p-2">
+            <div className="mb-4 p-4 bg-base-200 rounded-xl mx-2 shadow-inner">
               <textarea
                 ref={textareaRef}
-                className="w-full border rounded p-2 text-sm mb-2"
+                className="w-full bg-base-100 border border-base-300 rounded-lg p-3 text-sm mb-3 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:opacity-50"
                 placeholder="Add a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
@@ -159,7 +159,7 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
               <div className="flex space-x-2">
                 <button
                   onClick={handleSendComment}
-                  className="bg-blue-500 text-white text-sm px-4 py-2 rounded-xl hover:bg-blue-700"
+                  className="btn btn-primary btn-sm rounded-lg"
                 >
                   Post Comment
                 </button>
@@ -168,7 +168,7 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
                     setShowCommentInput(false);
                     setNewComment("");
                   }}
-                  className="border px-4 py-2 text-sm rounded"
+                  className="btn btn-ghost btn-sm rounded-lg"
                 >
                   Cancel
                 </button>
@@ -180,53 +180,54 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
                 setShowCommentInput(true);
                 setTimeout(() => textareaRef.current?.focus(), 0);
               }}
-              className="w-full text-left p-2 text-blue-500 hover:bg-gray-50 rounded"
+              className="w-full text-left p-4 text-primary hover:bg-base-200 transition-colors font-medium border-t border-base-300"
             >
               Add a comment...
             </button>
           )}
 
-          <div className="space-y-4 max-h-96 overflow-y-auto p-2">
+          <div className="space-y-4 max-h-96 overflow-y-auto p-2 no-scrollbar">
             {comments.map((comment) => (
-              <div key={comment.id} className="border-b pb-2">
+              <div key={comment.id} className="border-b border-base-300 last:border-0 pb-4 last:pb-0">
                 <div className="flex items-start space-x-2">
                   <div className="flex-shrink-0">
-                    {comment.user.avatar ? (
+                    {/* Check both top-level avatar (if any) and nested profile avatar */}
+                    {comment.user.avatar || (comment.user as any).profile?.avatar ? (
                       <Image
-                        src={comment.user.avatar}
+                        src={comment.user.avatar || (comment.user as any).profile?.avatar}
                         height={32}
                         width={32}
                         alt={comment.user.username}
                         className="rounded-full"
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span>{comment.user.username}</span>
+                      <div className="h-8 w-8 rounded-full bg-base-300 flex items-center justify-center text-sm font-bold text-base-content/60">
+                        <span>{comment.user.username?.charAt(0)}</span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{comment.user.username}</span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(comment.createdAt).toLocaleString()}
+                    <div className="flex justify-between items-baseline">
+                      <span className="font-bold text-sm text-base-content">@{comment.user.username}</span>
+                      <span className="text-[10px] text-base-content/50">
+                        {new Date(comment.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-sm my-1">{comment.text}</p>
-                    <div className="flex space-x-4 text-xs">
-                      <button onClick={() => handleLike(comment.id)} className="flex items-center space-x-1">
-                        <span>👍</span>
+                    <p className="text-sm my-1 text-base-content/90 leading-relaxed">{comment.content}</p>
+                    <div className="flex space-x-6 text-xs mt-2 font-semibold">
+                      <button onClick={() => handleLike(comment.id)} className="flex items-center space-x-1 hover:text-primary transition-colors">
+                        <span>❤️</span>
                         <span>{comment.likes}</span>
                       </button>
-                      <button onClick={() => setReplyingTo(comment.id)} className="text-blue-600">
+                      <button onClick={() => setReplyingTo(comment.id)} className="text-primary hover:underline transition-all">
                         Reply
                       </button>
                     </div>
 
                     {replyingTo === comment.id && (
-                      <div className="mt-2 ml-6">
+                      <div className="mt-3 ml-2 p-3 bg-base-200 rounded-xl border border-base-300">
                         <textarea
-                          className="w-full border rounded p-2 text-sm mb-2"
+                          className="w-full bg-base-100 border border-base-300 rounded-lg p-2 text-sm mb-2 focus:ring-2 focus:ring-primary outline-none text-base-content"
                           placeholder="Write your reply..."
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
@@ -235,11 +236,11 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
                         <div className="flex space-x-2">
                           <button
                             onClick={handleSendReply}
-                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                            className="btn btn-primary btn-xs rounded"
                           >
-                            Post Reply
+                            Reply
                           </button>
-                          <button onClick={() => setReplyingTo(null)} className="border px-3 py-1 rounded text-sm">
+                          <button onClick={() => setReplyingTo(null)} className="btn btn-ghost btn-xs rounded">
                             Cancel
                           </button>
                         </div>
@@ -247,34 +248,34 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
                     )}
 
                     {comment.replies?.map((reply) => (
-                      <div key={reply.id} className="mt-2 ml-6 pl-2 border-l-2 border-gray-200">
+                      <div key={reply.id} className="mt-3 ml-4 pl-4 border-l-2 border-base-300">
                         <div className="flex items-start space-x-2">
                           <div className="flex-shrink-0">
-                            {reply.user.avatar ? (
+                            {reply.user.avatar || (reply.user as any).profile?.avatar ? (
                               <Image
-                                src={reply.user.avatar}
+                                src={reply.user.avatar || (reply.user as any).profile?.avatar}
                                 height={24}
                                 width={24}
                                 alt={reply.user.username}
                                 className="rounded-full"
                               />
                             ) : (
-                              <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
+                              <div className="h-6 w-6 rounded-full bg-base-300 flex items-center justify-center text-[10px] font-bold text-base-content/50">
                                 <span>{reply.user.username.charAt(0)}</span>
                               </div>
                             )}
                           </div>
                           <div className="flex-1">
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium">{reply.user.username}</span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(reply.createdAt).toLocaleString()}
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-xs font-bold text-base-content">@{reply.user.username}</span>
+                              <span className="text-[10px] text-base-content/40">
+                                {new Date(reply.created_at).toLocaleDateString()}
                               </span>
                             </div>
-                            <p className="text-xs my-1">{reply.text}</p>
-                            <div className="flex space-x-4 text-xs">
-                              <button onClick={() => handleLike(reply.id)} className="flex items-center space-x-1">
-                                <span>👍</span>
+                            <p className="text-xs my-1 text-base-content/80">{reply.content}</p>
+                            <div className="flex space-x-4 text-[10px] font-bold">
+                              <button onClick={() => handleLike(reply.id)} className="flex items-center space-x-1 hover:text-primary transition-colors">
+                                <span>❤️</span>
                                 <span>{reply.likes}</span>
                               </button>
                             </div>

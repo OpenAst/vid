@@ -6,7 +6,7 @@ import { fetchUser } from "@/app/store/authSlice";
 import { AppDispatch } from "@/app/store/store";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/app/store/store";
-import { toast, ToastContainer} from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 
 
 interface FormDataState {
@@ -20,7 +20,7 @@ const CHUNK_SIZE = 10 * 1024 * 1024;
 const UploadVideo = () => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
-  
+
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -31,7 +31,7 @@ const UploadVideo = () => {
   const [isUploading, setIsUploading] = useState(false);
 
   const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
-  
+
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -60,7 +60,7 @@ const UploadVideo = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!videoFile) {
       toast.error("Please select a video file");
       return;
@@ -75,12 +75,17 @@ const UploadVideo = () => {
       setIsUploading(true);
 
 
+      // Sanitize filename: replace spaces/special chars with underscores, keep alphanumeric and dots
+      const sanitizedFileName = videoFile.name
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9._-]/g, '_');
+
       const initRes = await fetch("/api/video/initiate", {
         method: "POST",
         credentials: "include",
         body: JSON.stringify({
-          file_name: videoFile.name,
-          file_type: videoFile.type, 
+          file_name: sanitizedFileName,
+          file_type: videoFile.type,
         })
       });
 
@@ -89,7 +94,7 @@ const UploadVideo = () => {
       }
 
       const { upload_id, object_key, public_url } = await initRes.json();
-      
+
       let partNumber = 1;
       let start = 0;
       const parts: { ETag: string; PartNumber: number }[] = [];
@@ -116,13 +121,20 @@ const UploadVideo = () => {
         if (!presignedRes.ok) throw new Error("Failed to get presigned URL");
 
         const { url } = await presignedRes.json();
+        console.log(`Uploading chunk ${partNumber} to: ${url}`);
 
         // Upload chunk directly to R2
-        const uploadRes = await fetch(url, {
-          method: "PUT",
-          headers: { "Content-Type": videoFile.type },
-          body: chunk,
-        });
+        let uploadRes;
+        try {
+          uploadRes = await fetch(url, {
+            method: "PUT",
+            headers: { "Content-Type": videoFile.type },
+            body: chunk,
+          });
+        } catch (fetchErr) {
+          console.error(`Fetch failed for chunk ${partNumber}:`, fetchErr);
+          throw new Error(`Connection failed while uploading chunk ${partNumber}. This might be a CORS issue.`);
+        }
 
         if (!uploadRes.ok) throw new Error(`Chunk ${partNumber} upload failed`);
 
@@ -140,7 +152,7 @@ const UploadVideo = () => {
         "/api/video/complete_multipart",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ object_key, upload_id, parts }),
         }
@@ -155,8 +167,8 @@ const UploadVideo = () => {
       const metadata = {
         title: formData.title,
         description: formData.description || '',
-        file_url: finalUrl,     
-        file_key: object_key,   
+        file_url: finalUrl,
+        file_key: object_key,
         file_size: videoFile.size,
         file_type: videoFile.type,
       };
@@ -180,7 +192,7 @@ const UploadVideo = () => {
       const metaDataRes = await metaRes.json();
 
       console.log("Upload successful", metaDataRes);
-      
+
       toast.success("Video upload and metadata saved successfully");
       router.push("/");
     } catch (error) {
@@ -219,15 +231,15 @@ const UploadVideo = () => {
   }
 
   return (
-    <div className="min-h-screen md:max-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen md:max-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white shadow rounded-lg p-6 sm:p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Upload New Video</h1>
-          
+        <div className="bg-base-100 shadow-xl rounded-2xl p-6 sm:p-8 border border-base-300">
+          <h1 className="text-2xl font-bold text-base-content mb-6">Upload New Video</h1>
+
           <form onSubmit={handleSubmit} className="space-y-6 relative">
             {/* Title Input */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="title" className="block text-sm font-medium text-base-content/80 mb-1">
                 Video Title *
               </label>
               <input
@@ -236,13 +248,13 @@ const UploadVideo = () => {
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
                 required
                 maxLength={100}
               />
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="description" className="block text-sm font-medium text-base-content/80 mb-1">
                 Description
               </label>
               <textarea
@@ -251,19 +263,19 @@ const UploadVideo = () => {
                 rows={4}
                 value={formData.description}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
                 maxLength={500}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-base-content/80 mb-1">
                 Video File *
               </label>
               <div className="mt-1 flex items-center">
                 <label
                   htmlFor="video-upload"
-                  className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                  className="cursor-pointer bg-base-200 py-2 px-3 border border-base-300 rounded-md shadow-sm text-sm leading-4 font-medium text-base-content hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all"
                 >
                   Select Video
                   <input
@@ -299,7 +311,7 @@ const UploadVideo = () => {
               )}
             </div>
 
-            <div className="pt-2 mb-2 sticky bottom-0 bg-white">
+            <div className="pt-2 mb-2 sticky bottom-0 bg-base-100 border-t border-base-300">
               <button
                 type="submit"
                 className={`w-full mb-8 flex btn btn-primary justify-center py-3 
@@ -309,14 +321,14 @@ const UploadVideo = () => {
               >
                 {isUploading ? (
                   <>
-                    <svg 
+                    <svg
                       className="animate-spin
                       -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
                       fill="none" viewBox="0 0 24 24"
                     >
-                      <circle  className="opacity-25" cx="12" 
+                      <circle className="opacity-25" cx="12"
                         cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" 
+                      <path className="opacity-75"
                         fill="currentColor" d="M4 12a8 8 0 
                           018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -326,7 +338,7 @@ const UploadVideo = () => {
               </button>
             </div>
           </form>
-          <ToastContainer position="bottom-right" autoClose={3000}/>
+          <ToastContainer position="bottom-right" autoClose={3000} />
         </div>
       </div>
     </div>

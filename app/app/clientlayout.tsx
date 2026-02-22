@@ -29,7 +29,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
     <div className="flex h-screen transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed top-3 left-4 z-50 p-2 rounded-md bg-white shadow-sm"
+          className="md:hidden fixed top-3 left-4 z-50 p-2 rounded-md bg-base-100 shadow-sm border border-base-300"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <svg
@@ -51,7 +51,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
       {isAuthenticated && (
         <aside
           className={`${lusitana.className}
-            w-[80px] md:w-[100px] h-screen border-r fixed left-0 top-0 bg-white z-40 flex flex-col justify-between transition-all duration-300
+            w-[80px] md:w-[100px] h-screen border-r border-base-300 fixed left-0 top-0 bg-base-100 z-40 flex flex-col justify-between transition-all duration-300
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
@@ -59,37 +59,37 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           <nav className="space-y-10 p-2 mt-20 flex flex-col items-center">
             <Link
               href="/"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-base-200 rounded text-xs transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <Image src="/home.svg" alt="Home" width={22} height={22} />
+              <Image src="/home.svg" alt="Home" width={22} height={22} className="dark:invert" />
               <span className="hidden md:block text-xs mt-1">Home</span>
             </Link>
 
             <Link
               href="/about"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100  rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-base-200  rounded text-xs transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <Image src="/globe.svg" alt="About" width={22} height={22} />
+              <Image src="/globe.svg" alt="About" width={22} height={22} className="dark:invert" />
               <span className="hidden md:block text-xs mt-1">About</span>
             </Link>
 
             <Link
               href="/upload"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100  rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-base-200  rounded text-xs transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <Image src="/file.svg" alt="Upload" width={22} height={22} />
+              <Image src="/file.svg" alt="Upload" width={22} height={22} className="dark:invert" />
               <span className="hidden md:block text-xs mt-1">Upload</span>
             </Link>
 
             <Link
               href="/profile"
-              className="flex flex-col items-center justify-center p-2 hover:bg-gray-100 rounded text-xs"
+              className="flex flex-col items-center justify-center p-2 hover:bg-base-200 rounded text-xs transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <Image src="/user_icon.png" alt="Profile" width={28} height={28} />
+              <Image src="/user_icon.png" alt="Profile" width={28} height={28} className="dark:invert" />
               <span className="hidden md:block text-xs mt-1">Profile</span>
             </Link>
           </nav>
@@ -97,10 +97,10 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           <div className="p-2 mb-10 space-y-4 flex flex-col items-center">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="w-full text-xs flex items-center justify-center px-2 py-1 rounded"
+              className="w-full text-xs flex items-center justify-center px-2 py-2 rounded-lg bg-base-200 hover:bg-base-300 transition-colors"
             >
               {darkMode ? '☀️' : '🌙'}
-              <span className="hidden md:inline ml-1">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              <span className="hidden md:inline ml-1 font-medium">{darkMode ? 'Light' : 'Dark'}</span>
             </button>
 
             <div className="w-full">

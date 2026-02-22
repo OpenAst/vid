@@ -24,6 +24,12 @@ function ProfilePage() {
     bio: '',
     followers: '',
   });
+  const [videos, setVideos] = useState<any[]>([]);
+  const [isVideosLoading, setIsVideosLoading] = useState(false);
+
+  const [showAvatarOptions, setShowAvatarOptions] = useState(false);
+  const [viewImageOpen, setViewImageOpen] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -32,7 +38,7 @@ function ProfilePage() {
         last_name: user.last_name || '',
         username: user.username || '',
         email: user.email || '',
-        avatar: user.profile?.avatar || '/dog5.jpg',
+        avatar: user.profile?.avatar || '/user_icon.png',
         bio: user.profile?.bio || '',
         followers: user.profile?.followers ? String(user.profile?.followers) : ''
       });
@@ -41,16 +47,36 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!user) {
-      dispatch(fetchUser()).unwrap().catch(() => {
+      dispatch(fetchUser()).unwrap().then((u) => {
+        fetchUserVideos(u.username);
+      }).catch(() => {
         router.push('/login');
       })
+    } else {
+      fetchUserVideos(user.username);
     }
   }, [user, dispatch, router]);
+
+  const fetchUserVideos = async (username: string) => {
+    setIsVideosLoading(true);
+    try {
+      const res = await fetch(`/api/video/fetch?username=${username}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVideos(data.results || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user videos", err);
+    } finally {
+      setIsVideosLoading(false);
+    }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
       setPreviewImage(URL.createObjectURL(event.target.files[0]));
+      setShowAvatarOptions(false); // Close menu
     }
   };
 
@@ -128,11 +154,14 @@ function ProfilePage() {
   if (isError) return <p className="text-center text-red-500">Error loading profile</p>;
 
   const imageSrc: string = (previewImage && previewImage.trim() !== "") ? previewImage :
-    (userDetails.avatar && userDetails.avatar.trim() !== "") ? userDetails.avatar : '/dog5.jpg';
+    (userDetails.avatar && userDetails.avatar.trim() !== "") ? userDetails.avatar : '/user_icon.png';
 
   return (
-    <div className="flex flex-col items-center mt-10">
-      <div className="relative w-32 h-32 rounded-full justify-end items-end overflow-hidden border-4 border-gray-300">
+    <div className="flex flex-col items-center mt-10 relative">
+      <div
+        className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-base-300 cursor-pointer hover:opacity-80 transition"
+        onClick={() => setShowAvatarOptions(!showAvatarOptions)}
+      >
         <Image
           src={imageSrc}
           alt="Profile"
@@ -142,11 +171,57 @@ function ProfilePage() {
           className="w-full h-full object-cover"
         />
       </div>
+
+      {/* Avatar Options Menu */}
+      {showAvatarOptions && (
+        <div className="absolute top-36 bg-base-100 shadow-2xl rounded-xl p-2 flex flex-col space-y-2 z-10 border border-base-300">
+          <button
+            onClick={() => {
+              setViewImageOpen(true);
+              setShowAvatarOptions(false);
+            }}
+            className="text-sm px-4 py-2 hover:bg-base-200 rounded-lg text-left transition-colors text-base-content"
+          >
+            View Picture
+          </button>
+          <button
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+            className="text-sm px-4 py-2 hover:bg-base-200 rounded-lg text-left transition-colors text-base-content"
+          >
+            Upload New Picture
+          </button>
+        </div>
+      )}
+
+      {/* Full Screen View Modal */}
+      {viewImageOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+          <button
+            onClick={() => setViewImageOpen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300"
+          >
+            Close
+          </button>
+          <div className="relative w-full max-w-2xl h-[80vh]">
+            <Image
+              src={imageSrc}
+              alt="Full Profile"
+              fill
+              className="object-contain"
+              unoptimized={true}
+            />
+          </div>
+        </div>
+      )}
+
       <input
         type="file"
+        ref={fileInputRef}
         accept="image/*"
         onChange={handleFileChange}
-        className="mt-4"
+        className="hidden"
       />
       <input
         type="text"
@@ -154,7 +229,7 @@ function ProfilePage() {
         placeholder="First Name"
         value={userDetails.first_name}
         onChange={handleInputChange}
-        className="mt-4 p-2 border border-gray-300 rounded"
+        className="mt-4 p-2 bg-base-100 border border-base-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-64 text-base-content transition-all"
       />
       <input
         type="text"
@@ -162,7 +237,7 @@ function ProfilePage() {
         placeholder="Last Name"
         value={userDetails.last_name}
         onChange={handleInputChange}
-        className="mt-2 p-2 border border-gray-300 rounded"
+        className="mt-2 p-2 bg-base-100 border border-base-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-64 text-base-content transition-all"
       />
 
       <textarea
@@ -170,19 +245,69 @@ function ProfilePage() {
         placeholder="Bio"
         value={userDetails.bio}
         onChange={handleInputChange}
-        className="mt-2 p-2 border border-gray-300 rounded w-64 h-32 resize-none"
+        className="mt-2 p-2 bg-base-100 border border-base-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-64 h-32 resize-none text-base-content transition-all"
       />
 
       <div className="mt-4">
-        <p className="text-gray-600">Followers: {userDetails.followers}</p>
+        <p className="text-base-content/70">Followers: {userDetails.followers}</p>
       </div>
 
       <button
         onClick={handleUpdateProfile}
-        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        className="mt-4 px-6 py-2 btn btn-primary rounded-lg shadow-lg hover:shadow-xl transition-all"
       >
         Update Profile
       </button>
+
+      {/* Videos Section */}
+      <div className="w-full max-w-4xl mt-12 px-4 mb-10">
+        <h2 className="text-2xl font-bold mb-6 text-base-content border-b border-base-300 pb-2">My Videos</h2>
+        {isVideosLoading ? (
+          <div className="flex justify-center py-10">
+            <span className="loading loading-spinner loading-lg"></span>
+          </div>
+        ) : videos.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {videos.map((video) => (
+              <div
+                key={video.id}
+                className="group relative aspect-[9/16] bg-base-300 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all shadow-md"
+                onClick={() => router.push(`/?videoId=${video.id}`)}
+              >
+                {video.thumbnail_url ? (
+                  <Image
+                    src={video.thumbnail_url}
+                    alt={video.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <video
+                    src={video.file_url}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    preload="metadata"
+                    muted
+                    playsInline
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                  <p className="text-white text-xs font-semibold truncate">{video.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-base-100 rounded-2xl border-2 border-dashed border-base-300">
+            <p className="text-base-content/50">You haven't uploaded any videos yet.</p>
+            <button
+              onClick={() => router.push('/upload')}
+              className="mt-4 btn btn-outline btn-sm"
+            >
+              Upload your first video
+            </button>
+          </div>
+        )}
+      </div>
       <ToastContainer />
     </div>
   );
