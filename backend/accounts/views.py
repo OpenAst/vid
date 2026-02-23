@@ -122,7 +122,7 @@ class PublicProfileView(generics.RetrieveAPIView):
     serializer_class = UserPublicSerializer
     permission_classes = [permissions.AllowAny]
 
-    lookup_field = "username"
+    lookup_field = "username" #Lookup field for username
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
