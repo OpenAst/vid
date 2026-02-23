@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { setAuthenticated, fetchUser } from '@/app/store/authSlice';
 import { AppDispatch } from '@/app/store/store';
 import { toast } from 'react-toastify';
 
-export default function GoogleAuthPage() {
+function GoogleAuthContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const dispatch = useDispatch<AppDispatch>();
@@ -30,10 +30,6 @@ export default function GoogleAuthPage() {
                 const formData = new URLSearchParams();
                 formData.append('state', state);
                 formData.append('code', code);
-
-                // Important: Djoser might expect format 'json' or 'form-data' depending on version, 
-                // but standard Djoser uses form-data for social.
-                // However, adding redirect_uri is safer.
                 formData.append('redirect_uri', `${window.location.origin}/auth/google`);
 
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/o/google-oauth2/`, {
@@ -47,16 +43,7 @@ export default function GoogleAuthPage() {
 
                 if (res.ok) {
                     const data = await res.json();
-                    // Data should contain access and refresh tokens
-                    // dispatch(setCredentials({...})) 
-                    // Note: configure setCredentials to accept payload or verify what data djoser returns (usually { access, refresh })
 
-                    // Since setCredentials might expect a different format or handle storage, let's look at authSlice.
-                    // For now, assuming standard Djoser JWT response
-
-                    // But wait, Djoser social login usually sets cookies if configured, OR returns tokens. 
-
-                    // 1. Send tokens to Next.js API to set cookies
                     const setCookieRes = await fetch('/api/auth/set-tokens', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -90,12 +77,25 @@ export default function GoogleAuthPage() {
     }, [searchParams, router, dispatch]);
 
     return (
+        <div className="flex flex-col items-center">
+            <div className="loading loading-spinner loading-lg text-primary"></div>
+            <p className="mt-4 text-gray-600">Authenticating with Google...</p>
+        </div>
+    );
+}
+
+export default function GoogleAuthPage() {
+    return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="p-8 bg-white rounded-lg shadow-md">
-                <div className="flex flex-col items-center">
-                    <div className="loading loading-spinner loading-lg text-primary"></div>
-                    <p className="mt-4 text-gray-600">Authenticating with Google...</p>
-                </div>
+                <Suspense fallback={
+                    <div className="flex flex-col items-center">
+                        <div className="loading loading-spinner loading-lg text-primary"></div>
+                        <p className="mt-4 text-gray-600">Loading auth data...</p>
+                    </div>
+                }>
+                    <GoogleAuthContent />
+                </Suspense>
             </div>
         </div>
     );
