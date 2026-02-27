@@ -5,6 +5,7 @@ import { initializeRedisAdapter } from './redis';
 import { setupCommentSocket, likeSystem } from './socket';
 
 const FRONTEND_URL = process.env.FRONTEND_URL;
+const PORT = process.env.PORT;
 
 const app = express();
 const httpServer = createServer(app);
@@ -25,8 +26,8 @@ async function startServer() {
     setupCommentSocket(io, client);
     likeSystem(io, client);
 
-    httpServer.listen(3001, () => {
-      console.log('Server running on port 3001');
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
     });
 
     process.on('SIGTERM', async () => {
