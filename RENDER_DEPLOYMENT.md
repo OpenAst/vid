@@ -136,6 +136,7 @@ Render doesn't provide SSH, but you can check logs and restart:
 ## What Happens During Deploy
 
 1. Render builds `Render.Dockerfile`:
+   - Installs system packages: `build-essential`, `python3-dev`, `libpq-dev` (needed by psycopg2), plus `curl`, `nginx`, `supervisor`, Node.js
    - Installs Node.js and Python dependencies
    - Builds Next.js express server
    - Builds Django backend

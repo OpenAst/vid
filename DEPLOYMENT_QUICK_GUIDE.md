@@ -29,6 +29,11 @@ git add .
 git commit -m "Fix database schema: clean UUID deployment"
 git push origin main
 ```
+> **Note:** You do *not* need to supply a Build or Start command on Render. The
+> `Render.Dockerfile` builds everything (Node server, Python dependencies, etc.)
+> and the `render-entrypoint.sh` script starts the processes. Leaving those
+> fields blank is correct for a Docker service.
+
 
 ### 4️⃣ Deploy on Render (10 min build + 5 min init)
 
