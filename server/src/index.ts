@@ -4,6 +4,8 @@ import { Server } from 'socket.io';
 import { initializeRedisAdapter } from './redis';
 import { setupCommentSocket, likeSystem } from './socket';
 
+const FRONTEND_URL = process.env.FRONTEND_URL;
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -13,7 +15,7 @@ async function startServer() {
 
     const io = new Server(httpServer, {
       cors: {
-        origin: "http://localhost:3000",
+        origin: FRONTEND_URL,
         methods: ["GET", "POST"],
         credentials: true
       },

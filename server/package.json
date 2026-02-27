@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "nodemon --exec \"node -r ts-node/register\" src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "build": "tsc && prisma generate",
+    "postinstall": "npm run build",
+    "start": "npm run build && node dist/index.js"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

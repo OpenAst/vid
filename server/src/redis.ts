@@ -1,9 +1,11 @@
 import { createClient, RedisClientType } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
 
+const REDIS_URL = process.env.REDIS_URL;
+
 export const initializeRedisAdapter = async () => {
   const pubClient: RedisClientType = createClient({ 
-    url: 'redis://localhost:6379'
+    url: REDIS_URL
   });
   const subClient = pubClient.duplicate();
 
