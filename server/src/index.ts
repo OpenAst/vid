@@ -5,7 +5,7 @@ import { initializeRedisAdapter } from './redis';
 import { setupCommentSocket, likeSystem } from './socket';
 
 const FRONTEND_URL = process.env.FRONTEND_URL;
-const PORT = process.env.PORT;
+const PORT = Number(process.env.PORT);
 
 const app = express();
 const httpServer = createServer(app);
@@ -26,6 +26,9 @@ async function startServer() {
     setupCommentSocket(io, client);
     likeSystem(io, client);
 
+    if (!PORT) {
+      throw new Error("PORT environment variable is not set");
+    }
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
