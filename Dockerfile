@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     redis-server \
     nginx \
+    postgresql \
+    postgresql-contrib \
     postgresql-client \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -40,7 +42,7 @@ COPY backend/ ./backend/
 
 # --- Setup Supervisor ---
 RUN mkdir -p /var/log/supervisor && \
-    touch /var/log/backend.err.log /var/log/backend.out.log /var/log/socket.err.log /var/log/socket.out.log /var/log/redis.err.log /var/log/redis.out.log /var/log/nginx.err.log /var/log/nginx.out.log
+    touch /var/log/backend.err.log /var/log/backend.out.log /var/log/socket.err.log /var/log/socket.out.log /var/log/redis.err.log /var/log/redis.out.log /var/log/nginx.err.log /var/log/nginx.out.log /var/log/postgres.err.log /var/log/postgres.out.log
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY nginx.conf.template /usr/src/app/nginx.conf.template

@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'social_django',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     
     'accounts',
     'video',
@@ -117,11 +118,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 ASGI_APPLICATION = 'backend.asgi.application'
 
 
+# Redis configuration for Channels
+REDIS_URL = config('REDIS_URL', default='redis://127.0.0.1:6379/0')
+
 CHANNEL_LAYERS = {
   'default': {
     "BACKEND": "channels_redis.core.RedisChannelLayer",
     "CONFIG": {
-      'hosts': [("127.0.0.1", 6379)],
+      'hosts': [REDIS_URL],
     },
   },
 }
@@ -312,8 +316,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
 SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ['first_name', 'last_name']
 
-CELERY_BROKER_URL = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://127.0.0.1:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
