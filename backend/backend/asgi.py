@@ -15,4 +15,4 @@ application = ProtocolTypeRouter({
         URLRouter(websocket_urlpatterns)
     ),
 })
-Line:1: 
+
