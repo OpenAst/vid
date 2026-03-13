@@ -3,12 +3,11 @@ services:
   # Uses Supabase PostgreSQL, R2 Storage, and external Redis
   - type: web
     name: web-backend
-    env: docker
+    env: python
     plan: starter
-    repo: https://github.com/YOUR_USERNAME/YOUR_REPO.git  # Replace with your repo URL
-    dockerfilePath: Render.Dockerfile
-    buildCommand: ""  # Let Dockerfile handle build
-    startCommand: ""  # Let entrypoint.sh handle startup
+    repo: https://github.com/OpenAst/vid.git
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && python manage.py migrate --noinput && python manage.py create_site && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT backend.asgi:application"
     healthCheckPath: /api/
     envVars:
       # Django Settings
@@ -25,40 +24,35 @@ services:
         # Format: postgresql://user:password@db.supabase.co:5432/postgres
         # Get this from Supabase dashboard → Settings → Database
       
-      # Redis (Internal connection to the redis service defined below)
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: vid-redis
-          property: connectionString
-      
+      # Redis (External - get from Upstash or Redis Cloud)
       - key: CELERY_BROKER_URL
-        fromService:
-          type: redis
-          name: vid-redis
-          property: connectionString
+        sync: false
+        # Format: redis://default:password@host:port
+        # Use Upstash (free tier) or Redis Cloud
       
       - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: redis
-          name: vid-redis
-          property: connectionString
+        sync: false
+        # Same as CELERY_BROKER_URL
       
       # R2 Storage (Cloudflare)
       - key: AWS_ACCESS_KEY_ID
         sync: false
+        # Get from Cloudflare R2 API token
       
       - key: AWS_SECRET_ACCESS_KEY
         sync: false
+        # Get from Cloudflare R2 API token
       
       - key: AWS_STORAGE_BUCKET_NAME
         value: "your-bucket-name"
       
       - key: AWS_S3_ENDPOINT_URL
         value: "https://your-account-id.r2.cloudflarestorage.com"
+        # Replace your-account-id with your Cloudflare account ID
       
       - key: AWS_S3_CUSTOM_DOMAIN
         sync: false
+        # Optional: your-bucket.yourdomain.com (for custom domain)
       
       # Frontend URLs
       - key: ALLOWED_HOSTS
@@ -88,6 +82,7 @@ services:
       
       - key: EMAIL_HOST_USER
         sync: false
+        # SENDGRID_API_KEY or similar
       
       # Google OAuth (Optional)
       - key: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
@@ -102,9 +97,4 @@ services:
     
     autoDeploy: true
     regions:
-      - oregon
-
-  - type: redis
-    name: vid-redis
-    plan: free # or starter
-    ipAllowList: [] # empty means only internal access
+      - oregon  # Change to your preferred region
