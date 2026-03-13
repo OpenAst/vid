@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { io, Socket } from "socket.io-client";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store/store";
+import { buildWebSocketUrl } from "@/app/lib/websocket";
 
 
 type Comment = {
@@ -29,12 +29,12 @@ export type Props = {
   };
 };
 
-const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
+const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCommentInput, setShowCommentInput] = useState(false);
@@ -43,61 +43,79 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
   const { user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL_DEV ?? "http://localhost:3001"}/comments`, {
-      auth: { token: jwtToken },
-      transports: ["websocket"],
-    });
+    if (!jwtToken || !roomId) return;
+
+    const socket = new WebSocket(buildWebSocketUrl(`/ws/comments/${roomId}/`, jwtToken));
 
     socketRef.current = socket;
 
-    socket.on("connect", () => {
-      socket.emit("join-room", roomId);
-      console.log("The roomId", roomId);
-    });
+    socket.onmessage = (event) => {
+      const payload = JSON.parse(event.data);
 
-    socket.on("comments-history", (history: Comment[]) => {
-      setComments(history);
-    });
+      if (payload.type === "comments.history") {
+        setComments(payload.comments);
+        return;
+      }
 
-    socket.on("new-comment", (comment: Comment) => {
-      setComments((prev) => [...prev, comment]);
-      setShowCommentInput(false);
-      setNewComment("");
-    });
+      if (payload.type === "new_comment") {
+        setComments((prev) => [...prev, payload.comment]);
+        setShowCommentInput(false);
+        setNewComment("");
+        return;
+      }
 
-    socket.on("comment-liked", ({ commentId, likes }) => {
-      setComments((prev) => prev.map((comment) =>
-        comment.id === commentId ? { ...comment, likes } : comment
-      ))
-      console.log("Comment likes", commentId, likes)
-    });
+      if (payload.type === "comment_liked") {
+        setComments((prev) =>
+          prev.map((comment) => {
+            if (comment.id === payload.commentId) {
+              return { ...comment, likes: payload.likes };
+            }
 
-    socket.on("new-reply", ({ parentId, reply }: { parentId: string; reply: Comment }) => {
-      setComments((prev) =>
-        prev.map((comment) =>
-          comment.id === parentId
-            ? { ...comment, replies: [...(comment.replies || []), reply] }
-            : comment
-        )
-      );
-      setReplyText("");
-      setReplyingTo(null);
-    });
+            if (comment.replies?.length) {
+              return {
+                ...comment,
+                replies: comment.replies.map((reply) =>
+                  reply.id === payload.commentId
+                    ? { ...reply, likes: payload.likes }
+                    : reply
+                ),
+              };
+            }
+
+            return comment;
+          })
+        );
+        return;
+      }
+
+      if (payload.type === "new_reply") {
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment.id === payload.parentId
+              ? { ...comment, replies: [...(comment.replies || []), payload.reply] }
+              : comment
+          )
+        );
+        setReplyText("");
+        setReplyingTo(null);
+      }
+    };
 
     return () => {
-      socket.disconnect();
+      socket.close();
     };
   }, [jwtToken, roomId]);
 
   const handleSendComment = () => {
     if (!newComment.trim() || !socketRef.current) return;
+    if (socketRef.current.readyState !== WebSocket.OPEN) return;
 
-    socketRef.current.emit("send-comment", {
-      text: newComment,
-      roomId,
-      user: currentUser,
-    });
-    setNewComment("");
+    socketRef.current.send(
+      JSON.stringify({
+        action: "send_comment",
+        text: newComment,
+      })
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -108,22 +126,26 @@ const Comments = ({ jwtToken, roomId, currentUser }: Props) => {
   };
 
   const handleLike = (commentId: string) => {
-    if (!user) return;
-    socketRef.current?.emit("vote-comment", { commentId, roomId, userId: user.id, });
+    if (!user || socketRef.current?.readyState !== WebSocket.OPEN) return;
+    socketRef.current?.send(
+      JSON.stringify({
+        action: "vote_comment",
+        commentId,
+      })
+    );
   };
 
   const handleSendReply = () => {
     if (!replyText.trim() || !socketRef.current || !replyingTo) return;
+    if (socketRef.current.readyState !== WebSocket.OPEN) return;
 
-    socketRef.current.emit("send-reply", {
-      parentId: replyingTo,
-      text: replyText,
-      roomId,
-      user: currentUser,
-    });
-
-    setReplyText("");
-    setReplyingTo(null);
+    socketRef.current.send(
+      JSON.stringify({
+        action: "send_reply",
+        parentId: replyingTo,
+        text: replyText,
+      })
+    );
   };
 
   useEffect(() => {

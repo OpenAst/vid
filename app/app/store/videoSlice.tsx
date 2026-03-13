@@ -92,22 +92,26 @@ const videoSlice = createSlice({
     },
     resetVideoState: () => initialState,
     videoLiked: (state, action) => {
-      const { videoId } = action.payload;
+      const { videoId, likes, actorUserId, currentUserId } = action.payload;
       if (state.videos) {
         const video = state.videos.find(v => v.id === videoId);
         if (video) {
-          video.likes += 1;
-          video.user_vote = 1;
+          video.likes = typeof likes === "number" ? likes : video.likes + 1;
+          if (actorUserId && currentUserId && actorUserId === currentUserId) {
+            video.user_vote = 1;
+          }
         }
       }
     },
     videoUnliked: (state, action) => {
-      const { videoId } = action.payload;
+      const { videoId, likes, actorUserId, currentUserId } = action.payload;
       if (state.videos) {
         const video = state.videos.find(v => v.id === videoId);
         if (video && video.likes > 0) {
-          video.likes -= 1;
-          video.user_vote = 0;
+          video.likes = typeof likes === "number" ? likes : video.likes - 1;
+          if (actorUserId && currentUserId && actorUserId === currentUserId) {
+            video.user_vote = 0;
+          }
         }
       }
     }

@@ -95,10 +95,6 @@ services:
       # Database Settings (if using manual config instead of DATABASE_URL)
       - key: USE_DATABASE_URL
         value: "true"
-      
-      # Node settings
-      - key: NODE_ENV
-        value: "production"
     
     autoDeploy: true
     regions:

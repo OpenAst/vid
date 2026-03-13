@@ -117,17 +117,25 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 ASGI_APPLICATION = 'backend.asgi.application'
 
 
-# Redis configuration for Channels
+# Channels configuration
+CHANNEL_LAYER_BACKEND = config('CHANNEL_LAYER_BACKEND', default='inmemory')
 REDIS_URL = config('REDIS_URL', default='redis://127.0.0.1:6379/0')
 
-CHANNEL_LAYERS = {
-  'default': {
-    "BACKEND": "channels_redis.core.RedisChannelLayer",
-    "CONFIG": {
-      'hosts': [REDIS_URL],
-    },
-  },
-}
+if CHANNEL_LAYER_BACKEND == 'redis':
+    CHANNEL_LAYERS = {
+      'default': {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+          'hosts': [REDIS_URL],
+        },
+      },
+    }
+else:
+    CHANNEL_LAYERS = {
+      'default': {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+      },
+    }
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases

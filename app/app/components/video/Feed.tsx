@@ -8,7 +8,7 @@ import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
 import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { io, Socket } from "socket.io-client";
+import { buildWebSocketUrl } from "@/app/lib/websocket";
 
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -28,33 +28,44 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
 
   // Initialize Socket for Video Likes
   useEffect(() => {
     if (!token) return;
 
-    socketRef.current = io(`${process.env.NEXT_PUBLIC_SOCKET_URL_DEV ?? "http://localhost:3001"}/video-likes`, {
-      auth: { token },
-      transports: ["websocket"],
-    });
+    socketRef.current = new WebSocket(buildWebSocketUrl("/ws/video-likes/", token));
 
-    socketRef.current.on("connect", () => {
-      console.log("Connected to video-likes namespace");
-    });
+    socketRef.current.onmessage = (event) => {
+      const payload = JSON.parse(event.data);
+      if (payload.type !== "video_vote_updated") return;
 
-    socketRef.current.on("video-liked", ({ videoId }) => {
-      dispatch(videoLiked({ videoId }));
-    });
+      if (payload.liked) {
+        dispatch(
+          videoLiked({
+            videoId: payload.videoId,
+            likes: payload.likes,
+            actorUserId: payload.actorUserId,
+            currentUserId: user?.id,
+          })
+        );
+        return;
+      }
 
-    socketRef.current.on("video-unliked", ({ videoId }) => {
-      dispatch(videoUnliked({ videoId }));
-    });
+      dispatch(
+        videoUnliked({
+          videoId: payload.videoId,
+          likes: payload.likes,
+          actorUserId: payload.actorUserId,
+          currentUserId: user?.id,
+        })
+      );
+    };
 
     return () => {
-      socketRef.current?.disconnect();
+      socketRef.current?.close();
     };
-  }, [token, dispatch]);
+  }, [token, dispatch, user?.id]);
 
   const handleLikeVideo = (videoId: string) => {
     if (!user || !socketRef.current) {
@@ -62,8 +73,14 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       // For now, assume login enforced by auth protection or just do nothing
       return;
     }
-    socketRef.current.emit("like-video", { videoId, userId: user.id });
-    // Optimistic update could happen here too, but we wait for event for now to verify server rountrip
+    if (socketRef.current.readyState !== WebSocket.OPEN) return;
+
+    socketRef.current.send(
+      JSON.stringify({
+        action: "like_video",
+        videoId,
+      })
+    );
   };
 
   useEffect(() => {

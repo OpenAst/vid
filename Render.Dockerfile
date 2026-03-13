@@ -1,16 +1,11 @@
-# Multi-process Dockerfile for Django + Node.js (Render.com - External Services)
-# Uses Supabase (PostgreSQL) + R2 (Storage) + External Redis
+# Multi-process Dockerfile for Django ASGI + nginx
 FROM python:3.12-slim-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV NODE_VERSION 20
-
-# Install system dependencies (no ffmpeg for now - add if needed)
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg \
     supervisor \
     nginx \
     build-essential \
@@ -18,29 +13,17 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
-
 WORKDIR /app
-
-# --- Build Node.js Server ---
-COPY server/package*.json ./server/
-RUN cd server && npm ci --omit=dev
-
-COPY server/ ./server/
-RUN cd server && npx prisma generate && npm run build
 
 # --- Build Django Backend ---
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r backend/requirements.txt
-RUN pip install gunicorn
 
 COPY backend/ ./backend/
 
-# --- Setup Supervisor (no Redis/Postgres services) ---
+# --- Setup Supervisor ---
 RUN mkdir -p /var/log/supervisor && \
-    touch /var/log/backend.err.log /var/log/backend.out.log /var/log/socket.err.log /var/log/socket.out.log /var/log/nginx.err.log /var/log/nginx.out.log
+    touch /var/log/backend.err.log /var/log/backend.out.log /var/log/nginx.err.log /var/log/nginx.out.log
 
 COPY render-supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY nginx.conf.template /app/nginx.conf.template
