@@ -5,15 +5,18 @@ from django.db.models.signals import post_migrate
 from django.db import connection
 
 @receiver(post_save, sender=UserAccount)
-def create_profile(sender, instance, created,  **kwargs):
-  if created:
-    Profile.objects.create(user=instance)
-  else:
-    instance.profile.save()
-
-@receiver(post_save, sender=UserAccount)
-def save_profile(sender, instance, **kwargs):
-  instance.profile.save()    
+def manage_user_profile(sender, instance, created, **kwargs):
+    """
+    Ensure a profile is created for every new user and saved on updates.
+    """
+    if created:
+        Profile.objects.get_or_create(user=instance)
+    else:
+        # Check if profile exists before saving to avoid errors
+        if hasattr(instance, 'profile'):
+            instance.profile.save()
+        else:
+            Profile.objects.create(user=instance)
 
 
 @receiver(post_migrate)
