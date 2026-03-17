@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchVideos, videoLiked, videoUnliked } from "../../store/videoSlice";
+import { fetchVideos, updateLikes, updateViews } from "../../store/videoSlice";
 import { RootState, AppDispatch } from "../../store/store";
 import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
 import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { buildWebSocketUrl } from "@/app/lib/websocket";
+import toast from "react-hot-toast";
+import { Video } from "../../store/videoSlice";
 
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -38,28 +40,23 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
     socketRef.current.onmessage = (event) => {
       const payload = JSON.parse(event.data);
-      if (payload.type !== "video_vote_updated") return;
-
-      if (payload.liked) {
+      if (payload.type === "video_vote_updated") {
         dispatch(
-          videoLiked({
+          updateLikes({
             videoId: payload.videoId,
             likes: payload.likes,
-            actorUserId: payload.actorUserId,
-            currentUserId: user?.id,
+            liked: payload.liked,
+            userId: (user && payload.actorUserId === user.id) ? user.id : undefined,
           })
         );
-        return;
+      } else if (payload.type === "video_view_updated") {
+        dispatch(
+          updateViews({
+            videoId: payload.videoId,
+            views: payload.views,
+          })
+        );
       }
-
-      dispatch(
-        videoUnliked({
-          videoId: payload.videoId,
-          likes: payload.likes,
-          actorUserId: payload.actorUserId,
-          currentUserId: user?.id,
-        })
-      );
     };
 
     return () => {
@@ -81,6 +78,28 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
         videoId,
       })
     );
+  };
+
+  const handleShare = async (video: Video) => {
+    const shareData = {
+      title: video.title,
+      text: `Check out this video: ${video.title}`,
+      url: typeof window !== "undefined" ? window.location.origin + `?video=${video.id}` : "",
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        console.error("Error sharing:", err);
+        toast.error("Failed to share");
+      }
+    }
   };
 
   useEffect(() => {
@@ -184,10 +203,11 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               jwtToken={jwtToken}
               onLike={() => handleLikeVideo(video.id)} // Pass handler
               likes={video.likes}
+              user_vote={video.user_vote}
               uploader={{
-                id: user?.id || "",
-                username: user?.username || "",
-                avatar: user?.profile?.avatar || "",
+                id: video.uploader?.id || "",
+                username: video.uploader?.username || "Unknown",
+                avatar: (video.uploader as any)?.avatar || "",
               }}
               isCommentsOpen={openCommentsFor === video.id}
               onCloseComments={() => setOpenCommentsFor(null)}
@@ -204,10 +224,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                     <span className="text-xs">{video.timestamp}</span>
                   </div>
                   <p className="text-sm mt-1">{video.title}</p>
-                  <div className="flex items-center gap-1 text-xs opacity-80 mt-1">
-                    <Eye className="w-4 h-4" />
-                    <span>{video.views || 0} views</span>
-                  </div>
                 </>
               )}
             </div>
@@ -227,15 +243,22 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             )}
 
             <div className="
-                absolute bottom-10 right-0 flex flex-col justify-center items-center gap-6
+                absolute bottom-10 right-0 flex flex-col justify-center items-center gap-2
                 z-30
               ">
+              <div className="flex flex-col items-center">
+                <div className="rounded-full bg-black/60">
+                  <Eye size={24} className="text-white" fill="currentColor" />
+                </div>
+                <span className="hidden sm:block text-xs mt-1 text-white">{video.views || 0}</span>
+              </div>
+
               <button
                 onClick={() => handleLikeVideo(video.id)}
                 className="flex flex-col items-center hover:scale-110 transition"
               >
-                <div className="p-1 rounded-full bg-black/60">
-                  <Heart size={24} className={video.user_vote === 1 ? "text-red-500 fill-red-500" : "text-white"} />
+                <div className="rounded-full bg-black/60">
+                  <Heart size={24} className={video.user_vote === 1 ? "text-red-500 fill-red-500" : "text-white"} fill={video.user_vote === 1 ? "currentColor" : "currentColor"} />
                 </div>
                 <span className="hidden sm:block text-xs mt-1 text-white">{video.likes}</span>
               </button>
@@ -249,10 +272,12 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 <div className="p-1 rounded-full bg-black/60">
                   <MessageCircle className="w-6 h-6 text-white" fill="currentColor " />
                 </div>
-                <span className="hidden sm:block text-xs mt-1 text-white">Comments</span>
               </button>
 
-              <button className="flex flex-col items-center hover:scale-110 transition">
+              <button
+                onClick={() => handleShare(video)}
+                className="flex flex-col items-center hover:scale-110 transition"
+              >
                 <div className="p-1 rounded-full bg-black/60">
                   <Share2 className="w-6 h-6 text-white" fill="currentColor" />
                 </div>

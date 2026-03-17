@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 // Types
 export interface Video {
@@ -42,79 +42,87 @@ const initialState: VideoState = {
   errorMessage: null,
 };
 
-
 export const fetchVideos = createAsyncThunk(
   "videos/fetchVideos",
   async (
-    { page = 1, limit = 10, search = "", append = false }: { page?: number; limit?: number; search?: string, append?: boolean },
+    { page, limit, search, append }: { page: number; limit: number; search: string; append: boolean },
     { rejectWithValue }
   ) => {
     try {
-      const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
-      const url = `/api/video/fetch?page=${page}&limit=${limit}${searchParam}`;
-      console.log("DEBUG: fetchVideos URL:", url, "append:", append);
-
-      const res = await fetch(
-        url,
-        {
-          credentials: 'include',
-        }
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/videos/?page=${page}&limit=${limit}&search=${search}`
       );
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        return rejectWithValue(
-          errorData.error?.message ||
-          errorData.message ||
-          "Failed to fetch videos"
-        );
+      if (!response.ok) {
+        throw new Error("Failed to fetch videos");
       }
-      return await res.json();
-    } catch (err) {
-      const errorMessage = typeof err === "object" && err !== null && "message" in err
-        ? (err as { message?: string }) : "Internal error"
-      return rejectWithValue(
-        errorMessage || "Network error while fetching videos"
-      );
+      const data = await response.json();
+      return data;
+    } catch (err: any) {
+      return rejectWithValue(err.message || "Failed to fetch videos");
     }
   }
 );
 
+const loadInitialState = (): VideoState => {
+  if (typeof window === "undefined") return initialState;
+  try {
+    const saved = localStorage.getItem("video_cache");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...initialState,
+        videos: parsed.videos || null,
+        next: parsed.next || "",
+      };
+    }
+  } catch (err) {
+    console.error("Failed to load video cache:", err);
+  }
+  return initialState;
+};
+
+const saveToCache = (state: VideoState) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("video_cache", JSON.stringify({
+      videos: state.videos,
+      next: state.next,
+    }));
+  } catch (err) {
+    console.error("Failed to save video cache:", err);
+  }
+};
 
 const videoSlice = createSlice({
   name: "videos",
-  initialState,
+  initialState: loadInitialState(),
   reducers: {
     clearUploadStatus: (state) => {
       state.isLoading = false;
       state.isError = false;
       state.errorMessage = null;
     },
-    resetVideoState: () => initialState,
-    videoLiked: (state, action) => {
-      const { videoId, likes, actorUserId, currentUserId } = action.payload;
-      if (state.videos) {
-        const video = state.videos.find(v => v.id === videoId);
-        if (video) {
-          video.likes = typeof likes === "number" ? likes : video.likes + 1;
-          if (actorUserId && currentUserId && actorUserId === currentUserId) {
-            video.user_vote = 1;
-          }
+    resetVideoState: () => {
+      if (typeof window !== "undefined") localStorage.removeItem("video_cache");
+      return initialState;
+    },
+    updateLikes: (state, action: PayloadAction<{ videoId: string; likes: number; liked: boolean; userId?: string }>) => {
+      const video = state.videos?.find((v) => v.id === action.payload.videoId);
+      if (video) {
+        video.likes = action.payload.likes;
+        if (action.payload.userId) {
+          video.user_vote = action.payload.liked ? 1 : 0;
         }
+        saveToCache(state);
       }
     },
-    videoUnliked: (state, action) => {
-      const { videoId, likes, actorUserId, currentUserId } = action.payload;
-      if (state.videos) {
-        const video = state.videos.find(v => v.id === videoId);
-        if (video && video.likes > 0) {
-          video.likes = typeof likes === "number" ? likes : video.likes - 1;
-          if (actorUserId && currentUserId && actorUserId === currentUserId) {
-            video.user_vote = 0;
-          }
-        }
+    updateViews: (state, action: PayloadAction<{ videoId: string; views: number }>) => {
+      const video = state.videos?.find((v) => v.id === action.payload.videoId);
+      if (video) {
+        video.views = action.payload.views;
+        saveToCache(state);
       }
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -132,6 +140,7 @@ const videoSlice = createSlice({
           state.videos = newVideos;
         }
         state.next = action.payload.next;
+        saveToCache(state);
       })
       .addCase(fetchVideos.rejected, (state, action) => {
         state.isLoading = false;
@@ -141,11 +150,6 @@ const videoSlice = createSlice({
   },
 });
 
-export const {
-  clearUploadStatus,
-  resetVideoState,
-  videoLiked,
-  videoUnliked
-} = videoSlice.actions;
+export const { clearUploadStatus, resetVideoState, updateLikes, updateViews } = videoSlice.actions;
 
 export default videoSlice.reducer;
