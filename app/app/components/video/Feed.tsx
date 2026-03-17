@@ -247,20 +247,20 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 z-30
               ">
               <div className="flex flex-col items-center">
-                <div className="rounded-full bg-black/60">
+                <div className="p-1 rounded-full bg-black/60">
                   <Eye size={24} className="text-white" fill="currentColor" />
                 </div>
-                <span className="hidden sm:block text-xs mt-1 text-white">{video.views || 0}</span>
+                <span className="text-xs mt-1 text-white">{video.views || 0}</span>
               </div>
 
               <button
                 onClick={() => handleLikeVideo(video.id)}
                 className="flex flex-col items-center hover:scale-110 transition"
               >
-                <div className="rounded-full bg-black/60">
-                  <Heart size={24} className={video.user_vote === 1 ? "text-red-500 fill-red-500" : "text-white"} fill={video.user_vote === 1 ? "currentColor" : "currentColor"} />
+                <div className="p-1 rounded-full bg-black/60">
+                  <Heart size={24} className={video.user_vote === 1 ? "text-red-500 fill-red-500" : "text-white"} fill="currentColor" />
                 </div>
-                <span className="hidden sm:block text-xs mt-1 text-white">{video.likes}</span>
+                <span className="text-xs mt-1 text-white">{video.likes}</span>
               </button>
 
               <button
@@ -281,7 +281,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 <div className="p-1 rounded-full bg-black/60">
                   <Share2 className="w-6 h-6 text-white" fill="currentColor" />
                 </div>
-                <span className="hidden sm:block text-xs mt-1 text-white">Share</span>
+                <span className="text-xs mt-1 text-white">Share</span>
               </button>
             </div>
           </div>

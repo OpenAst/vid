@@ -29,12 +29,12 @@ export default function ClientProvider({ children }: { children: React.ReactNode
     <div className="flex h-screen transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed top-3 left-4 z-50 p-2 rounded-md bg-base-100 shadow-sm border border-base-300"
+          className="md:hidden fixed top-2 left-[26px] z-50 p-1 rounded-md bg-base-100 shadow-sm border border-base-300"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
+            className="h-5 w-5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -56,7 +56,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           `}
         >
           {/* Nav Icons */}
-          <nav className="space-y-10 p-2 mt-20 flex flex-col items-center">
+          <nav className="space-y-10 p-2 mt-12 flex flex-col items-center">
             <Link
               href="/"
               className="flex flex-col items-center justify-center p-2 hover:bg-base-200 rounded text-xs transition-colors"
