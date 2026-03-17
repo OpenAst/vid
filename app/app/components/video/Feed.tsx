@@ -179,7 +179,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }
 
   return (
-    <div className="h-[85vh] w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
+    <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
       {Array.isArray(videos) &&
         videos.map((video, idx) => (
           <div
