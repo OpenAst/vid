@@ -64,7 +64,7 @@ function HomePage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-base-100 transition-colors">
       <Header />
 
-      <div className="mt-[46px] h-[calc(100vh-48px)]">
+      <div className="mt-[46px] h-[calc(100vh-46px)]">
         <Feed jwtToken={token} />
 
         <button

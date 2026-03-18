@@ -29,7 +29,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
     <div className="flex h-screen transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed top-2 left-[26px] z-50 p-1 rounded-md bg-base-100 shadow-sm border border-base-300"
+          className="md:hidden fixed top-2 left-[22px] z-50 p-1 rounded-md bg-base-100 shadow-sm border border-base-300"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <svg

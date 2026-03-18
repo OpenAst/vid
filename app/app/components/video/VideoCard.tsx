@@ -278,22 +278,24 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
         </AnimatePresence>
 
         {/* Seek Bar */}
-        <div
-          className="absolute bottom-0 left-0 w-full h-1 bg-white/20 cursor-pointer group hover:h-2 transition-all z-30"
-          onClick={handleSeek}
-          onMouseDown={handleDragStart}
-          onMouseUp={handleDragEnd}
-          onTouchStart={handleDragStart}
-          onTouchEnd={handleDragEnd}
-          onTouchMove={handleSeek}
-        >
+        {zoomScale <= 1.1 && (
           <div
-            className="h-full bg-red-600 relative transition-all"
-            style={{ width: `${(currentTime / duration) * 100}%` }}
+            className="absolute bottom-0 left-0 w-full h-[2px] bg-white/20 cursor-pointer group hover:h-1 transition-all z-30"
+            onClick={handleSeek}
+            onMouseDown={handleDragStart}
+            onMouseUp={handleDragEnd}
+            onTouchStart={handleDragStart}
+            onTouchEnd={handleDragEnd}
+            onTouchMove={handleSeek}
           >
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full scale-0 group-hover:scale-100 transition-transform shadow-lg" />
+            <div
+              className="h-full bg-red-600 relative transition-all"
+              style={{ width: `${(currentTime / duration) * 100}%` }}
+            >
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full scale-0 group-hover:scale-100 transition-transform shadow-lg" />
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
     );
   }
