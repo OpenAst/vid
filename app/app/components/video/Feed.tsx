@@ -188,7 +188,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             ref={(el) => {
               wrapperRefs.current[idx] = el;
             }}
-            className="h-full w-[45vh] snap-start flex justify-center relative mb-1"
+            className="h-full snap-start flex flex-col items-center justify-center relative mb-2"
           >
             <VideoCard
               ref={(el) => {
@@ -243,7 +243,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             )}
 
             <div className="
-                absolute bottom-10 right-0 flex flex-col justify-center items-center gap-2
+                absolute bottom-10 right-1 flex flex-col justify-center items-center gap-2
                 z-30
               ">
               <div className="flex flex-col items-center">

@@ -223,7 +223,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           height: isCommentsOpen ? "70%" : "100%"
         }}
         transition={{ duration: 0.3 }}
-        className="relative h-full sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-lg"
+        className="relative h-full sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-sm"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
