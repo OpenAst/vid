@@ -179,7 +179,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }
 
   return (
-    <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
+    <div className="h-[91vh] w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
       {Array.isArray(videos) &&
         videos.map((video, idx) => (
           <div
@@ -188,101 +188,93 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             ref={(el) => {
               wrapperRefs.current[idx] = el;
             }}
-            className="h-full snap-start flex flex-col items-center justify-center relative mb-2"
+            className="h-full w-full snap-start flex items-center justify-center relative"
           >
-            <VideoCard
-              ref={(el) => {
-                videoRefs.current[idx] = el;
-              }}
-              id={video.id}
-              title={video.title}
-              thumbnail_url={video.thumbnail_url || null}
-              file_url={video.file_url || ""}
-              views={video.views || 0}
-              timestamp={video.timestamp || "N/A"}
-              jwtToken={jwtToken}
-              onLike={() => handleLikeVideo(video.id)} // Pass handler
-              likes={video.likes}
-              user_vote={video.user_vote}
-              uploader={{
-                id: video.uploader?.id || "",
-                username: video.uploader?.username || "Unknown",
-                avatar: (video.uploader as any)?.avatar || "",
-              }}
-              isCommentsOpen={openCommentsFor === video.id}
-              onCloseComments={() => setOpenCommentsFor(null)}
-            />
+            {/* Constrained Center Wrapper */}
+            <div className="relative h-full w-[45vh] max-w-full flex items-center justify-center">
+              <VideoCard
+                ref={(el) => {
+                  videoRefs.current[idx] = el;
+                }}
+                id={video.id}
+                file_url={video.file_url || ""}
+                thumbnail_url={video.thumbnail_url || null}
+                isCommentsOpen={openCommentsFor === video.id}
+                onCloseComments={() => setOpenCommentsFor(null)}
+              />
 
-            {/* username + views wrapper always here, content conditional */}
-            <div className="absolute bottom-4 w-[95%] text-white z-20">
-              {openCommentsFor !== video.id && (
-                <>
-                  <div className="flex items-center gap-2 text-sm opacity-90">
-                    <span className="font-semibold">
-                      @{video.uploader?.username || "Unknown"}
-                    </span>
-                    <span className="text-xs">{video.timestamp}</span>
+              {/* username + metadata wrapper */}
+              <div className="absolute bottom-4 left-4 right-12 text-white z-20 pointer-events-none">
+                {openCommentsFor !== video.id && (
+                  <div className="drop-shadow-lg">
+                    <div className="flex items-center gap-2 text-sm opacity-90">
+                      <span className="font-semibold">
+                        @{video.uploader?.username || "Unknown"}
+                      </span>
+                      <span className="text-xs">{video.timestamp}</span>
+                    </div>
+                    <p className="text-sm mt-1">{video.title}</p>
                   </div>
-                  <p className="text-sm mt-1">{video.title}</p>
-                </>
+                )}
+              </div>
+
+              {/* Action Buttons - Internal Overlay */}
+              <div className="absolute bottom-4 right-2 flex flex-col justify-center items-center gap-2 z-30">
+                <div className="flex flex-col items-center">
+                  <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
+                    <Eye size={20} className="text-white" fill="currentColor" />
+                  </div>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">{video.views || 0}</span>
+                </div>
+
+                <button
+                  onClick={() => handleLikeVideo(video.id)}
+                  className="flex flex-col items-center hover:scale-110 active:scale-95 transition"
+                >
+                  <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
+                    <Heart
+                      size={20}
+                      className={video.user_vote === 1 ? "text-red-500 fill-red-500" : "text-white"}
+                      fill="currentColor"
+                    />
+                  </div>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">{video.likes}</span>
+                </button>
+
+                <button
+                  onClick={() => setOpenCommentsFor((prev) => (prev === video.id ? null : video.id))}
+                  className="flex flex-col items-center hover:scale-110 active:scale-95 transition"
+                >
+                  <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
+                    <MessageCircle className="w-5 h-5 text-white" fill="currentColor" />
+                  </div>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">Chat</span>
+                </button>
+
+                <button
+                  onClick={() => handleShare(video)}
+                  className="flex flex-col items-center hover:scale-110 active:scale-95 transition"
+                >
+                  <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
+                    <Share2 className="w-5 h-5 text-white" fill="currentColor" />
+                  </div>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">Share</span>
+                </button>
+              </div>
+
+              {openCommentsFor === video.id && (
+                <div className="absolute no-scrollbar bottom-0 w-full z-40">
+                  <CommentsDrawer
+                    videoId={video.id}
+                    jwtToken={token}
+                    currentUser={{
+                      id: user?.id || "",
+                      username: user?.username || "Anonymous",
+                    }}
+                    onClose={() => setOpenCommentsFor(null)}
+                  />
+                </div>
               )}
-            </div>
-
-            {openCommentsFor === video.id && (
-              <div className="absolute no-scrollbar bottom-0 w-full z-40">
-                <CommentsDrawer
-                  videoId={video.id}
-                  jwtToken={token}
-                  currentUser={{
-                    id: user?.id || "",
-                    username: user?.username || "Anonymous",
-                  }}
-                  onClose={() => setOpenCommentsFor(null)}
-                />
-              </div>
-            )}
-
-            <div className="
-                absolute bottom-10 right-1 flex flex-col justify-center items-center gap-2
-                z-30
-              ">
-              <div className="flex flex-col items-center">
-                <div className="p-1 rounded-full bg-black/60">
-                  <Eye size={24} className="text-white" fill="currentColor" />
-                </div>
-                <span className="text-xs mt-1 text-white">{video.views || 0}</span>
-              </div>
-
-              <button
-                onClick={() => handleLikeVideo(video.id)}
-                className="flex flex-col items-center hover:scale-110 transition"
-              >
-                <div className="p-1 rounded-full bg-black/60">
-                  <Heart size={24} className={video.user_vote === 1 ? "text-red-500 fill-red-500" : "text-white"} fill="currentColor" />
-                </div>
-                <span className="text-xs mt-1 text-white">{video.likes}</span>
-              </button>
-
-              <button
-                onClick={() =>
-                  setOpenCommentsFor((prev) => (prev === video.id ? null : video.id))
-                }
-                className="flex flex-col items-center hover:scale-110 transition"
-              >
-                <div className="p-1 rounded-full bg-black/60">
-                  <MessageCircle className="w-6 h-6 text-white" fill="currentColor " />
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleShare(video)}
-                className="flex flex-col items-center hover:scale-110 transition"
-              >
-                <div className="p-1 rounded-full bg-black/60">
-                  <Share2 className="w-6 h-6 text-white" fill="currentColor" />
-                </div>
-                <span className="text-xs mt-1 text-white">Share</span>
-              </button>
             </div>
           </div>
         ))}

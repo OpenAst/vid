@@ -8,22 +8,8 @@ import { VolumeX, Volume2, Play, Pause } from "lucide-react";
 
 interface VideoCardProps {
   id: string;
-  title: string;
   file_url: string;
   thumbnail_url: string | null;
-  views: number;
-  duration?: number;
-  timestamp: string;
-  likes?: number;
-  dislikes?: number;
-  user_vote?: number;
-  jwtToken: string;
-  description?: string,
-  uploader: {
-    id: string;
-    avatar?: string;
-    username: string;
-  }
   isCommentsOpen: boolean;
   onCloseComments: () => void;
   onLike?: () => void;
@@ -220,10 +206,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     return (
       <motion.div
         animate={{
-          height: isCommentsOpen ? "70%" : "auto"
+          height: isCommentsOpen ? "70%" : "100%"
         }}
         transition={{ duration: 0.3 }}
-        className="relative max-h-full w-full max-w-[70vw] sm:max-w-sm mx-auto rounded-2xl aspect-[9/16] overflow-hidden shadow-sm flex items-center justify-center"
+        className="relative h-full w-full mx-auto rounded-2xl aspect-[9/16] overflow-hidden shadow-sm flex items-center justify-center"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

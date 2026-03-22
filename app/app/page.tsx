@@ -64,14 +64,14 @@ function HomePage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-base-100 transition-colors overflow-x-hidden">
       <Header />
 
-      <div className="mt-[46px] h-[calc(100vh-46px)]">
+      <div className="mt-10 h-[calc(100vh-rem)]">
         <Feed jwtToken={token} />
 
         <button
           onClick={() => router.push("/upload")}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 w-14 h-14 bg-white/90 backdrop-blur-md text-black border border-white/20 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-110 active:scale-95 transition-all z-30"
+          className="fixed bottom-2 left-1/2 -translate-x-1/2 w-10 h-10 bg-white/90 backdrop-blur-md text-black border border-white/20 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-110 active:scale-95 transition-all z-30"
         >
-          <Plus className="w-8 h-8" />
+          <Plus className="w-6 h-6" />
         </button>
       </div>
     </div>
