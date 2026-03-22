@@ -19,5 +19,6 @@ urlpatterns = [
     path("comments/vote/", views.CommentVoteAPIView.as_view(), name='comment-vote'),
     
     path("videos/vote/", views.VideoVoteAPIView.as_view(), name='video-vote'),
+    path("videos/<uuid:video_id>/view/", views.VideoViewAPIView.as_view(), name='video-view'),
 
 ]

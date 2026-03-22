@@ -273,6 +273,15 @@ class VideoLikesConsumer(BaseAuthenticatedConsumer):
             }
         )
 
+    async def videos_view_updated(self, event):
+        await self.send_json(
+            {
+                "type": "video_view_updated",
+                "videoId": event["videoId"],
+                "views": event["views"],
+            }
+        )
+
     @sync_to_async
     def toggle_video_like(self, video_id, user_id):
         video = Video.objects.filter(pk=video_id).first()

@@ -61,7 +61,7 @@ function HomePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-base-100 transition-colors">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-base-100 transition-colors overflow-x-hidden">
       <Header />
 
       <div className="mt-[46px] h-[calc(100vh-46px)]">

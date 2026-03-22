@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import generics, permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Video, Comment, VideoVote, CommentVote
+from .models import Video, Comment, VideoVote, CommentVote, VideoView
 from .serializers import VideoSerializer, CommentSerializer, VideoVoteSerializer, CommentVoteSerializer
 from rest_framework.pagination import PageNumberPagination
 from accounts.permissions import IsOwnerOrReadOnly
@@ -230,6 +230,72 @@ class CommentVoteAPIView(generics.CreateAPIView):
                 "total_likes": total_likes
             }, status=status.HTTP_201_CREATED
         )
+
+class VideoViewAPIView(generics.CreateAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        video_id = self.kwargs.get("video_id")
+        video = get_object_or_404(Video, pk=video_id)
+        
+        user = request.user if request.user.is_authenticated else None
+        ip_address = self.get_client_ip(request)
+        session_key = request.session.session_key or ""
+
+        # Logic for unique views: 
+        # 1. If authenticated, check if this user has viewed this video in the last 24 hours.
+        # 2. If anonymous, check if this IP has viewed this video in the last 24 hours.
+        
+        from django.utils import timezone
+        from datetime import timedelta
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        # Reduced window for testing/verification, can be increased later
+        time_threshold = timezone.now() - timedelta(minutes=1)
+        
+        if user:
+            already_viewed = VideoView.objects.filter(
+                video=video, user=user, created_at__gt=time_threshold
+            ).exists()
+        else:
+            already_viewed = VideoView.objects.filter(
+                video=video, ip_address=ip_address, created_at__gt=time_threshold
+            ).exists()
+
+        if not already_viewed:
+            VideoView.objects.create(
+                video=video,
+                user=user,
+                ip_address=ip_address,
+                session_key=session_key
+            )
+            # Increment the views count on the video model for fast access
+            video.views += 1
+            video.save(update_fields=['views'])
+
+            # Broadcast update via WebSocket
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                "video_likes", # Reusing the video_likes group
+                {
+                    "type": "videos.view_updated",
+                    "videoId": str(video.id),
+                    "views": video.views,
+                }
+            )
+
+            return Response({"detail": "View recorded", "total_views": video.views}, status=status.HTTP_201_CREATED)
+        
+        return Response({"detail": "Already viewed", "total_views": video.views}, status=status.HTTP_200_OK)
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
 logger = logging.getLogger(__name__)
 

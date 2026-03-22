@@ -70,7 +70,7 @@ export const login = createAsyncThunk(
   'auth/login',
   async (credentials: {
     email: string, password: string, username: string
-  }, {rejectWithValue }) => {
+  }, { rejectWithValue }) => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -88,9 +88,9 @@ export const login = createAsyncThunk(
 
     } catch (error: unknown) {
       console.log('Error', error)
-      
+
       return rejectWithValue(
-        (error instanceof Error ? error.message: 'Not working') || 'Something went wrong'
+        (error instanceof Error ? error.message : 'Not working') || 'Something went wrong'
       );
     }
   }
@@ -98,7 +98,7 @@ export const login = createAsyncThunk(
 
 
 export const register = createAsyncThunk<
-  registerSuccessResponse, 
+  registerSuccessResponse,
   { email: string; password: string; re_password: string; first_name: string; last_name: string; username: string }, // input type
   { rejectValue: DjoserErrorResponse | string } // reject type
 >(
@@ -126,34 +126,34 @@ export const register = createAsyncThunk<
 );
 
 
-  export const activate = createAsyncThunk(
-    'auth/activate',
-    async ({ uid, token }: { uid: string; token: string }, thunkAPI) => {
-      try { 
-        const res = await fetch('/api/auth/activate/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ uid, token }),
-        });
-  
-        if (!res.ok) {
-          const errorData = await res.json();
-          return thunkAPI.rejectWithValue(errorData);
-        }
-  
-        return {};
-      } catch (error) {
-        console.log(error);
-        return thunkAPI.rejectWithValue({ error: 'Network error' });
-      }
-    }
-  );
+export const activate = createAsyncThunk(
+  'auth/activate',
+  async ({ uid, token }: { uid: string; token: string }, thunkAPI) => {
+    try {
+      const res = await fetch('/api/auth/activate/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uid, token }),
+      });
 
-  export const refresh = createAsyncThunk(
-    'auth/refresh', 
-    async (_, { rejectWithValue }) => {
+      if (!res.ok) {
+        const errorData = await res.json();
+        return thunkAPI.rejectWithValue(errorData);
+      }
+
+      return {};
+    } catch (error) {
+      console.log(error);
+      return thunkAPI.rejectWithValue({ error: 'Network error' });
+    }
+  }
+);
+
+export const refresh = createAsyncThunk(
+  'auth/refresh',
+  async (_, { rejectWithValue }) => {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
@@ -180,9 +180,9 @@ export const verify = createAsyncThunk(
   'auth/verify',
   async (credentials: { token: string }, { rejectWithValue }) => {
     try {
-      const res = await fetch('/api/auth/verify',{
+      const res = await fetch('/api/auth/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
         credentials: "include",
       });
@@ -193,7 +193,7 @@ export const verify = createAsyncThunk(
         return rejectWithValue(data.error || 'Verification failed');
       }
       return data;
-      
+
     } catch (error) {
       return rejectWithValue(error || 'Verification failed');
     }
@@ -207,32 +207,32 @@ export const fetchUser = createAsyncThunk(
     try {
       const res = await fetch('/api/auth/user_details', {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
       });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error) || 'Failed to fetch user profile';
-    }  
-    const data = await res.json();
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error) || 'Failed to fetch user profile';
+      }
+      const data = await res.json();
 
-    return data;
+      return data;
     } catch (error: unknown) {
       console.log('Error', error)
       return rejectWithValue(
-        (error instanceof Error ? error.message: 'Something went wrong') || 'Something went wrong'); 
-      }
+        (error instanceof Error ? error.message : 'Something went wrong') || 'Something went wrong');
     }
-  );
+  }
+);
 
 export const updateUser = createAsyncThunk(
   'auth/updateUser',
   async (
-    userUpdates: {avatar?: string; first_name?: string, last_name?: string, bio?: string }, { rejectWithValue }) => {
+    userUpdates: { avatar?: string; first_name?: string, last_name?: string, bio?: string }, { rejectWithValue }) => {
     try {
       const res = await fetch("api/auth/profile_update", {
         method: 'PATCH',
-        headers: { "Content-Type": "application/json" }, 
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(userUpdates),
       });
@@ -257,7 +257,7 @@ export const fetchPublicUser = createAsyncThunk(
       const response = await axios.get(`/api/auth/profile?username=${username}`);
       return response.data;
     } catch (error: unknown) {
-      return thunkAPI.rejectWithValue(error instanceof Error ? error.message: "Error fetching user profile")
+      return thunkAPI.rejectWithValue(error instanceof Error ? error.message : "Error fetching user profile")
     }
   }
 );
@@ -335,14 +335,15 @@ const authSlice = createSlice({
       })
       .addCase(refresh.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.isAuthenticated = action.payload.user;
+        state.isAuthenticated = true;
+        state.token = action.payload;
         state.isError = false;
       })
       .addCase(refresh.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
       })
-      .addCase(fetchUser.pending, (state) => { 
+      .addCase(fetchUser.pending, (state) => {
         state.isLoading = true;
         state.isError = false;
       })
@@ -367,7 +368,7 @@ const authSlice = createSlice({
       .addCase(updateUser.fulfilled, (state, action) => {
         if (state.user) {
           state.user = {
-            ...state.user, 
+            ...state.user,
             ...action.payload,
             profile: {
               ...(state.user.profile || {}),
@@ -380,7 +381,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isError = false;
       })
-      .addCase(fetchPublicUser.pending, (state) => { 
+      .addCase(fetchPublicUser.pending, (state) => {
         state.isLoading = true;
         state.isError = false;
       })
@@ -393,7 +394,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isError = true;
       })
-      .addCase(verify.pending, (state) => { 
+      .addCase(verify.pending, (state) => {
         state.isLoading = true;
         state.isError = false;
       })

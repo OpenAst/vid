@@ -1,5 +1,4 @@
 from django.db import models
-from accounts.models import UserAccount
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from accounts.models import UserAccount
@@ -65,3 +64,17 @@ class CommentVote(models.Model):
 
   class Meta:
     unique_together = ('comment', 'user')
+
+class VideoView(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name="view_logs")
+    user = models.ForeignKey(UserAccount, on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    session_key = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"View of {self.video} by {self.user or self.ip_address}"

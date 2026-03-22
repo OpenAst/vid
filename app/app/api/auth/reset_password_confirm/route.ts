@@ -17,11 +17,18 @@ export async function POST(req: NextRequest) {
     }),
   });
 
+  // Django returns 204 No Content on success — don't try to parse an empty body
+  if (res.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const data = await res.json();
 
   if (!res.ok) {
-    // Forward the specific error from Django if possible
-    throw new Error(JSON.stringify(data) || 'Failed to verify account');
+    return NextResponse.json(
+      { error: data?.detail || data?.token?.[0] || JSON.stringify(data) || 'Failed to reset password' },
+      { status: res.status }
+    );
   }
 
   return NextResponse.json(data);

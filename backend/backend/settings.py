@@ -83,6 +83,7 @@ else:
 CSRF_USE_SESSIONS = False
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://oneclyq.com',
     'https://www.oneclyq.com',
     'https://vid-4yi2.onrender.com',
     "https://vid-olive.vercel.app",
@@ -95,6 +96,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    'https://oneclyq.com',
     'https://www.oneclyq.com',
     "http://localhost:3001",
     "https://vid-olive.vercel.app",
@@ -291,7 +293,11 @@ DJOSER = {
        'activation': 'accounts.email.CustomActivationEmail',
     },
     'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
-    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': ['http://localhost:3000/auth/google', 'https://www.oneclyq.com/auth/google'],
+    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': [
+        'http://localhost:3000/auth/google',
+        'https://www.oneclyq.com/auth/google',
+        'https://oneclyq.com/auth/google'
+    ],
     'SERIALIZERS': {
         'user_create': 'accounts.serializers.UserCreateSerializer',
         'user': 'accounts.serializers.UserDetailSerializer',

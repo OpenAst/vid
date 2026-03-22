@@ -220,10 +220,10 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     return (
       <motion.div
         animate={{
-          height: isCommentsOpen ? "70%" : "100%"
+          height: isCommentsOpen ? "70%" : "auto"
         }}
         transition={{ duration: 0.3 }}
-        className="relative h-full sm:max-w-sm rounded-2xl aspect-[9/16] overflow-hidden shadow-sm"
+        className="relative max-h-full w-full max-w-[70vw] sm:max-w-sm mx-auto rounded-2xl aspect-[9/16] overflow-hidden shadow-sm flex items-center justify-center"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -237,7 +237,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           drag={zoomScale > 1}
           dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
           dragElastic={0.5}
-          className={`absolute h-full bg-black rounded-2xl ${isPortrait ? "object-cover" : "object-contain"
+          className={`relative w-full h-full bg-black rounded-2xl ${isPortrait ? "object-cover" : "object-contain"
             }`}
           playsInline
           autoPlay
