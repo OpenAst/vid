@@ -3,7 +3,7 @@
 import { useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
-import { setAuthenticated, fetchUser } from '@/app/store/authSlice';
+import { setAuthenticated, setToken, fetchUser } from '@/app/store/authSlice';
 import { AppDispatch } from '@/app/store/store';
 import { toast } from 'react-toastify';
 
@@ -55,6 +55,7 @@ function GoogleAuthContent() {
 
                     if (setCookieRes.ok) {
                         dispatch(setAuthenticated(true));
+                        dispatch(setToken(data.access));
                         dispatch(fetchUser());
                         router.push('/');
                         toast.success('Logged in with Google successfully!');

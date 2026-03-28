@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Camera, Video, X, Square } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser } from "@/app/store/authSlice";
 import { AppDispatch } from "@/app/store/store";
@@ -29,8 +30,77 @@ const UploadVideo = () => {
     description: ""
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: true
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      streamRef.current = stream;
+      setIsCameraActive(true);
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      toast.error("Could not access camera. Please check permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+    setIsRecording(false);
+  };
+
+  const startRecording = () => {
+    if (!streamRef.current) return;
+
+    setRecordedChunks([]);
+    const mediaRecorder = new MediaRecorder(streamRef.current, {
+      mimeType: "video/webm;codecs=vp8,opus"
+    });
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        setRecordedChunks(prev => [...prev, event.data]);
+      }
+    };
+
+    mediaRecorderRef.current = mediaRecorder;
+    mediaRecorder.start();
+    setIsRecording(true);
+    toast.info("Recording started...");
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast.success("Recording finished!");
+    }
+  };
+
+  const saveRecording = () => {
+    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    const file = new File([blob], `recorded_video_${Date.now()}.webm`, { type: "video/webm" });
+    setVideoFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    stopCamera();
+  };
 
 
   const handleInputChange = (
@@ -62,7 +132,7 @@ const UploadVideo = () => {
     e.preventDefault();
 
     if (!videoFile) {
-      toast.error("Please select a video file");
+      toast.error("Please select or record a video file");
       return;
     }
 
@@ -270,71 +340,149 @@ const UploadVideo = () => {
 
             <div>
               <label className="block text-sm font-medium text-base-content/80 mb-1">
-                Video File *
+                Video Content *
               </label>
-              <div className="mt-1 flex items-center">
-                <label
-                  htmlFor="video-upload"
-                  className="cursor-pointer bg-base-200 py-2 px-3 border border-base-300 rounded-md shadow-sm text-sm leading-4 font-medium text-base-content hover:bg-base-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all"
-                >
-                  Select Video
-                  <input
-                    id="video-upload"
-                    name="video"
-                    type="file"
-                    accept="video/*"
-                    onChange={handleFileChange}
-                    className="sr-only"
-                    required
-                  />
-                </label>
-                <span className="ml-2 text-sm text-gray-500">
-                  {videoFile ? videoFile.name : "No file selected"}
-                </span>
-              </div>
 
-              {previewUrl && (
-                <div className="mt-3 flex justify-center">
-                  <div className="w-full max-w-xs">
+              {!isCameraActive ? (
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <label
+                      htmlFor="video-upload"
+                      className="flex-1 cursor-pointer bg-base-200 py-3 px-4 border border-base-300 rounded-xl shadow-sm text-center text-sm font-medium text-base-content hover:bg-base-300 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Video size={20} />
+                      <span>Choose Media</span>
+                      <input
+                        id="video-upload"
+                        name="video"
+                        type="file"
+                        accept="video/*"
+                        onChange={handleFileChange}
+                        className="sr-only"
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="flex-1 bg-primary/10 py-3 px-4 border border-primary/20 rounded-xl shadow-sm text-center text-sm font-medium text-primary hover:bg-primary/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Camera size={20} />
+                      Record Now
+                    </button>
+                  </div>
+
+                  <span className="block text-center text-xs text-gray-500">
+                    {videoFile ? `Selected: ${videoFile.name}` : "No file selected"}
+                  </span>
+                </div>
+              ) : (
+                <div className="relative bg-black rounded-2xl overflow-hidden aspect-[9/16] max-h-[60vh] mx-auto shadow-2xl border border-white/10">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Recording Controls */}
+                  <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-6">
+                    {!isRecording ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={stopCamera}
+                          className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-all"
+                        >
+                          <X size={24} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={startRecording}
+                          className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center p-1 hover:scale-110 active:scale-95 transition-all"
+                        >
+                          <div className="w-full h-full rounded-full bg-red-600 shadow-inner"></div>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={stopRecording}
+                        className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center p-4 hover:scale-110 active:scale-95 transition-all"
+                      >
+                        <Square size={24} className="text-red-600 fill-red-600" />
+                      </button>
+                    )}
+                  </div>
+
+                  {isRecording && (
+                    <div className="absolute top-4 right-4 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full">
+                      <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+                      <span className="text-xs text-white font-medium">REC</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Show the recorded/selected video preview if camera is not active */}
+              {!isCameraActive && previewUrl && (
+                <div className="mt-4 flex justify-center">
+                  <div className="w-full max-w-xs relative group">
                     <video
                       key={previewUrl}
                       src={previewUrl}
                       controls
-                      className="w-full h-32 object-cover rounded-md border border-blue-400"
+                      className="w-full aspect-[9/16] object-cover rounded-2xl border-2 border-primary/20 shadow-xl"
                     />
-                    <p className="text-xs 
-                    text-center text-gray-500 mt-1">
-                      Video preview
-                    </p>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVideoFile(null);
+                          setPreviewUrl(null);
+                        }}
+                        className="p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
                   </div>
+                </div>
+              )}
+
+              {/* Save recording prompt */}
+              {!isRecording && recordedChunks.length > 0 && isCameraActive && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={saveRecording}
+                    className="btn btn-success btn-wide text-white"
+                  >
+                    Use this Recording
+                  </button>
                 </div>
               )}
             </div>
 
-            <div className="pt-2 mb-2 sticky bottom-0 bg-base-100 border-t border-base-300">
+            <div className="pt-4 sticky bottom-0 bg-base-100 z-10 border-t border-base-300">
               <button
                 type="submit"
-                className={`w-full mb-8 flex btn btn-primary justify-center py-3 
-                  px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
-                  hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2
-                focus:ring-orange-500 focus:border-orange-500 ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                disabled={isUploading || isRecording || (!videoFile && !isCameraActive)}
+                className={`w-full mb-8 flex btn btn-primary justify-center py-4 
+                  px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white 
+                  hover:scale-[1.02] active:scale-[0.98] transition-all
+                ${(isUploading || isRecording) ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isUploading ? (
                   <>
-                    <svg
-                      className="animate-spin
-                      -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
-                      fill="none" viewBox="0 0 24 24"
-                    >
-                      <circle className="opacity-25" cx="12"
-                        cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75"
-                        fill="currentColor" d="M4 12a8 8 0 
-                          018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Uploading...
+                    Uploading Video...
                   </>
-                ) : 'Upload Video'}
+                ) : 'Post Video'}
               </button>
             </div>
           </form>

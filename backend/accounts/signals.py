@@ -12,11 +12,9 @@ def manage_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.get_or_create(user=instance)
     else:
-        # Check if profile exists before saving to avoid errors
-        if hasattr(instance, 'profile'):
-            instance.profile.save()
-        else:
-            Profile.objects.create(user=instance)
+        # Use get_or_create to handle cases where profile might be missing or existed but not linked
+        profile, _ = Profile.objects.get_or_create(user=instance)
+        profile.save()
 
 
 @receiver(post_migrate)
