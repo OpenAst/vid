@@ -38,6 +38,10 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
     socketRef.current = new WebSocket(buildWebSocketUrl("/ws/video-likes/", token));
 
+    socketRef.current.onopen = () => {
+      console.log("WebSocket connected to video-likes feed");
+    };
+
     socketRef.current.onmessage = (event) => {
       const payload = JSON.parse(event.data);
       if (payload.type === "video_vote_updated") {
@@ -57,6 +61,14 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
           })
         );
       }
+    };
+
+    socketRef.current.onerror = (error) => {
+      console.error("WebSocket Error in video-likes feed", error);
+    };
+
+    socketRef.current.onclose = (event) => {
+      console.log("WebSocket closed for video-likes", event.code, event.reason);
     };
 
     return () => {
@@ -179,7 +191,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }
 
   return (
-    <div className="h-[91vh] w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
+    <div className="h-[92vh] w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
       {Array.isArray(videos) &&
         videos.map((video, idx) => (
           <div

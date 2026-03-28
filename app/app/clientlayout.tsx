@@ -3,20 +3,41 @@
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import LogoutButton from '@/app/components/layout/LogoutButton';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/app/store/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '@/app/store/store';
+import { fetchUser, refresh } from '@/app/store/authSlice';
 import Image from 'next/image';
 import { lusitana } from './fonts';
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
+  const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
+    // Initial theme setup
     const storedTheme = localStorage.getItem('theme') || 'light';
     setDarkMode(storedTheme === 'dark');
     document.documentElement.setAttribute('data-theme', storedTheme);
+
+    // Rehydrate session from cookies on mount
+    const rehydrateSession = async () => {
+      if (!isAuthenticated) {
+        try {
+          // Attempt to refresh the access token first
+          const result = await dispatch(refresh()).unwrap();
+          if (result) {
+            // Then fetch user profile
+            await dispatch(fetchUser());
+          }
+        } catch (err) {
+          console.log("No valid session found during rehydration", err);
+        }
+      }
+    };
+
+    rehydrateSession();
   }, []);
 
   useEffect(() => {

@@ -82,7 +82,11 @@ export async function POST(req: NextRequest) {
       headers.append('Content-Type', 'application/json');
 
       return new Response(
-        JSON.stringify({ success: 'Logged in successfully' }),
+        JSON.stringify({
+          success: 'Logged in successfully',
+          access: data.access,
+          user: data.user // Check if data.user exists, if not we might need to fetch it or skip
+        }),
         { status: 200, headers }
       );
     } else {

@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export interface registerSuccessResponse {
   email: string;
-  user: User
+  user: User;
   username: string;
   id: string;
 }
@@ -230,7 +230,7 @@ export const updateUser = createAsyncThunk(
   async (
     userUpdates: { avatar?: string; first_name?: string, last_name?: string, bio?: string }, { rejectWithValue }) => {
     try {
-      const res = await fetch("api/auth/profile_update", {
+      const res = await fetch("/api/auth/profile_update", {
         method: 'PATCH',
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -290,6 +290,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
+        state.token = action.payload.access;
         state.isAuthenticated = true;
       })
       .addCase(login.rejected, (state) => {
@@ -315,7 +316,7 @@ const authSlice = createSlice({
           state.errorMessage = JSON.stringify(action.payload);
         } else {
           state.errorMessage = action.payload as string;
-        };
+        }
       })
       .addCase(activate.pending, (state) => {
         state.isLoading = true;
