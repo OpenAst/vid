@@ -191,7 +191,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }
 
   return (
-    <div className="h-[92vh] w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-white">
+    <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-base-100">
       {Array.isArray(videos) &&
         videos.map((video, idx) => (
           <div
@@ -200,10 +200,10 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             ref={(el) => {
               wrapperRefs.current[idx] = el;
             }}
-            className="h-full w-full snap-start flex items-center justify-center relative"
+            className="h-[90vh] w-full snap-start flex items-center justify-center relative mb-4"
           >
             {/* Constrained Center Wrapper */}
-            <div className="relative h-full w-[45vh] max-w-full flex items-center justify-center">
+            <div className="relative h-full w-[45vh] max-w-full flex items-center justify-center rounded-2xl overflow-hidden shadow-xl bg-black">
               <VideoCard
                 ref={(el) => {
                   videoRefs.current[idx] = el;
