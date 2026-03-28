@@ -200,10 +200,10 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             ref={(el) => {
               wrapperRefs.current[idx] = el;
             }}
-            className="h-[90vh] w-full snap-start flex items-center justify-center relative mb-4"
+            className="h-[90vh] w-full snap-start flex items-center justify-center relative mb-2"
           >
             {/* Constrained Center Wrapper */}
-            <div className="relative h-full w-[45vh] max-w-full flex items-center justify-center rounded-2xl overflow-hidden shadow-xl bg-black">
+            <div className="relative h-full w-[47vh] max-w-full flex items-start justify-center rounded-2xl overflow-hidden shadow-xl bg-black">
               <VideoCard
                 ref={(el) => {
                   videoRefs.current[idx] = el;
@@ -231,7 +231,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               </div>
 
               {/* Action Buttons - Internal Overlay */}
-              <div className="absolute bottom-4 right-2 flex flex-col justify-center items-center gap-2 z-30">
+              <div className="absolute bottom-12 right-2 flex flex-col justify-center items-center gap-2 z-30">
                 <div className="flex flex-col items-center">
                   <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
                     <Eye size={20} className="text-white" fill="currentColor" />
@@ -290,6 +290,8 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             </div>
           </div>
         ))}
+      {/* Bottom Spacer to allow last video to snap to top */}
+      <div className="h-[40vh] w-full shrink-0" />
       {loadingMore && (
         <div className="h-20 w-full flex items-center justify-center p-4">
           <span className="loading loading-spinner loading-md text-primary"></span>
