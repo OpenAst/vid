@@ -174,7 +174,7 @@ const LoginPage = () => {
             // Redirect string contains the backend URL which returns a JSON with the actual auth URL
             try {
               const redirectUri = `${window.location.origin}/auth/google`;
-              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/o/google-oauth2/?redirect_uri=${redirectUri}`;
+              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/o/google-oauth2/?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
               const res = await fetch(backendUrl, {
                 method: 'GET',

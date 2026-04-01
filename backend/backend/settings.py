@@ -76,9 +76,21 @@ ENV = config("ENV", default="production")
 if ENV == "development":
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_SECURE = False
+    SESSION_COOKIE_DOMAIN = None
+    CSRF_COOKIE_DOMAIN = None
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
 else:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
+    # Shared domain for www.oneclyq.com and api.oneclyq.com
+    SESSION_COOKIE_DOMAIN = '.oneclyq.com'
+    CSRF_COOKIE_DOMAIN = '.oneclyq.com'
+    # SameSite=None is required for cross-origin social auth callbacks
+    SESSION_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SAMESITE = 'None'
+    # Render and other proxies
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 CSRF_USE_SESSIONS = False
 
@@ -321,6 +333,10 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
 )
+
+# Force HTTPS for social redirects in production
+if ENV != 'development':
+    SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
