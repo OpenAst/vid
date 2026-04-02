@@ -8,8 +8,29 @@ import { inter } from "./fonts";
 
 
 export const metadata: Metadata = {
-  title: "OneClyq",
-  description: "video microblogging",
+  title: "OneClyq - Video Microblogging",
+  description: "OneClyq is a short video microblogging platform. Share moments, discover creators, and connect with the world.",
+  keywords: ["oneclyq", "video", "microblogging", "short videos", "social media"],
+  metadataBase: new URL("https://www.oneclyq.com"),
+  alternates: {
+    canonical: "https://www.oneclyq.com",
+  },
+  openGraph: {
+    title: "OneClyq - Video Microblogging",
+    description: "Share short videos and discover creators on OneClyq.",
+    url: "https://www.oneclyq.com",
+    siteName: "OneClyq",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OneClyq - Video Microblogging",
+    description: "Share short videos and discover creators on OneClyq.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
