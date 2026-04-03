@@ -306,9 +306,7 @@ DJOSER = {
        'activation': 'accounts.email.CustomActivationEmail',
     },
     'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
-    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': [
-        f'{origin.rstrip("/")}/auth/google' for origin in FRONTEND_ORIGINS
-    ],
+    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': os.getenv('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS', '').split(','),
     'SERIALIZERS': {
         'user_create': 'accounts.serializers.UserCreateSerializer',
         'user': 'accounts.serializers.UserDetailSerializer',
