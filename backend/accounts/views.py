@@ -16,6 +16,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.http import urlsafe_base64_decode
 from .tokens import OneDayActivationTokenGenerator
+from social_django.utils import load_backend, load_strategy
 import boto3
 import time
 from django.conf import settings
@@ -173,6 +174,34 @@ def get_avatar_url(request):
 @ensure_csrf_cookie
 def csrf(request):
     return JsonResponse({'message': 'CSRF cookie set'})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def google_auth_redirect(request):
+    redirect_uri = request.query_params.get('redirect_uri')
+
+    if not redirect_uri:
+        return Response(
+            {"detail": "redirect_uri is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    allowed_redirect_uris = settings.DJOSER.get('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS', [])
+    if redirect_uri not in allowed_redirect_uris:
+        return Response(
+            {"detail": "Redirect URI is not allowed."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    strategy = load_strategy(request)
+    backend = load_backend(
+        strategy=strategy,
+        name='google-oauth2',
+        redirect_uri=redirect_uri,
+    )
+
+    return backend.start()
 
 @api_view(['GET'])  
 def home(request):

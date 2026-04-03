@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from django.urls import path, include
 from accounts.views import (
   CustomTokenObtainPairView, ProfileUpdateView, PublicProfileView, UserDetailView, home, total_users,
-  csrf, LogoutView, ActivateUserView, check_email, get_avatar_url
+  csrf, LogoutView, ActivateUserView, check_email, get_avatar_url, google_auth_redirect
 )
 from video.views import (
   get_presigned_part_url, initiate_multipart_upload,
@@ -17,6 +17,7 @@ urlpatterns = [
     path('auth/jwt/create/', CustomTokenObtainPairView.as_view(), 
          name='custom_jwt_create'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('auth/google/redirect/', google_auth_redirect, name='google-auth-redirect'),
     path('auth/', include('djoser.urls')),
     path('auth/users/me/', UserDetailView.as_view(), name="current-user"),
     path('auth/', include('djoser.urls.jwt')),

@@ -171,29 +171,11 @@ const LoginPage = () => {
         <SocialButton
           provider="google"
           onClick={async () => {
-            // Redirect string contains the backend URL which returns a JSON with the actual auth URL
             try {
               const redirectUri = `${window.location.origin}/auth/google`;
-              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/o/google-oauth2/?redirect_uri=${encodeURIComponent(redirectUri)}`;
+              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/google/redirect/?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-              const res = await fetch(backendUrl, {
-                method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-              });
-
-              if (res.ok) {
-                const data = await res.json();
-                if (data.authorization_url) {
-                  window.location.href = data.authorization_url;
-                } else {
-                  toast.error("Failed to get authorization URL");
-                }
-              } else {
-                toast.error("Failed to initiate Google Login");
-              }
+              window.location.href = backendUrl;
             } catch (err) {
               console.error(err);
               toast.error("An error occurred");
