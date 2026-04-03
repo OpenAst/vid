@@ -8,11 +8,16 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def csv_config(name, default=""):
+    value = config(name, default=default)
+    return [item.strip() for item in value.split(",") if item.strip()]
+
 SITE_ID = 1
 
 SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
 
 INSTALLED_APPS = [
     'daphne',
@@ -72,6 +77,11 @@ ROOT_URLCONF = 'backend.urls'
 CSRF_COOKIE_HTTPONLY = True
 
 ENV = config("ENV", default="production")
+FRONTEND_ORIGINS = csv_config(
+    "FRONTEND_ORIGINS",
+    "http://localhost:3000,https://www.oneclyq.com,https://oneclyq.com,https://vid-olive.vercel.app",
+)
+COOKIE_DOMAIN = config("COOKIE_DOMAIN", default=None)
 
 if ENV == "development":
     CSRF_COOKIE_SECURE = False
@@ -83,9 +93,9 @@ if ENV == "development":
 else:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
-    # Shared domain for www.oneclyq.com and api.oneclyq.com
-    SESSION_COOKIE_DOMAIN = '.oneclyq.com'
-    CSRF_COOKIE_DOMAIN = '.oneclyq.com'
+    # Only set a shared cookie domain when the API is actually served from it.
+    SESSION_COOKIE_DOMAIN = COOKIE_DOMAIN
+    CSRF_COOKIE_DOMAIN = COOKIE_DOMAIN
     # SameSite=None is required for cross-origin social auth callbacks
     SESSION_COOKIE_SAMESITE = 'None'
     CSRF_COOKIE_SAMESITE = 'None'
@@ -94,29 +104,25 @@ else:
 
 CSRF_USE_SESSIONS = False
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://oneclyq.com',
-    'https://www.oneclyq.com',
-    'https://vid-4yi2.onrender.com',
-    "https://vid-olive.vercel.app",
-    "http://localhost:3000",
-]
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(
+        FRONTEND_ORIGINS + ['https://vid-4yi2.onrender.com']
+    )
+)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    'https://oneclyq.com',
-    'https://www.oneclyq.com',
-    "http://localhost:3001",
-    "https://vid-olive.vercel.app",
-]
+CORS_ALLOWED_ORIGINS = list(
+    dict.fromkeys(
+        FRONTEND_ORIGINS + ["http://localhost:3001"]
+    )
+)
 
-FRONTEND_URL = config('FRONTEND_URL').split(',')
+FRONTEND_URL = csv_config('FRONTEND_URL')
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
+ALLOWED_HOSTS = csv_config('ALLOWED_HOSTS')
 
 
 DATA_UPLOAD_MAX_MEMORY_SIZE =  1024 * 1024 * 1024
@@ -273,16 +279,11 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SAMESITE': None,
 }
 
-ENV = config("ENV", default="production")
-
-if ENV == 'development':
-    FRONTEND_DOMAIN = "localhost:3000"
-    FRONTEND_PROTOCOL = "http"
-else:
-    FRONTEND_DOMAIN = "www.oneclyq.com"
-    FRONTEND_PROTOCOL = "https"
-
-FRONTEND_URL = f"{FRONTEND_PROTOCOL}://{FRONTEND_DOMAIN}"
+DEFAULT_FRONTEND_URL = (
+    "http://localhost:3000" if ENV == 'development' else "https://www.oneclyq.com"
+)
+PRIMARY_FRONTEND_URL = config("PRIMARY_FRONTEND_URL", default=DEFAULT_FRONTEND_URL)
+FRONTEND_PROTOCOL, FRONTEND_DOMAIN = PRIMARY_FRONTEND_URL.split("://", 1)
 
 DJOSER = {
     'DOMAIN': FRONTEND_DOMAIN,
@@ -306,9 +307,7 @@ DJOSER = {
     },
     'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
     'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': [
-        'http://localhost:3000/auth/google',
-        'https://www.oneclyq.com/auth/google',
-        'https://oneclyq.com/auth/google'
+        f'{origin.rstrip("/")}/auth/google' for origin in FRONTEND_ORIGINS
     ],
     'SERIALIZERS': {
         'user_create': 'accounts.serializers.UserCreateSerializer',
