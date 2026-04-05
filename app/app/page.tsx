@@ -37,9 +37,10 @@ function HomePage() {
             email: userData.email || '',
           });
         }
-        setAuthChecked(true)
       } catch (error) {
         console.error('Error loading user details', error);
+      } finally {
+        setAuthChecked(true);
       }
     };
     fetchData();

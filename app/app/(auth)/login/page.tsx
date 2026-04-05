@@ -77,8 +77,9 @@ const LoginPage = () => {
         setErrorMessage(defaultMsg);
       }
 
+      const apiErr = (typeof err === 'object' && err !== null) ? err as ApiError : null;
 
-      if ((e as ApiError).status === 401) {
+      if (apiErr?.status === 401) {
         try {
           console.log('Attempting token refresh...');
           const res = await fetch('/api/auth/refresh/', {
@@ -172,8 +173,7 @@ const LoginPage = () => {
           provider="google"
           onClick={async () => {
             try {
-              const redirectUri = `${window.location.origin}/auth/google`;
-              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/google/redirect/?redirect_uri=${encodeURIComponent(redirectUri)}`;
+              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/google/start/`;
 
               window.location.href = backendUrl;
             } catch (err) {
@@ -198,6 +198,6 @@ const LoginPage = () => {
       </p>
     </AuthLayout>
   );
-};
+}
 
 export default LoginPage;

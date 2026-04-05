@@ -14,19 +14,39 @@ function GoogleAuthContent() {
     const attemptedRef = useRef(false);
 
     useEffect(() => {
+        const access = searchParams.get('access');
+        const refresh = searchParams.get('refresh');
         const state = searchParams.get('state');
         const code = searchParams.get('code');
-
-        if (!state || !code) {
-            router.push('/login');
-            return;
-        }
 
         if (attemptedRef.current) return;
         attemptedRef.current = true;
 
         const authenticate = async () => {
             try {
+                if (access && refresh) {
+                    const setCookieRes = await fetch('/api/auth/set-tokens', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ access, refresh }),
+                    });
+
+                    if (setCookieRes.ok) {
+                        dispatch(setAuthenticated(true));
+                        dispatch(setToken(access));
+                        dispatch(fetchUser());
+                        router.push('/');
+                        toast.success('Logged in with Google successfully!');
+                        return;
+                    }
+                    throw new Error('Failed to set session cookies');
+                }
+
+                if (!state || !code) {
+                    router.push('/login');
+                    return;
+                }
+
                 const formData = new URLSearchParams();
                 formData.append('state', state);
                 formData.append('code', code);

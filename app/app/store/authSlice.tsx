@@ -167,7 +167,7 @@ export const refresh = createAsyncThunk(
       }
 
       const data = await response.json();
-      return data.access; // Return the refreshed access token
+      return data.access || null; 
     } catch (error: unknown) {
       return rejectWithValue(
         (error instanceof Error ? error.message : 'Something went wrong') || 'Unknown error'

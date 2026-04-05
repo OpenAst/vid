@@ -6,7 +6,7 @@ export async function POST() {
   const refresh = cookieStore.get("refresh")?.value;
 
   if (!refresh) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ access: null }, { status: 200 });
   }
 
   try {
