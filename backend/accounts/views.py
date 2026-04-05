@@ -187,6 +187,12 @@ def google_auth_redirect(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    # Normalize localhost HTTPS to HTTP for dev environments
+    if redirect_uri.startswith('https://localhost'):
+        redirect_uri = 'http://' + redirect_uri[len('https://'):]
+    if redirect_uri.startswith('https://127.0.0.1'):
+        redirect_uri = 'http://' + redirect_uri[len('https://'):]
+
     allowed_redirect_uris = settings.DJOSER.get('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS', [])
     if redirect_uri not in allowed_redirect_uris:
         return Response(

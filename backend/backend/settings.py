@@ -81,6 +81,21 @@ FRONTEND_ORIGINS = csv_config(
     "FRONTEND_ORIGINS",
     "http://localhost:3000,https://www.oneclyq.com,https://oneclyq.com,https://vid-olive.vercel.app",
 )
+# Defensive: if env parsing returns a raw string, normalize to list
+if isinstance(FRONTEND_ORIGINS, str):
+    FRONTEND_ORIGINS = [item.strip() for item in FRONTEND_ORIGINS.split(",") if item.strip()]
+if not FRONTEND_ORIGINS:
+    FRONTEND_ORIGINS = [
+        "http://localhost:3000",
+        "https://www.oneclyq.com",
+        "https://oneclyq.com",
+        "https://vid-olive.vercel.app",
+    ]
+SOCIAL_AUTH_ALLOWED_REDIRECT_URIS = csv_config("SOCIAL_AUTH_ALLOWED_REDIRECT_URIS")
+if not SOCIAL_AUTH_ALLOWED_REDIRECT_URIS:
+    SOCIAL_AUTH_ALLOWED_REDIRECT_URIS = [
+        f'{origin.rstrip("/")}/auth/google' for origin in FRONTEND_ORIGINS
+    ]
 COOKIE_DOMAIN = config("COOKIE_DOMAIN", default=None)
 
 if ENV == "development":
@@ -306,7 +321,7 @@ DJOSER = {
        'activation': 'accounts.email.CustomActivationEmail',
     },
     'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
-    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': os.getenv('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS', '').split(','),
+    'SOCIAL_AUTH_ALLOWED_REDIRECT_URIS': SOCIAL_AUTH_ALLOWED_REDIRECT_URIS,
     'SERIALIZERS': {
         'user_create': 'accounts.serializers.UserCreateSerializer',
         'user': 'accounts.serializers.UserDetailSerializer',
