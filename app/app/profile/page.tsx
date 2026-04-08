@@ -267,11 +267,11 @@ function ProfilePage() {
             <span className="loading loading-spinner loading-lg"></span>
           </div>
         ) : videos.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
             {videos.map((video) => (
               <div
                 key={video.id}
-                className="group relative aspect-[9/16] bg-base-300 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all shadow-md"
+                className="group relative aspect-[9/16] bg-base-300 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all shadow-md max-h-[60vh]"
                 onClick={() => router.push(`/?videoId=${video.id}`)}
               >
                 {video.thumbnail_url ? (
