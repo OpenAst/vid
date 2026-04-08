@@ -17,6 +17,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.http import urlsafe_base64_decode
 from .tokens import OneDayActivationTokenGenerator
 from social_django.utils import load_backend, load_strategy
+from django.shortcuts import redirect
+from django.urls import reverse
 import boto3
 import time
 from django.conf import settings
@@ -187,12 +189,6 @@ def google_auth_redirect(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Normalize localhost HTTPS to HTTP for dev environments
-    if redirect_uri.startswith('https://localhost'):
-        redirect_uri = 'http://' + redirect_uri[len('https://'):]
-    if redirect_uri.startswith('https://127.0.0.1'):
-        redirect_uri = 'http://' + redirect_uri[len('https://'):]
-
     allowed_redirect_uris = settings.DJOSER.get('SOCIAL_AUTH_ALLOWED_REDIRECT_URIS', [])
     if redirect_uri not in allowed_redirect_uris:
         return Response(
@@ -208,6 +204,76 @@ def google_auth_redirect(request):
     )
 
     return backend.start()
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def google_auth_start(request):
+    redirect_uri = request.build_absolute_uri(reverse('google-auth-callback'))
+    strategy = load_strategy(request)
+    backend = load_backend(
+        strategy=strategy,
+        name='google-oauth2',
+        redirect_uri=redirect_uri,
+    )
+    return backend.start()
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def google_auth_callback(request):
+    redirect_uri = request.build_absolute_uri(reverse('google-auth-callback'))
+    strategy = load_strategy(request)
+    backend = load_backend(
+        strategy=strategy,
+        name='google-oauth2',
+        redirect_uri=redirect_uri,
+    )
+
+    try:
+        user = backend.complete(user=None)
+    except Exception:
+        return Response({"detail": "Google authentication failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user:
+        return Response({"detail": "Google authentication failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if hasattr(user, "is_active") and not user.is_active:
+        return Response({"detail": "Account not activated."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    refresh = RefreshToken.for_user(user)
+    access = str(refresh.access_token)
+    refresh_token = str(refresh)
+
+    frontend_base = settings.PRIMARY_FRONTEND_URL
+    if settings.ENV == "development":
+        frontend_base = "http://localhost:3000"
+
+    if settings.COOKIE_DOMAIN:
+        response = redirect(frontend_base)
+        response.set_cookie(
+            "access",
+            access,
+            httponly=True,
+            secure=settings.ENV != "development",
+            samesite="None" if settings.ENV != "development" else "Lax",
+            domain=settings.COOKIE_DOMAIN,
+            path="/",
+        )
+        response.set_cookie(
+            "refresh",
+            refresh_token,
+            httponly=True,
+            secure=settings.ENV != "development",
+            samesite="None" if settings.ENV != "development" else "Lax",
+            domain=settings.COOKIE_DOMAIN,
+            path="/",
+        )
+        return response
+
+    # Local dev fallback: pass tokens to frontend to set cookies on its own domain
+    redirect_url = f"{frontend_base.rstrip('/')}/auth/google?access={access}&refresh={refresh_token}"
+    return redirect(redirect_url)
 
 @api_view(['GET'])  
 def home(request):

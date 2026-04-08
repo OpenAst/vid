@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { login } from '@/app/store/authSlice';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
@@ -22,12 +22,14 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
 
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, isError } = useSelector((state: RootState) => state.auth);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
+  const isLoadingUi = mounted ? isLoading : false;
 
   interface AuthErrorResponse {
     email?: string;
@@ -102,6 +104,10 @@ const LoginPage = () => {
 
   const togglePassword = () => setShowPassword(!showPassword);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <AuthLayout title="Welcome back !">
       <p className="text-center">Signin to OneClyq</p>
@@ -157,10 +163,10 @@ const LoginPage = () => {
 
         <button
           type="submit"
-          className={`btn btn-primary hover:opacity-75 w-full flex items-center justify-center ${isLoading ? 'opacity-75' : ''}`}
-          disabled={isLoading}
+          className={`btn btn-primary hover:opacity-75 w-full flex items-center justify-center ${isLoadingUi ? 'opacity-75' : ''}`}
+          disabled={isLoadingUi}
         >
-          {isLoading ? (
+          {isLoadingUi ? (
             <span className="loading loading-spinner loading-sm">Signing in</span>
           ) : (
             'Login'

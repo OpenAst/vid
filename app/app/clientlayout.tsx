@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import LogoutButton from '@/app/components/layout/LogoutButton';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
-import { fetchUser, refresh } from '@/app/store/authSlice';
+import { fetchUser, refresh, setUnAuthenticated } from '@/app/store/authSlice';
 import Image from 'next/image';
 import { lusitana } from './fonts';
 
@@ -30,9 +30,12 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           if (result) {
             // Then fetch user profile
             await dispatch(fetchUser());
+          } else {
+            dispatch(setUnAuthenticated());
           }
         } catch (err) {
           console.log("No valid session found during rehydration", err);
+          dispatch(setUnAuthenticated());
         }
       }
     };
