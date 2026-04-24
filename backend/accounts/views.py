@@ -239,7 +239,8 @@ def google_auth_callback(request):
         return Response({"detail": "Google authentication failed."}, status=status.HTTP_400_BAD_REQUEST)
 
     if hasattr(user, "is_active") and not user.is_active:
-        return Response({"detail": "Account not activated."}, status=status.HTTP_401_UNAUTHORIZED)
+        user.is_active = True
+        user.save(update_fields=["is_active"])
 
     refresh = RefreshToken.for_user(user)
     access = str(refresh.access_token)

@@ -13,6 +13,7 @@ interface VideoCardProps {
   isCommentsOpen: boolean;
   onCloseComments: () => void;
   onLike?: () => void;
+  onViewOptimistic?: () => void;
   onViewRecorded?: (views: number) => void;
 }
 
@@ -29,6 +30,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       thumbnail_url,
       isCommentsOpen,
       onLike,
+      onViewOptimistic,
       onViewRecorded,
     },
     ref
@@ -134,6 +136,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       if (hasViewedOnce.current) return;
 
       try {
+        onViewOptimistic?.();
         const response = await axios.post(`/api/video/${id}/view`);
         const totalViews = response.data?.total_views;
         if (typeof totalViews === "number") {

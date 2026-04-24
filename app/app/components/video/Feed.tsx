@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchVideos, updateLikes, updateViews } from "../../store/videoSlice";
+import {
+  fetchVideos,
+  updateLikes,
+  updateViews,
+  applyOptimisticLike,
+  applyOptimisticView,
+} from "../../store/videoSlice";
 import { RootState, AppDispatch } from "../../store/store";
 import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
@@ -18,6 +24,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const searchParams = useSearchParams();
   const search = searchParams.get("search");
   const videos = useSelector((state: RootState) => state.video.videos);
+  const cacheQuery = useSelector((state: RootState) => state.video.cacheQuery);
   const isError = useSelector((state: RootState) => state.video.isError);
   const { token, user } = useSelector((state: RootState) => state.auth);
 
@@ -85,14 +92,22 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     };
   }, [token, dispatch, user?.id]);
 
-  const handleLikeVideo = (videoId: string) => {
+  const handleLikeVideo = (video: Video) => {
     if (!user || !socketRef.current) {
       // Optimistic UI or error if not logged in? 
       // For now, assume login enforced by auth protection or just do nothing
       return;
     }
 
-    socketRef.current.emit("video-likes:like_video", { videoId });
+    const liked = video.user_vote !== 1;
+    dispatch(
+      applyOptimisticLike({
+        videoId: video.id,
+        liked,
+      })
+    );
+
+    socketRef.current.emit("video-likes:like_video", { videoId: video.id });
   };
 
   const handleShare = async (video: Video) => {
@@ -119,8 +134,24 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
   useEffect(() => {
     setPage(1);
-    dispatch(fetchVideos({ page: 1, limit: 10, search: search || "", append: false }));
-  }, [dispatch, search]);
+    const currentSearch = search || "";
+    const hasCachedVideos = Array.isArray(videos) && videos.length > 0;
+    const canRefreshInBackground = hasCachedVideos && cacheQuery === currentSearch;
+
+    const id = window.setTimeout(() => {
+      dispatch(
+        fetchVideos({
+          page: 1,
+          limit: 10,
+          search: currentSearch,
+          append: false,
+          background: canRefreshInBackground,
+        })
+      );
+    }, 0);
+
+    return () => window.clearTimeout(id);
+  }, [dispatch, search, cacheQuery]);
 
   const fetchMoreVideos = () => {
     if (next && !isLoading && !loadingMore) {
@@ -220,6 +251,13 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 thumbnail_url={video.thumbnail_url || null}
                 isCommentsOpen={openCommentsFor === video.id}
                 onCloseComments={() => setOpenCommentsFor(null)}
+                onViewOptimistic={() => {
+                  dispatch(
+                    applyOptimisticView({
+                      videoId: video.id,
+                    })
+                  );
+                }}
                 onViewRecorded={(views) => {
                   dispatch(
                     updateViews({
@@ -255,7 +293,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 </div>
 
                 <button
-                  onClick={() => handleLikeVideo(video.id)}
+                  onClick={() => handleLikeVideo(video)}
                   className="flex flex-col items-center hover:scale-110 active:scale-95 transition"
                 >
                   <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">

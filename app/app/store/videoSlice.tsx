@@ -27,25 +27,29 @@ export interface Video {
 interface VideoState {
   videos: Video[] | null;
   isLoading: boolean;
+  isRefreshing: boolean;
   isError: boolean;
   next: string,
   count: string,
+  cacheQuery: string;
   errorMessage: string | null;
 };
 
 const initialState: VideoState = {
   videos: null,
   isLoading: false,
+  isRefreshing: false,
   isError: false,
   next: "",
   count: "",
+  cacheQuery: "",
   errorMessage: null,
 };
 
 export const fetchVideos = createAsyncThunk(
   "videos/fetchVideos",
   async (
-    { page, limit, search, append }: { page: number; limit: number; search: string; append: boolean },
+    { page, limit, search, append, background }: { page: number; limit: number; search: string; append: boolean; background?: boolean },
     { rejectWithValue }
   ) => {
     try {
@@ -73,6 +77,7 @@ const loadInitialState = (): VideoState => {
         ...initialState,
         videos: parsed.videos || null,
         next: parsed.next || "",
+        cacheQuery: parsed.query || "",
       };
     }
   } catch (err) {
@@ -87,6 +92,7 @@ const saveToCache = (state: VideoState) => {
     localStorage.setItem("video_cache", JSON.stringify({
       videos: state.videos,
       next: state.next,
+      query: state.cacheQuery,
     }));
   } catch (err) {
     console.error("Failed to save video cache:", err);
@@ -99,6 +105,7 @@ const videoSlice = createSlice({
   reducers: {
     clearUploadStatus: (state) => {
       state.isLoading = false;
+      state.isRefreshing = false;
       state.isError = false;
       state.errorMessage = null;
     },
@@ -123,16 +130,37 @@ const videoSlice = createSlice({
         saveToCache(state);
       }
     },
+    applyOptimisticLike: (state, action: PayloadAction<{ videoId: string; liked: boolean }>) => {
+      const video = state.videos?.find((v) => v.id === action.payload.videoId);
+      if (video) {
+        const nextLikes = action.payload.liked ? video.likes + 1 : video.likes - 1;
+        video.likes = Math.max(0, nextLikes);
+        video.user_vote = action.payload.liked ? 1 : 0;
+        saveToCache(state);
+      }
+    },
+    applyOptimisticView: (state, action: PayloadAction<{ videoId: string }>) => {
+      const video = state.videos?.find((v) => v.id === action.payload.videoId);
+      if (video) {
+        video.views = Math.max(0, video.views + 1);
+        saveToCache(state);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchVideos.pending, (state) => {
-        state.isLoading = true;
+      .addCase(fetchVideos.pending, (state, action) => {
+        if (action.meta.arg.background) {
+          state.isRefreshing = true;
+        } else {
+          state.isLoading = true;
+        }
         state.isError = false;
         state.errorMessage = null;
       })
       .addCase(fetchVideos.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.isRefreshing = false;
         const newVideos = action.payload.results;
         if (action.meta.arg.append && state.videos) {
           state.videos = [...state.videos, ...newVideos];
@@ -140,16 +168,27 @@ const videoSlice = createSlice({
           state.videos = newVideos;
         }
         state.next = action.payload.next;
+        state.cacheQuery = action.meta.arg.search;
         saveToCache(state);
       })
       .addCase(fetchVideos.rejected, (state, action) => {
         state.isLoading = false;
-        state.isError = true;
-        state.errorMessage = action.payload as string;
+        state.isRefreshing = false;
+        if (!action.meta.arg.background) {
+          state.isError = true;
+          state.errorMessage = action.payload as string;
+        }
       });
   },
 });
 
-export const { clearUploadStatus, resetVideoState, updateLikes, updateViews } = videoSlice.actions;
+export const {
+  clearUploadStatus,
+  resetVideoState,
+  updateLikes,
+  updateViews,
+  applyOptimisticLike,
+  applyOptimisticView,
+} = videoSlice.actions;
 
 export default videoSlice.reducer;
