@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store/store";
-import { createRealtimeSocket } from "@/app/lib/socket";
+import { createRealtimeSocket, type RealtimeSocket } from "@/app/lib/socket";
 
 
 type Comment = {
@@ -34,7 +34,7 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<RealtimeSocket | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCommentInput, setShowCommentInput] = useState(false);

@@ -1,5 +1,7 @@
 import { io, Socket } from "socket.io-client";
 
+export type RealtimeSocket = Socket;
+
 function getSocketBaseUrl() {
   const apiUrl =
     process.env.NEXT_PUBLIC_REALTIME_URL ||
@@ -10,7 +12,7 @@ function getSocketBaseUrl() {
   return apiUrl.replace(/\/$/, "");
 }
 
-export function createRealtimeSocket(token: string): Socket {
+export function createRealtimeSocket(token: string): RealtimeSocket {
   return io(getSocketBaseUrl(), {
     auth: { token },
     withCredentials: true,

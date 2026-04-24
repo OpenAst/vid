@@ -8,7 +8,7 @@ import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
 import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createRealtimeSocket } from "@/app/lib/socket";
+import { createRealtimeSocket, type RealtimeSocket } from "@/app/lib/socket";
 import toast from "react-hot-toast";
 import { Video } from "../../store/videoSlice";
 
@@ -30,7 +30,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const socketRef = useRef<ReturnType<typeof createRealtimeSocket> | null>(null);
+  const socketRef = useRef<RealtimeSocket | null>(null);
 
   // Initialize Socket for Video Likes
   useEffect(() => {
