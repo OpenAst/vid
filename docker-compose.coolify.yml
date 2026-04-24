@@ -1,4 +1,11 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
   backend:
     build:
       context: ./backend
@@ -15,6 +22,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REALTIME_SERVER_INTERNAL_URL: http://realtime:4000
       REALTIME_INTERNAL_SECRET: ${REALTIME_INTERNAL_SECRET}
+      SECURE_SSL_REDIRECT: "False"
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       SOCIAL_AUTH_ALLOWED_REDIRECT_URIS: ${SOCIAL_AUTH_ALLOWED_REDIRECT_URIS}
       SOCIAL_AUTH_REDIRECT_IS_HTTPS: "True"
@@ -44,7 +52,12 @@ services:
       DJANGO_API_URL: http://backend:8000
       REALTIME_INTERNAL_SECRET: ${REALTIME_INTERNAL_SECRET}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS}
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       - backend
+      - redis
     expose:
       - "4000"
+
+volumes:
+  redis_data:
