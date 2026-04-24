@@ -24,15 +24,15 @@ ALLOWED_HOSTS = csv_config("ALLOWED_HOSTS", "127.0.0.1,localhost")
 FRONTEND_ORIGINS = csv_config("FRONTEND_ORIGINS", "http://localhost:3000")
 PRIMARY_FRONTEND_URL = config("PRIMARY_FRONTEND_URL", default="http://localhost:3000")
 API_BASE_URL = config("API_BASE_URL", default="http://localhost:8000")
+REALTIME_SERVER_INTERNAL_URL = config("REALTIME_SERVER_INTERNAL_URL", default="http://localhost:4000")
+REALTIME_INTERNAL_SECRET = config("REALTIME_INTERNAL_SECRET", default="")
 COOKIE_DOMAIN = config("COOKIE_DOMAIN", default="")
 
 FRONTEND_PROTOCOL, FRONTEND_DOMAIN = PRIMARY_FRONTEND_URL.split("://", 1)
 
 
 INSTALLED_APPS = [
-    "daphne",
     "core",
-    "channels",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -53,6 +53,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,7 +64,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "backend.urls"
 WSGI_APPLICATION = "backend.wsgi.application"
-ASGI_APPLICATION = "backend.asgi.application"
 
 TEMPLATES = [
     {
@@ -117,8 +117,8 @@ else:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-    SESSION_COOKIE_DOMAIN = COOKIE_DOMAIN or ".oneclyq.com"
-    CSRF_COOKIE_DOMAIN = COOKIE_DOMAIN or ".oneclyq.com"
+    SESSION_COOKIE_DOMAIN = COOKIE_DOMAIN or None
+    CSRF_COOKIE_DOMAIN = COOKIE_DOMAIN or None
 
     SESSION_COOKIE_SAMESITE = "None"
     CSRF_COOKIE_SAMESITE = "None"
@@ -145,6 +145,7 @@ MEDIA_URL = "/media/"
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # ----------------------------
@@ -155,30 +156,6 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024
 FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
-
-
-# ----------------------------
-# Channels
-# ----------------------------
-
-CHANNEL_LAYER_BACKEND = config("CHANNEL_LAYER_BACKEND", default="inmemory")
-REDIS_URL = config("REDIS_URL", default="redis://127.0.0.1:6379/0")
-
-if CHANNEL_LAYER_BACKEND == "redis":
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [REDIS_URL],
-            },
-        },
-    }
-else:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        },
-    }
 
 
 # ----------------------------

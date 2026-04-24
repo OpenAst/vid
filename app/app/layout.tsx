@@ -6,19 +6,21 @@ import Providers from './store/providers';
 import { Toaster } from 'react-hot-toast';
 import { inter } from "./fonts";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+const metadataBaseUrl = new URL(siteUrl);
 
 export const metadata: Metadata = {
   title: "OneClyq - Video Microblogging",
   description: "OneClyq is a short video microblogging platform. Share moments, discover creators, and connect with the world.",
   keywords: ["oneclyq", "video", "microblogging", "short videos", "social media"],
-  metadataBase: new URL("https://www.oneclyq.com"),
+  metadataBase: metadataBaseUrl,
   alternates: {
-    canonical: "https://www.oneclyq.com",
+    canonical: siteUrl,
   },
   openGraph: {
     title: "OneClyq - Video Microblogging",
     description: "Share short videos and discover creators on OneClyq.",
-    url: "https://www.oneclyq.com",
+    url: siteUrl,
     siteName: "OneClyq",
     type: "website",
   },

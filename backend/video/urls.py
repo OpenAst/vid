@@ -2,6 +2,12 @@ from django.urls import path
 from . import views 
 
 urlpatterns = [
+    path('realtime/auth/me/', views.RealtimeAuthMeAPIView.as_view(), name='realtime-auth-me'),
+    path('realtime/comments/<uuid:video_id>/history/', views.RealtimeCommentHistoryAPIView.as_view(), name='realtime-comment-history'),
+    path('realtime/comments/<uuid:video_id>/messages/', views.RealtimeCommentCreateAPIView.as_view(), name='realtime-comment-create'),
+    path('realtime/comments/<uuid:video_id>/replies/', views.RealtimeReplyCreateAPIView.as_view(), name='realtime-reply-create'),
+    path('realtime/comments/vote/toggle/', views.RealtimeCommentVoteToggleAPIView.as_view(), name='realtime-comment-vote-toggle'),
+    path('realtime/videos/vote/toggle/', views.RealtimeVideoVoteToggleAPIView.as_view(), name='realtime-video-vote-toggle'),
     path('videos/save-metadata/', views.VideoUploadView.as_view(), name='video-upload'),
     path('videos/get_presigned_part_url/', views.get_presigned_part_url, name='presigned_part_url'),
     path('videos/initiate_multipart_upload/', views.initiate_multipart_upload, name='initiate_upload'),

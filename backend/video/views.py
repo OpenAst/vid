@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import threading
 import requests
+from urllib.parse import urljoin
 from botocore.config import Config
 from django.conf import settings
 from rest_framework import status
@@ -15,17 +16,64 @@ from rest_framework.response import Response
 from rest_framework import generics, permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Video, Comment, VideoVote, CommentVote, VideoView
-from .serializers import VideoSerializer, CommentSerializer, VideoVoteSerializer, CommentVoteSerializer
+from .serializers import VideoSerializer, CommentSerializer, VideoVoteSerializer, CommentVoteSerializer, UserPublicSerializer
 from rest_framework.pagination import PageNumberPagination
 from accounts.permissions import IsOwnerOrReadOnly
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser, MultiPartParser
 
+logger = logging.getLogger(__name__)
+
 class VideoPagination(PageNumberPagination):
   page_size = 10
   page_size_query_param = 'limit'
   max_page_size = 100
+
+
+def serialize_comment_for_request(comment, request):
+    return CommentSerializer(comment, context={"request": request}).data
+
+
+def get_room_comments(room_id, request):
+    comments = (
+        Comment.objects.filter(video_id=room_id, parent__isnull=True)
+        .select_related("user", "user__profile", "video")
+        .prefetch_related(
+            "votes",
+            "replies__votes",
+            "replies__user",
+            "replies__user__profile",
+        )
+        .order_by("created_at")
+    )
+
+    serialized_comments = []
+    for comment in comments:
+        data = serialize_comment_for_request(comment, request)
+        data["replies"] = [
+            serialize_comment_for_request(reply, request)
+            for reply in comment.replies.all().order_by("created_at")
+        ]
+        serialized_comments.append(data)
+    return serialized_comments
+
+
+def notify_realtime_server(event_type, payload):
+    if not settings.REALTIME_SERVER_INTERNAL_URL or not settings.REALTIME_INTERNAL_SECRET:
+        return
+
+    endpoint = urljoin(settings.REALTIME_SERVER_INTERNAL_URL.rstrip("/") + "/", "internal/events")
+
+    try:
+        requests.post(
+            endpoint,
+            json={"type": event_type, **payload},
+            headers={"Authorization": f"Bearer {settings.REALTIME_INTERNAL_SECRET}"},
+            timeout=3,
+        )
+    except requests.RequestException:
+        logger.exception("Failed to notify realtime server")
 
 class VideoUploadView(generics.CreateAPIView):
     serializer_class = VideoSerializer
@@ -231,6 +279,128 @@ class CommentVoteAPIView(generics.CreateAPIView):
             }, status=status.HTTP_201_CREATED
         )
 
+
+class RealtimeAuthMeAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        return Response(UserPublicSerializer(request.user).data, status=status.HTTP_200_OK)
+
+
+class RealtimeCommentHistoryAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        return Response(
+            {"comments": get_room_comments(self.kwargs["video_id"], request)},
+            status=status.HTTP_200_OK,
+        )
+
+
+class RealtimeCommentCreateAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        text = (request.data.get("text") or "").strip()
+        if not text:
+            return Response({"detail": "Comment text is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        video = get_object_or_404(Video, pk=self.kwargs["video_id"])
+        comment = Comment.objects.create(
+            video=video,
+            user=request.user,
+            content=text,
+        )
+        comment = Comment.objects.select_related("user", "user__profile", "video").prefetch_related("votes").get(pk=comment.pk)
+        return Response(
+            {"comment": serialize_comment_for_request(comment, request)},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class RealtimeReplyCreateAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        parent_id = request.data.get("parentId")
+        text = (request.data.get("text") or "").strip()
+
+        if not parent_id or not text:
+            return Response({"detail": "parentId and text are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        parent = get_object_or_404(Comment, pk=parent_id, video_id=self.kwargs["video_id"])
+        reply = Comment.objects.create(
+            video=parent.video,
+            user=request.user,
+            content=text,
+            parent=parent,
+        )
+        reply = Comment.objects.select_related("user", "user__profile", "video", "parent").prefetch_related("votes").get(pk=reply.pk)
+        return Response(
+            {
+                "parentId": str(parent.id),
+                "reply": serialize_comment_for_request(reply, request),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class RealtimeCommentVoteToggleAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        comment_id = request.data.get("commentId")
+        comment = get_object_or_404(Comment, pk=comment_id)
+
+        existing_like = CommentVote.objects.filter(comment=comment, user=request.user, value=1).first()
+        if existing_like:
+            existing_like.delete()
+            liked = False
+        else:
+            CommentVote.objects.create(comment=comment, user=request.user, value=1)
+            liked = True
+
+        likes = CommentVote.objects.filter(comment=comment, value=1).count()
+        return Response(
+            {
+                "commentId": str(comment.id),
+                "roomId": str(comment.video_id),
+                "likes": likes,
+                "liked": liked,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class RealtimeVideoVoteToggleAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        video_id = request.data.get("videoId")
+        video = get_object_or_404(Video, pk=video_id)
+
+        existing_vote = VideoVote.objects.filter(video=video, user=request.user).first()
+        if existing_vote and existing_vote.value == 1:
+            existing_vote.delete()
+            liked = False
+        elif existing_vote:
+            existing_vote.value = 1
+            existing_vote.save(update_fields=["value"])
+            liked = True
+        else:
+            VideoVote.objects.create(video=video, user=request.user, value=1)
+            liked = True
+
+        likes = video.votes.filter(value=1).count()
+        return Response(
+            {
+                "videoId": str(video.id),
+                "likes": likes,
+                "liked": liked,
+            },
+            status=status.HTTP_200_OK,
+        )
+
 class VideoViewAPIView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
@@ -248,8 +418,6 @@ class VideoViewAPIView(generics.CreateAPIView):
         
         from django.utils import timezone
         from datetime import timedelta
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
         
         # Reduced window for testing/verification, can be increased later
         time_threshold = timezone.now() - timedelta(minutes=1)
@@ -274,15 +442,12 @@ class VideoViewAPIView(generics.CreateAPIView):
             video.views += 1
             video.save(update_fields=['views'])
 
-            # Broadcast update via WebSocket
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                "video_likes", # Reusing the video_likes group
+            notify_realtime_server(
+                "video_view_updated",
                 {
-                    "type": "videos.view_updated",
                     "videoId": str(video.id),
                     "views": video.views,
-                }
+                },
             )
 
             return Response({"detail": "View recorded", "total_views": video.views}, status=status.HTTP_201_CREATED)
@@ -296,8 +461,6 @@ class VideoViewAPIView(generics.CreateAPIView):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
-
-logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

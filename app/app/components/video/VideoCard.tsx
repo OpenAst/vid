@@ -13,6 +13,7 @@ interface VideoCardProps {
   isCommentsOpen: boolean;
   onCloseComments: () => void;
   onLike?: () => void;
+  onViewRecorded?: (views: number) => void;
 }
 
 export type VideoCardHandle = {
@@ -28,6 +29,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       thumbnail_url,
       isCommentsOpen,
       onLike,
+      onViewRecorded,
     },
     ref
   ) => {
@@ -40,11 +42,16 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     const [overlayIcon, setOverlayIcon] = useState<"play" | "pause" | "mute" | "unmute" | null>(null);
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const onViewRecordedRef = useRef(onViewRecorded);
 
     useImperativeHandle(ref, () => ({
       video: videoRef.current,
       isUserPaused,
     }));
+
+    useEffect(() => {
+      onViewRecordedRef.current = onViewRecorded;
+    }, [onViewRecorded]);
 
     const clickTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -73,7 +80,11 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       if (!videoRef.current) return;
 
       if (videoRef.current.paused) {
-        videoRef.current.play();
+        void videoRef.current.play().catch((error) => {
+          if ((error as Error).name !== "AbortError") {
+            console.error("Failed to play video:", error);
+          }
+        });
         setIsUserPaused(false);
         setOverlayIcon("play");
       } else {
@@ -117,36 +128,61 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     const handleDragEnd = () => setIsDragging(false);
 
     const hasViewedOnce = useRef(false);
+    const viewTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const recordView = async () => {
+      if (hasViewedOnce.current) return;
+
+      try {
+        const response = await axios.post(`/api/video/${id}/view`);
+        const totalViews = response.data?.total_views;
+        if (typeof totalViews === "number") {
+          onViewRecordedRef.current?.(totalViews);
+        }
+        hasViewedOnce.current = true;
+      } catch (err) {
+        console.error("Failed to record view:", err);
+      }
+    };
 
     useEffect(() => {
       if (!videoRef.current || isUserPaused || hasViewedOnce.current) return;
 
       const video = videoRef.current;
-      let viewTimer: NodeJS.Timeout | null = null;
 
       const handlePlay = () => {
         if (hasViewedOnce.current) return;
 
-        viewTimer = setTimeout(async () => {
-          try {
-            await axios.post(`/api/video/${id}/view`);
-            hasViewedOnce.current = true;
-          } catch (err) {
-            console.error("Failed to record view:", err);
-          }
-        }, 3000);
+        if (viewTimerRef.current) {
+          clearTimeout(viewTimerRef.current);
+        }
+
+        const durationSeconds = Number.isFinite(video.duration) ? video.duration : 0;
+        const thresholdMs =
+          durationSeconds > 0 && durationSeconds < 3
+            ? Math.max(Math.round(durationSeconds * 750), 500)
+            : 3000;
+
+        viewTimerRef.current = setTimeout(() => {
+          void recordView();
+        }, thresholdMs);
       };
 
       const handlePauseOrEnd = () => {
-        if (viewTimer) {
-          clearTimeout(viewTimer);
-          viewTimer = null;
+        if (viewTimerRef.current) {
+          clearTimeout(viewTimerRef.current);
+          viewTimerRef.current = null;
         }
+      };
+
+      const handleEnded = () => {
+        handlePauseOrEnd();
+        void recordView();
       };
 
       video.addEventListener("play", handlePlay);
       video.addEventListener("pause", handlePauseOrEnd);
-      video.addEventListener("ended", handlePauseOrEnd);
+      video.addEventListener("ended", handleEnded);
 
       // If already playing when effect runs
       if (!video.paused) {
@@ -156,8 +192,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       return () => {
         video.removeEventListener("play", handlePlay);
         video.removeEventListener("pause", handlePauseOrEnd);
-        video.removeEventListener("ended", handlePauseOrEnd);
-        if (viewTimer) clearTimeout(viewTimer);
+        video.removeEventListener("ended", handleEnded);
+        if (viewTimerRef.current) clearTimeout(viewTimerRef.current);
       };
     }, [id, isUserPaused]);
 

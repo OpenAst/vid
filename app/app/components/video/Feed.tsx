@@ -8,7 +8,7 @@ import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
 import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { buildWebSocketUrl } from "@/app/lib/websocket";
+import { createRealtimeSocket } from "@/app/lib/socket";
 import toast from "react-hot-toast";
 import { Video } from "../../store/videoSlice";
 
@@ -30,49 +30,58 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<ReturnType<typeof createRealtimeSocket> | null>(null);
 
   // Initialize Socket for Video Likes
   useEffect(() => {
     if (!token) return;
 
-    socketRef.current = new WebSocket(buildWebSocketUrl("/ws/video-likes/", token));
+    const socket = createRealtimeSocket(token);
+    socketRef.current = socket;
 
-    socketRef.current.onopen = () => {
-      console.log("WebSocket connected to video-likes feed");
+    const handleConnect = () => {
+      socket.emit("video-likes:join");
+      console.log("Socket.IO connected to video-likes feed");
     };
 
-    socketRef.current.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      if (payload.type === "video_vote_updated") {
-        dispatch(
-          updateLikes({
-            videoId: payload.videoId,
-            likes: payload.likes,
-            liked: payload.liked,
-            userId: (user && payload.actorUserId === user.id) ? user.id : undefined,
-          })
-        );
-      } else if (payload.type === "video_view_updated") {
-        dispatch(
-          updateViews({
-            videoId: payload.videoId,
-            views: payload.views,
-          })
-        );
-      }
+    const handleVideoVoteUpdated = (payload: {
+      videoId: string;
+      likes: number;
+      liked: boolean;
+      actorUserId: string;
+    }) => {
+      dispatch(
+        updateLikes({
+          videoId: payload.videoId,
+          likes: payload.likes,
+          liked: payload.liked,
+          userId: user && payload.actorUserId === user.id ? user.id : undefined,
+        })
+      );
     };
 
-    socketRef.current.onerror = (error) => {
-      console.error("WebSocket Error in video-likes feed", error);
+    const handleVideoViewUpdated = (payload: { videoId: string; views: number }) => {
+      dispatch(
+        updateViews({
+          videoId: payload.videoId,
+          views: payload.views,
+        })
+      );
     };
 
-    socketRef.current.onclose = (event) => {
-      console.log("WebSocket closed for video-likes", event.code, event.reason);
-    };
+    socket.on("connect", handleConnect);
+    socket.on("video_vote_updated", handleVideoVoteUpdated);
+    socket.on("video_view_updated", handleVideoViewUpdated);
+    socket.on("connect_error", (error) => {
+      console.error("Socket.IO error in video-likes feed", error);
+    });
 
+    socket.connect();
     return () => {
-      socketRef.current?.close();
+      socket.off("connect", handleConnect);
+      socket.off("video_vote_updated", handleVideoVoteUpdated);
+      socket.off("video_view_updated", handleVideoViewUpdated);
+      socket.disconnect();
     };
   }, [token, dispatch, user?.id]);
 
@@ -82,14 +91,8 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       // For now, assume login enforced by auth protection or just do nothing
       return;
     }
-    if (socketRef.current.readyState !== WebSocket.OPEN) return;
 
-    socketRef.current.send(
-      JSON.stringify({
-        action: "like_video",
-        videoId,
-      })
-    );
+    socketRef.current.emit("video-likes:like_video", { videoId });
   };
 
   const handleShare = async (video: Video) => {
@@ -175,7 +178,11 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
       if (idx === currentIndex) {
         if (!card.isUserPaused) {
-          void video.play();
+          void video.play().catch((error) => {
+            if ((error as Error).name !== "AbortError") {
+              console.error("Failed to start video playback:", error);
+            }
+          });
         }
         video.muted = card.isUserPaused ? true : false;
       } else {
@@ -213,6 +220,14 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 thumbnail_url={video.thumbnail_url || null}
                 isCommentsOpen={openCommentsFor === video.id}
                 onCloseComments={() => setOpenCommentsFor(null)}
+                onViewRecorded={(views) => {
+                  dispatch(
+                    updateViews({
+                      videoId: video.id,
+                      views,
+                    })
+                  );
+                }}
               />
 
               {/* username + metadata wrapper */}
