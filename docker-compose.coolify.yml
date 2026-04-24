@@ -44,7 +44,6 @@ services:
       DJANGO_API_URL: http://backend:8000
       REALTIME_INTERNAL_SECRET: ${REALTIME_INTERNAL_SECRET}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS}
-      REDIS_URL: ${REDIS_URL}
     depends_on:
       - backend
     expose:
