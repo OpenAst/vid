@@ -5,10 +5,21 @@ from accounts.models import UserAccount
 from uuid import uuid4
 
 class Video(models.Model):
+  SKILL_CATEGORIES = (
+    ("beginner", "Beginner"),
+    ("trades", "Skilled Trades"),
+    ("coding", "Tech Skills"),
+    ("business", "Business"),
+    ("design", "Design"),
+    ("other", "Other"),
+  )
+
   id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
   uploader = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="videos")
   title = models.CharField(max_length=255)
   description = models.TextField(blank=True)
+  skill_category = models.CharField(max_length=32, choices=SKILL_CATEGORIES, blank=True, default="", db_index=True)
+  duration_seconds = models.PositiveIntegerField(null=True, blank=True, db_index=True)
   file_url = models.URLField(max_length=1000)
   thumbnail = models.URLField(blank=True, null=True)
   created_at = models.DateTimeField(auto_now_add=True)

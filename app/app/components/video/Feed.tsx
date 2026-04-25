@@ -23,12 +23,13 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get("search");
+  const showIntroCard = !search;
   const videos = useSelector((state: RootState) => state.video.videos);
   const cacheQuery = useSelector((state: RootState) => state.video.cacheQuery);
   const isError = useSelector((state: RootState) => state.video.isError);
   const { token, user } = useSelector((state: RootState) => state.auth);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -38,6 +39,17 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
   const socketRef = useRef<RealtimeSocket | null>(null);
+
+  const starterTopics = [
+    { label: "Start Here", query: "beginner" },
+    { label: "Skilled Trades", query: "trades" },
+    { label: "Tech Skills", query: "coding" },
+    { label: "Business", query: "business" },
+  ];
+
+  const handleTopicSelect = (query: string) => {
+    router.push(`/?search=${encodeURIComponent(query)}`);
+  };
 
   // Initialize Socket for Video Likes
   useEffect(() => {
@@ -230,6 +242,58 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
   return (
     <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-base-100">
+      {showIntroCard && (
+        <div className="h-[90vh] w-full snap-start flex items-center justify-center relative mb-2">
+        <div className="relative h-full w-[47vh] max-w-full flex flex-col justify-between rounded-2xl overflow-hidden shadow-xl border border-base-300 bg-gradient-to-b from-primary/10 via-base-100 to-base-200">
+          <div className="absolute inset-0 pointer-events-none opacity-60 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.16),transparent_42%),radial-gradient(circle_at_bottom,rgba(14,165,233,0.1),transparent_38%)]" />
+
+          <div className="relative z-10 p-6 pt-8">
+            <div className="inline-flex items-center gap-2 rounded-full bg-base-100/85 border border-base-300 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-base-content/70">
+              Learn by watching
+            </div>
+            <h2 className="mt-5 text-3xl font-black leading-tight text-base-content">
+              Short videos.
+              <br />
+              Real-world skills.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-base-content/75 max-w-[28ch]">
+              Explore practical lessons, vocational tips, and focused how-tos instead of endless random scrolling.
+            </p>
+          </div>
+
+          <div className="relative z-10 px-6 pb-6 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {starterTopics.map((topic) => (
+                <button
+                  key={topic.query}
+                  onClick={() => handleTopicSelect(topic.query)}
+                  className="rounded-xl border border-base-300 bg-base-100/85 px-3 py-3 text-left transition-all hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98]"
+                >
+                  <div className="text-sm font-semibold text-base-content">{topic.label}</div>
+                  <div className="text-[11px] text-base-content/55 mt-1">Browse {topic.query}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleTopicSelect("beginner")}
+                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-content shadow-sm hover:opacity-90 transition"
+              >
+                Start with beginner lessons
+              </button>
+              <button
+                onClick={() => router.push("/")}
+                className="rounded-full border border-base-300 bg-base-100/80 px-4 py-2 text-sm font-semibold text-base-content hover:bg-base-200 transition"
+              >
+                See featured videos
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+      )}
+
       {Array.isArray(videos) &&
         videos.map((video, idx) => (
           <div
@@ -272,12 +336,17 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
               <div className="absolute bottom-4 left-4 right-12 text-white z-20 pointer-events-none">
                 {openCommentsFor !== video.id && (
                   <div className="drop-shadow-lg">
-                    <div className="flex items-center gap-2 text-sm opacity-90">
-                      <span className="font-semibold">
-                        @{video.uploader?.username || "Unknown"}
-                      </span>
-                      <span className="text-xs">{video.timestamp}</span>
-                    </div>
+                  <div className="flex items-center gap-2 text-sm opacity-90">
+                    <span className="font-semibold">
+                      @{video.uploader?.username || "Unknown"}
+                    </span>
+                      {video.skill_category && (
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                          {video.skill_category.replace("_", " ")}
+                        </span>
+                      )}
+                    <span className="text-xs">{video.timestamp}</span>
+                  </div>
                     <p className="text-sm mt-1">{video.title}</p>
                   </div>
                 )}

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
-import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { VolumeX, Volume2, Play, Pause } from "lucide-react";
 
@@ -135,16 +134,29 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     const recordView = async () => {
       if (hasViewedOnce.current) return;
 
+      onViewOptimistic?.();
+
       try {
-        onViewOptimistic?.();
-        const response = await axios.post(`/api/video/${id}/view`);
-        const totalViews = response.data?.total_views;
+        const response = await fetch(`/api/video/${id}/view`, {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          console.error("Failed to record view:", data?.detail || data?.error || response.statusText);
+          return;
+        }
+
+        const totalViews = data?.total_views;
         if (typeof totalViews === "number") {
           onViewRecordedRef.current?.(totalViews);
         }
-        hasViewedOnce.current = true;
       } catch (err) {
         console.error("Failed to record view:", err);
+      } finally {
+        hasViewedOnce.current = true;
       }
     };
 

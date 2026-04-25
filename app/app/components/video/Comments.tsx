@@ -19,6 +19,42 @@ type Comment = {
   replies?: Comment[];
 };
 
+type CommentCache = {
+  comments: Comment[];
+  updatedAt: number;
+};
+
+const getCommentsCacheKey = (roomId: string) => `comments_cache:${roomId}`;
+
+const loadCommentsFromCache = (roomId: string): Comment[] => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = localStorage.getItem(getCommentsCacheKey(roomId));
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as CommentCache;
+    return Array.isArray(parsed.comments) ? parsed.comments : [];
+  } catch (error) {
+    console.error("Failed to load comments cache:", error);
+    return [];
+  }
+};
+
+const saveCommentsToCache = (roomId: string, comments: Comment[]) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    const payload: CommentCache = {
+      comments,
+      updatedAt: Date.now(),
+    };
+    localStorage.setItem(getCommentsCacheKey(roomId), JSON.stringify(payload));
+  } catch (error) {
+    console.error("Failed to save comments cache:", error);
+  }
+};
+
 export type Props = {
   jwtToken: string;
   roomId: string;
@@ -43,6 +79,13 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
   const { user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
+    setComments(loadCommentsFromCache(roomId));
+    setReplyingTo(null);
+    setReplyText("");
+    setNewComment("");
+  }, [roomId]);
+
+  useEffect(() => {
     if (!jwtToken || !roomId) return;
 
     const socket = createRealtimeSocket(jwtToken);
@@ -55,10 +98,26 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
 
     const handleCommentsHistory = (payload: { roomId: string; comments: Comment[] }) => {
       setComments(payload.comments);
+      saveCommentsToCache(roomId, payload.comments);
     };
 
     const handleNewComment = (payload: { roomId: string; comment: Comment }) => {
-      setComments((prev) => [...prev, payload.comment]);
+      setComments((prev) => {
+        const optimisticIndex = prev.findIndex(
+          (comment) =>
+            comment.id.startsWith("optimistic-") &&
+            comment.content === payload.comment.content &&
+            comment.user.id === payload.comment.user.id
+        );
+
+        const nextComments =
+          optimisticIndex >= 0
+            ? prev.map((comment, index) => (index === optimisticIndex ? payload.comment : comment))
+            : [...prev, payload.comment];
+
+        saveCommentsToCache(roomId, nextComments);
+        return nextComments;
+      });
       setShowCommentInput(false);
       setNewComment("");
     };
@@ -70,8 +129,8 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
       liked: boolean;
       actorUserId: string;
     }) => {
-      setComments((prev) =>
-        prev.map((comment) => {
+      setComments((prev) => {
+        const nextComments = prev.map((comment) => {
           if (comment.id === payload.commentId) {
             return { ...comment, likes: payload.likes };
           }
@@ -86,8 +145,10 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
           }
 
           return comment;
-        })
-      );
+        });
+        saveCommentsToCache(roomId, nextComments);
+        return nextComments;
+      });
     };
 
     const handleNewReply = (payload: {
@@ -95,13 +156,29 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
       parentId: string;
       reply: Comment;
     }) => {
-      setComments((prev) =>
-        prev.map((comment) =>
-          comment.id === payload.parentId
-            ? { ...comment, replies: [...(comment.replies || []), payload.reply] }
-            : comment
-        )
-      );
+      setComments((prev) => {
+        const nextComments = prev.map((comment) => {
+          if (comment.id !== payload.parentId) return comment;
+
+          const replies = comment.replies || [];
+          const optimisticIndex = replies.findIndex(
+            (reply) =>
+              reply.id.startsWith("optimistic-reply-") &&
+              reply.content === payload.reply.content &&
+              reply.user.id === payload.reply.user.id
+          );
+
+          return {
+            ...comment,
+            replies:
+              optimisticIndex >= 0
+                ? replies.map((reply, index) => (index === optimisticIndex ? payload.reply : reply))
+                : [...replies, payload.reply],
+          };
+        });
+        saveCommentsToCache(roomId, nextComments);
+        return nextComments;
+      });
       setReplyText("");
       setReplyingTo(null);
     };
@@ -130,9 +207,30 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
   const handleSendComment = () => {
     if (!newComment.trim() || !socketRef.current) return;
 
+    const optimisticComment: Comment = {
+      id: `optimistic-${Date.now()}`,
+      content: newComment.trim(),
+      user: {
+        id: user?.id || _currentUser.id,
+        username: user?.username || _currentUser.username,
+        avatar: _currentUser.avatar,
+      },
+      likes: 0,
+      created_at: new Date().toISOString(),
+      replies: [],
+    };
+
+    setComments((prev) => {
+      const nextComments = [...prev, optimisticComment];
+      saveCommentsToCache(roomId, nextComments);
+      return nextComments;
+    });
+    setShowCommentInput(false);
+    setNewComment("");
+
     socketRef.current.emit("comments:send_comment", {
       roomId,
-      text: newComment,
+      text: optimisticComment.content,
     });
   };
 
@@ -145,6 +243,28 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
 
   const handleLike = (commentId: string) => {
     if (!user || !socketRef.current) return;
+
+    setComments((prev) => {
+      const nextComments = prev.map((comment) => {
+        if (comment.id === commentId) {
+          return { ...comment, likes: comment.likes + 1 };
+        }
+
+        if (comment.replies?.length) {
+          return {
+            ...comment,
+            replies: comment.replies.map((reply) =>
+              reply.id === commentId ? { ...reply, likes: reply.likes + 1 } : reply
+            ),
+          };
+        }
+
+        return comment;
+      });
+      saveCommentsToCache(roomId, nextComments);
+      return nextComments;
+    });
+
     socketRef.current.emit("comments:vote_comment", {
       roomId,
       commentId,
@@ -154,10 +274,35 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
   const handleSendReply = () => {
     if (!replyText.trim() || !socketRef.current || !replyingTo) return;
 
+    const optimisticReply: Comment = {
+      id: `optimistic-reply-${Date.now()}`,
+      content: replyText.trim(),
+      user: {
+        id: user?.id || _currentUser.id,
+        username: user?.username || _currentUser.username,
+        avatar: _currentUser.avatar,
+      },
+      likes: 0,
+      created_at: new Date().toISOString(),
+      replies: [],
+    };
+
+    setComments((prev) => {
+      const nextComments = prev.map((comment) =>
+        comment.id === replyingTo
+          ? { ...comment, replies: [...(comment.replies || []), optimisticReply] }
+          : comment
+      );
+      saveCommentsToCache(roomId, nextComments);
+      return nextComments;
+    });
+    setReplyText("");
+    setReplyingTo(null);
+
     socketRef.current.emit("comments:send_reply", {
       roomId,
       parentId: replyingTo,
-      text: replyText,
+      text: optimisticReply.content,
     });
   };
 

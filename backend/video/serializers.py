@@ -22,7 +22,7 @@ class VideoSerializer(serializers.ModelSerializer):
   class Meta:
     model = Video
     fields = [
-      'id', 'title', 'description', 'thumbnail_url',
+      'id', 'title', 'description', 'skill_category', 'duration_seconds', 'thumbnail_url',
        'timestamp', 'file_url',  'uploader', "likes", "dislikes", "user_vote"
     ]
     read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at']
@@ -32,6 +32,31 @@ class VideoSerializer(serializers.ModelSerializer):
     if parsed:
       parsed[-1] = quote(parsed[-1])
     return '/'.join(parsed)
+
+  def validate_skill_category(self, value):
+    if value in (None, ""):
+      return ""
+    valid_categories = {choice[0] for choice in Video.SKILL_CATEGORIES}
+    if value not in valid_categories:
+      raise serializers.ValidationError("Invalid skill category")
+    return value
+
+  def validate_duration_seconds(self, value):
+    if value in (None, ""):
+      return None
+
+    try:
+      duration = int(value)
+    except (TypeError, ValueError):
+      raise serializers.ValidationError("Duration must be an integer number of seconds")
+
+    if duration < 0:
+      raise serializers.ValidationError("Duration cannot be negative")
+
+    if duration > 3600:
+      raise serializers.ValidationError("Videos must be 1 hour or shorter")
+
+    return duration
 
   def get_thumbnail_url(self, obj):
     request = self.context.get('request')

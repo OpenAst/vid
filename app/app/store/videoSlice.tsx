@@ -5,6 +5,7 @@ export interface Video {
   id: string;
   title: string;
   description: string;
+  skill_category?: string;
   file_url: string;
   thumbnail_url: string | null;
   created_at: string;

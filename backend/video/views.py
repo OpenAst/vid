@@ -98,6 +98,8 @@ class VideoUploadView(generics.CreateAPIView):
             data = {
                 "title": request.data.get("title"),
                 "description": request.data.get("description", ""),
+                "skill_category": request.data.get("skill_category", ""),
+                "duration_seconds": request.data.get("duration_seconds"),
                 "file_url": request.data.get("file_url"),
             }
             
@@ -152,7 +154,8 @@ class VideoListView(generics.ListAPIView):
     if search_query:
       queryset = queryset.filter(
         Q(title__icontains=search_query) | 
-        Q(description__icontains=search_query)
+        Q(description__icontains=search_query) |
+        Q(skill_category__icontains=search_query)
       )
     
     if username:

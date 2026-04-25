@@ -13,6 +13,7 @@ import { toast, ToastContainer } from 'react-toastify';
 interface FormDataState {
   title: string;
   description: string;
+  skillCategory: string;
   thumbnail?: File;
 }
 
@@ -25,9 +26,11 @@ const UploadVideo = () => {
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [formData, setFormData] = useState<FormDataState>({
     title: "",
-    description: ""
+    description: "",
+    skillCategory: "",
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -104,7 +107,7 @@ const UploadVideo = () => {
 
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -115,9 +118,43 @@ const UploadVideo = () => {
     if (file && file.type.startsWith("video/")) {
       setVideoFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      setVideoDuration(null);
     } else {
       toast.error("Selected file is not a valid video");
     }
+  };
+
+  const handlePreviewMetadata = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const duration = event.currentTarget.duration;
+    if (Number.isFinite(duration) && duration > 0) {
+      setVideoDuration(Math.floor(duration));
+    }
+  };
+
+  const ensureVideoDuration = async (): Promise<number | null> => {
+    if (videoDuration !== null) {
+      return videoDuration;
+    }
+
+    if (!videoFile) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      const tempVideo = document.createElement("video");
+      tempVideo.preload = "metadata";
+      const tempUrl = URL.createObjectURL(videoFile);
+      tempVideo.src = tempUrl;
+      tempVideo.onloadedmetadata = () => {
+        const duration = Number.isFinite(tempVideo.duration) ? Math.floor(tempVideo.duration) : null;
+        resolve(duration);
+        URL.revokeObjectURL(tempUrl);
+      };
+      tempVideo.onerror = () => {
+        URL.revokeObjectURL(tempUrl);
+        resolve(null);
+      };
+    });
   };
 
   useEffect(() => {
@@ -138,6 +175,17 @@ const UploadVideo = () => {
 
     if (!formData.title) {
       toast.error("Please enter a title");
+      return;
+    }
+
+    const durationSeconds = await ensureVideoDuration();
+    if (durationSeconds === null) {
+      toast.error("We could not read the video duration. Please choose another file.");
+      return;
+    }
+
+    if (durationSeconds > 3600) {
+      toast.error("Videos must be 1 hour or shorter.");
       return;
     }
 
@@ -237,6 +285,8 @@ const UploadVideo = () => {
       const metadata = {
         title: formData.title,
         description: formData.description || '',
+        skill_category: formData.skillCategory || '',
+        duration_seconds: durationSeconds,
         file_url: finalUrl,
         file_key: object_key,
         file_size: videoFile.size,
@@ -339,6 +389,27 @@ const UploadVideo = () => {
             </div>
 
             <div>
+              <label htmlFor="skillCategory" className="block text-sm font-medium text-base-content/80 mb-1">
+                Skill Category
+              </label>
+              <select
+                id="skillCategory"
+                name="skillCategory"
+                value={formData.skillCategory}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
+              >
+                <option value="">Select a category</option>
+                <option value="beginner">Beginner</option>
+                <option value="trades">Skilled Trades</option>
+                <option value="coding">Tech Skills</option>
+                <option value="business">Business</option>
+                <option value="design">Design</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-base-content/80 mb-1">
                 Video Content *
               </label>
@@ -433,6 +504,7 @@ const UploadVideo = () => {
                       key={previewUrl}
                       src={previewUrl}
                       controls
+                      onLoadedMetadata={handlePreviewMetadata}
                       className="w-full aspect-[9/16] object-cover rounded-2xl border-2 border-primary/20 shadow-xl"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
