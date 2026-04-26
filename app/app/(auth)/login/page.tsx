@@ -26,7 +26,7 @@ const LoginPage = () => {
 
 
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, isError } = useSelector((state: RootState) => state.auth);
+  const { isLoading, isError, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
   const isLoadingUi = mounted ? isLoading : false;
@@ -107,6 +107,12 @@ const LoginPage = () => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      router.replace('/');
+    }
+  }, [mounted, isAuthenticated, router]);
 
   return (
     <AuthLayout title="Welcome back !">
