@@ -161,6 +161,17 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
     });
   };
 
+  const toggleReplyForm = (commentId: string) => {
+    if (replyingTo === commentId) {
+      setReplyingTo(null);
+      setReplyText("");
+      return;
+    }
+
+    setReplyingTo(commentId);
+    setReplyText("");
+  };
+
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -254,8 +265,8 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser }: Props) => {
                         <span>❤️</span>
                         <span>{comment.likes}</span>
                       </button>
-                      <button onClick={() => setReplyingTo(comment.id)} className="text-primary hover:underline transition-all">
-                        Reply
+                      <button onClick={() => toggleReplyForm(comment.id)} className="text-primary hover:underline transition-all">
+                        {replyingTo === comment.id ? "Close" : "Reply"}
                       </button>
                     </div>
 
