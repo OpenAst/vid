@@ -167,7 +167,6 @@ const LoginPage = () => {
               </div>
 
               <div className="absolute bottom-10 left-36 h-28 w-28 rounded-full border-4 border-cyan-300 bg-gradient-to-br from-cyan-300 to-fuchsia-500 shadow-xl shadow-fuchsia-950/50" />
-              <div className="absolute right-3 top-32 rounded-2xl bg-fuchsia-500 px-4 py-3 text-sm font-bold shadow-xl">16:45</div>
               <div className="absolute right-8 bottom-28 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-3xl shadow-xl">♥</div>
             </div>
           </div>
