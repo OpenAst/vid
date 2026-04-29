@@ -6,6 +6,8 @@ export interface Video {
   title: string;
   description: string;
   file_url: string;
+  music_url?: string | null;
+  processing_status?: string;
   thumbnail_url: string | null;
   created_at: string;
   views: number;

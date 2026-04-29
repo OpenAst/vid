@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Camera, Video, X, Square } from "lucide-react";
+import { Camera, Music2, Video, X, Square } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser } from "@/app/store/authSlice";
 import { AppDispatch } from "@/app/store/store";
@@ -24,7 +24,9 @@ const UploadVideo = () => {
 
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [musicFile, setMusicFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormDataState>({
     title: "",
     description: ""
@@ -120,13 +122,116 @@ const UploadVideo = () => {
     }
   };
 
+  const handleMusicFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("audio/")) {
+      setMusicFile(file);
+      setMusicPreviewUrl(URL.createObjectURL(file));
+    } else {
+      toast.error("Selected file is not a valid audio file");
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
+      if (musicPreviewUrl) {
+        URL.revokeObjectURL(musicPreviewUrl);
+      }
     }
-  });
+  }, [previewUrl, musicPreviewUrl]);
+
+  const uploadFile = async (file: File) => {
+    const sanitizedFileName = file.name
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    const initRes = await fetch("/api/video/initiate", {
+      method: "POST",
+      credentials: "include",
+      body: JSON.stringify({
+        file_name: sanitizedFileName,
+        file_type: file.type,
+      })
+    });
+
+    if (!initRes.ok) {
+      throw new Error("Failed to initiate upload");
+    }
+
+    const { upload_id, object_key, public_url } = await initRes.json();
+
+    let partNumber = 1;
+    let start = 0;
+    const parts: { ETag: string; PartNumber: number }[] = [];
+
+    while (start < file.size) {
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const presignedRes = await fetch(
+        "/api/video/presigned",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            object_key,
+            file_type: file.type,
+            upload_id,
+            part_number: partNumber,
+          }),
+        }
+      );
+
+      if (!presignedRes.ok) throw new Error("Failed to get presigned URL");
+
+      const { url } = await presignedRes.json();
+
+      let uploadRes;
+      try {
+        uploadRes = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: chunk,
+        });
+      } catch (fetchErr) {
+        console.error(`Fetch failed for chunk ${partNumber}:`, fetchErr);
+        throw new Error(`Connection failed while uploading chunk ${partNumber}. This might be a CORS issue.`);
+      }
+
+      if (!uploadRes.ok) throw new Error(`Chunk ${partNumber} upload failed`);
+
+      const eTag = uploadRes.headers.get("ETag");
+      if (!eTag) throw new Error("Missing ETag from upload response");
+
+      parts.push({ ETag: eTag.replace(/"/g, ""), PartNumber: partNumber });
+
+      partNumber++;
+      start = end;
+    }
+
+    const completeRes = await fetch(
+      "/api/video/complete_multipart",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ object_key, upload_id, parts }),
+      }
+    );
+
+    if (!completeRes.ok) throw new Error("Failed to complete upload");
+
+    const completeData = await completeRes.json();
+
+    return {
+      objectKey: object_key,
+      publicUrl: completeData.public_url || public_url,
+    };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,101 +249,16 @@ const UploadVideo = () => {
     try {
       setIsUploading(true);
 
-
-      // Sanitize filename: replace spaces/special chars with underscores, keep alphanumeric and dots
-      const sanitizedFileName = videoFile.name
-        .replace(/\s+/g, '_')
-        .replace(/[^a-zA-Z0-9._-]/g, '_');
-
-      const initRes = await fetch("/api/video/initiate", {
-        method: "POST",
-        credentials: "include",
-        body: JSON.stringify({
-          file_name: sanitizedFileName,
-          file_type: videoFile.type,
-        })
-      });
-
-      if (!initRes.ok) {
-        throw new Error("Failed to initiate upload");
-      }
-
-      const { upload_id, object_key, public_url } = await initRes.json();
-
-      let partNumber = 1;
-      let start = 0;
-      const parts: { ETag: string; PartNumber: number }[] = [];
-
-      while (start < videoFile.size) {
-        const end = Math.min(start + CHUNK_SIZE, videoFile.size);
-        const chunk = videoFile.slice(start, end);
-
-        const presignedRes = await fetch(
-          "/api/video/presigned",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              object_key,
-              file_type: videoFile.type,
-              upload_id,
-              part_number: partNumber,
-            }),
-          }
-        );
-
-        if (!presignedRes.ok) throw new Error("Failed to get presigned URL");
-
-        const { url } = await presignedRes.json();
-        console.log(`Uploading chunk ${partNumber} to: ${url}`);
-
-        // Upload chunk directly to R2
-        let uploadRes;
-        try {
-          uploadRes = await fetch(url, {
-            method: "PUT",
-            headers: { "Content-Type": videoFile.type },
-            body: chunk,
-          });
-        } catch (fetchErr) {
-          console.error(`Fetch failed for chunk ${partNumber}:`, fetchErr);
-          throw new Error(`Connection failed while uploading chunk ${partNumber}. This might be a CORS issue.`);
-        }
-
-        if (!uploadRes.ok) throw new Error(`Chunk ${partNumber} upload failed`);
-
-        const eTag = uploadRes.headers.get("ETag");
-        if (!eTag) throw new Error("Missing ETag from upload response");
-
-        parts.push({ ETag: eTag.replace(/"/g, ""), PartNumber: partNumber });
-
-        partNumber++;
-        start = end;
-      }
-
-      // Complete multipart upload
-      const completeRes = await fetch(
-        "/api/video/complete_multipart",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ object_key, upload_id, parts }),
-        }
-      );
-
-      if (!completeRes.ok) throw new Error("Failed to complete upload");
-
-      const completeData = await completeRes.json();
-      const finalUrl = completeData.public_url || public_url;
+      const uploadedVideo = await uploadFile(videoFile);
+      const uploadedMusic = musicFile ? await uploadFile(musicFile) : null;
 
       // Save metadata
       const metadata = {
         title: formData.title,
         description: formData.description || '',
-        file_url: finalUrl,
-        file_key: object_key,
+        file_url: uploadedVideo.publicUrl,
+        music_url: uploadedMusic?.publicUrl || null,
+        file_key: uploadedVideo.objectKey,
         file_size: videoFile.size,
         file_type: videoFile.type,
       };
@@ -461,6 +481,48 @@ const UploadVideo = () => {
                   >
                     Use this Recording
                   </button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="music-upload" className="block text-sm font-medium text-base-content/80 mb-1">
+                Background Music
+              </label>
+              <label
+                htmlFor="music-upload"
+                className="cursor-pointer bg-base-200 py-3 px-4 border border-base-300 rounded-xl shadow-sm text-center text-sm font-medium text-base-content hover:bg-base-300 transition-all flex items-center justify-center gap-2"
+              >
+                <Music2 size={20} />
+                <span>{musicFile ? "Change Music" : "Choose Music"}</span>
+                <input
+                  id="music-upload"
+                  name="music"
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleMusicFileChange}
+                  className="sr-only"
+                />
+              </label>
+              {musicFile && (
+                <div className="mt-3 rounded-xl border border-base-300 bg-base-200 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate text-sm text-base-content/80">{musicFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMusicFile(null);
+                        setMusicPreviewUrl(null);
+                      }}
+                      className="p-1.5 rounded-full bg-base-300 text-base-content hover:bg-red-500 hover:text-white transition-colors"
+                      aria-label="Remove background music"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  {musicPreviewUrl && (
+                    <audio src={musicPreviewUrl} controls className="mt-3 w-full" />
+                  )}
                 </div>
               )}
             </div>

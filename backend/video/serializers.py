@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Video, Comment, VideoVote, CommentVote
+from .models import Video, Comment, VideoVote, CommentVote, Call
 from django.conf import settings
 from accounts.models import UserAccount
 from accounts.serializers import UserDetailSerializer
@@ -10,6 +10,16 @@ class UserPublicSerializer(serializers.ModelSerializer):
   class Meta:
     model = UserAccount
     fields = ['id', 'email', 'username', 'first_name', 'last_name']
+
+
+class CallSerializer(serializers.ModelSerializer):
+  caller = UserPublicSerializer(read_only=True)
+  callee = UserPublicSerializer(read_only=True)
+
+  class Meta:
+    model = Call
+    fields = ['id', 'caller', 'callee', 'call_type', 'status', 'started_at', 'ended_at', 'created_at']
+    read_only_fields = ['id', 'caller', 'callee', 'status', 'started_at', 'ended_at', 'created_at']
 
 class VideoSerializer(serializers.ModelSerializer):
   uploader = UserPublicSerializer(read_only=True)
@@ -23,9 +33,10 @@ class VideoSerializer(serializers.ModelSerializer):
     model = Video
     fields = [
       'id', 'title', 'description', 'thumbnail_url',
-       'timestamp', 'file_url',  'uploader', "likes", "dislikes", "user_vote"
+       'timestamp', 'file_url', 'music_url', 'processing_status', 'uploader',
+       "likes", "dislikes", "user_vote"
     ]
-    read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at']
+    read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at', 'processing_status']
   
   def validate_file_url(self, value):
     parsed = value.split('/')

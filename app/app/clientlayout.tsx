@@ -8,6 +8,7 @@ import { RootState, AppDispatch } from '@/app/store/store';
 import { fetchUser, refresh, setUnAuthenticated } from '@/app/store/authSlice';
 import Image from 'next/image';
 import { lusitana } from './fonts';
+import CallProvider from '@/app/components/calls/CallProvider';
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -133,7 +134,9 @@ export default function ClientProvider({ children }: { children: React.ReactNode
           </div>
         </aside>
       )}
-      <div className="w-full h-full mx-auto">{children}</div>
+      <CallProvider>
+        <div className="w-full h-full mx-auto">{children}</div>
+      </CallProvider>
 
       {isMobileMenuOpen && (
         <div

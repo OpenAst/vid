@@ -1,7 +1,6 @@
 "use client";
 
 import React, { forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
-import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { VolumeX, Volume2, Play, Pause } from "lucide-react";
 
@@ -20,6 +19,7 @@ interface VideoCardProps {
 export type VideoCardHandle = {
   video: HTMLVideoElement | null;
   isUserPaused: boolean;
+  isMuted: boolean;
 };
 
 const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
@@ -49,6 +49,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     useImperativeHandle(ref, () => ({
       video: videoRef.current,
       isUserPaused,
+      isMuted,
     }));
 
     useEffect(() => {
@@ -83,7 +84,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
 
       if (videoRef.current.paused) {
         void videoRef.current.play().catch((error) => {
-          if ((error as Error).name !== "AbortError") {
+          if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
             console.error("Failed to play video:", error);
           }
         });
@@ -137,14 +138,15 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
 
       try {
         onViewOptimistic?.();
-        const response = await axios.post(`/api/video/${id}/view`);
-        const totalViews = response.data?.total_views;
+        const response = await fetch(`/api/video/${id}/view`, { method: "POST" });
+        const data = await response.json().catch(() => null);
+        const totalViews = data?.total_views;
         if (typeof totalViews === "number") {
           onViewRecordedRef.current?.(totalViews);
         }
         hasViewedOnce.current = true;
-      } catch (err) {
-        console.error("Failed to record view:", err);
+      } catch {
+        hasViewedOnce.current = true;
       }
     };
 
@@ -267,7 +269,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           playsInline
           autoPlay
           loop
-          muted={true}
+          muted={isMuted}
           onClick={handleVideoClick}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}

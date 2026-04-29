@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import AuthLayout from '../../components/layout/AuthLayout';
 import { ToastContainer, toast } from 'react-toastify';
 import SocialButton from '../../components/auth/SocialButton';
 
@@ -115,100 +115,180 @@ const LoginPage = () => {
   }, [mounted, isAuthenticated, router]);
 
   return (
-    <AuthLayout title="Welcome back !">
-      <p className="text-center">Signin to OneClyq</p>
+    <main className="min-h-screen bg-white text-slate-950 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
+      <section className="relative overflow-hidden bg-[#05070d] px-5 py-8 text-white sm:px-8 lg:min-h-screen lg:px-14 lg:py-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_20%,rgba(44,189,255,0.18),transparent_34%),radial-gradient(circle_at_78%_32%,rgba(199,42,255,0.22),transparent_32%)]" />
 
-      <form onSubmit={handleSubmit} className="space-y-6 p-8">
-        <div className="form-control">
-          <input
-            className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
-            type="email"
-            placeholder="Email"
-            name="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-control">
-          <input
-            className="input input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue w-full"
-            type="text"
-            placeholder="Username"
-            name="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-control relative">
-          <input
-            className="input w-full input-bordered focus:outline-none focus:ring-2 focus:ring-primary-blue"
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Password"
-            name="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={6}
-            required
-          />
-          <span
-            onClick={togglePassword}
-            className="absolute right-3 top-4 cursor-pointer"
-          >
-            {showPassword ? <FaEyeSlash /> : <FaEye />}
-          </span>
-        </div>
-
-        {isError && errorMessage && (
-          <div className="bg-red-500 text-white text-sm text-center p-2 rounded-md">
-            {errorMessage}
+        <div className="relative mx-auto flex max-w-xl flex-col lg:h-full lg:max-w-none">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/oneclyq.png"
+              alt="OneClyq"
+              width={72}
+              height={72}
+              priority
+              className="h-14 w-14 rounded-2xl object-cover sm:h-16 sm:w-16"
+            />
+            <div>
+              <p className="text-xl font-bold leading-none sm:text-2xl">OneClyq</p>
+              <p className="mt-1 text-sm font-medium text-cyan-100/80">Watch. Discover. Connect.</p>
+            </div>
           </div>
-        )}
 
-        <button
-          type="submit"
-          className={`btn btn-primary hover:opacity-75 w-full flex items-center justify-center ${isLoadingUi ? 'opacity-75' : ''}`}
-          disabled={isLoadingUi}
-        >
-          {isLoadingUi ? (
-            <span className="loading loading-spinner loading-sm">Signing in</span>
-          ) : (
-            'Login'
-          )}
-        </button>
+          <div className="mt-10 grid gap-8 lg:mt-auto lg:grid-cols-[0.78fr_1fr] lg:items-center">
+            <div>
+              <h1 className="text-5xl font-bold leading-tight sm:text-6xl lg:text-7xl">
+                Find
+                <span className="block">the clips</span>
+                <span className="block bg-gradient-to-r from-cyan-300 via-blue-400 to-fuchsia-400 bg-clip-text text-transparent">
+                  you love.
+                </span>
+              </h1>
+              <p className="mt-5 max-w-sm text-sm leading-6 text-slate-300 sm:text-base">
+                Sign in to catch fresh videos, follow creators, and keep your favorite moments close.
+              </p>
+            </div>
 
-        <div className="divider text-sm text-gray-400 my-4">OR</div>
+            <div className="relative hidden min-h-[470px] lg:block">
+              <div className="absolute left-16 top-8 h-80 w-56 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-2xl shadow-cyan-950/40">
+                <div className="h-full bg-gradient-to-br from-fuchsia-500 via-blue-500 to-cyan-300 p-4">
+                  <div className="h-1.5 w-20 rounded-full bg-white/75" />
+                  <div className="mt-24 rounded-2xl bg-black/30 p-4 backdrop-blur-md">
+                    <p className="text-sm font-medium text-white/75">Now playing</p>
+                    <p className="mt-2 text-2xl font-bold">Creator stories</p>
+                  </div>
+                </div>
+              </div>
 
-        <SocialButton
-          provider="google"
-          onClick={async () => {
-            try {
-              const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/google/start/`;
+              <div className="absolute left-0 top-40 h-44 w-64 rounded-3xl border border-white/10 bg-white/10 p-4 shadow-xl backdrop-blur-xl">
+                <div className="h-28 rounded-2xl bg-gradient-to-br from-slate-200 via-cyan-200 to-fuchsia-300" />
+                <div className="mt-3 h-2 w-32 rounded-full bg-white/50" />
+                <div className="mt-2 h-2 w-20 rounded-full bg-white/25" />
+              </div>
 
-              window.location.href = backendUrl;
-            } catch (err) {
-              console.error(err);
-              toast.error("An error occurred");
-            }
-          }}
-        />
-      </form>
+              <div className="absolute bottom-10 left-36 h-28 w-28 rounded-full border-4 border-cyan-300 bg-gradient-to-br from-cyan-300 to-fuchsia-500 shadow-xl shadow-fuchsia-950/50" />
+              <div className="absolute right-3 top-32 rounded-2xl bg-fuchsia-500 px-4 py-3 text-sm font-bold shadow-xl">16:45</div>
+              <div className="absolute right-8 bottom-28 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-3xl shadow-xl">♥</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex min-h-[58vh] items-center justify-center px-5 py-10 sm:px-8 lg:min-h-screen lg:px-12">
+        <div className="w-full max-w-md">
+          <div className="mb-8 lg:hidden">
+            <p className="text-sm font-medium text-blue-600">Welcome back</p>
+            <h2 className="mt-2 text-3xl font-bold">Log in to OneClyq</h2>
+          </div>
+
+          <div className="hidden lg:block">
+            <p className="text-sm font-medium text-blue-600">Welcome back</p>
+            <h2 className="mt-3 text-3xl font-bold">Log in to OneClyq</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              Your feed, creator circle, and conversations are waiting.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <input
+              className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              type="email"
+              placeholder="Email address"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+
+            <input
+              className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              type="text"
+              placeholder="Username"
+              name="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+
+            <div className="relative">
+              <input
+                className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 pr-12 text-base outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                required
+              />
+              <button
+                type="button"
+                onClick={togglePassword}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-900"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+
+            {isError && errorMessage && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {errorMessage}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className={`h-14 w-full rounded-full bg-blue-600 text-base font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.99] ${isLoadingUi ? 'opacity-75' : ''}`}
+              disabled={isLoadingUi}
+            >
+              {isLoadingUi ? (
+                <span className="loading loading-spinner loading-sm">Signing in</span>
+              ) : (
+                'Log in'
+              )}
+            </button>
+
+            <div className="flex items-center gap-4 py-2 text-sm font-medium text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              or
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <SocialButton
+              provider="google"
+              onClick={async () => {
+                try {
+                  const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/google/start/`;
+
+                  window.location.href = backendUrl;
+                } catch (err) {
+                  console.error(err);
+                  toast.error("An error occurred");
+                }
+              }}
+            />
+          </form>
+
+          <div className="mt-8 space-y-3 text-center text-sm">
+            <p>
+              Don&apos;t have an account?{' '}
+              <Link className="font-bold text-blue-600 hover:underline" href="/register">
+                Sign up
+              </Link>
+            </p>
+            <p>
+              Forgot your password?{' '}
+              <Link className="font-bold text-blue-600 hover:underline" href="/password-reset">
+                Reset password
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
       <ToastContainer />
-      <p className="text-center mt-4 mb-2">
-        Don&apos;t have an account?{' '}
-        <Link className="text-primary-blue hover:underline" href="/register">
-          Sign Up
-        </Link>
-      </p>
-      <p className="text-center mt-2 mb-2">
-        Forgot your password?{' '}
-        <Link className="text-primary-blue hover:underline" href="/password-reset">
-          Reset Password
-        </Link>
-      </p>
-    </AuthLayout>
+    </main>
   );
 }
 

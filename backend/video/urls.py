@@ -26,5 +26,8 @@ urlpatterns = [
     
     path("videos/vote/", views.VideoVoteAPIView.as_view(), name='video-vote'),
     path("videos/<uuid:video_id>/view/", views.VideoViewAPIView.as_view(), name='video-view'),
+    path("calls/start/", views.CallStartAPIView.as_view(), name='call-start'),
+    path("calls/turn-credentials/", views.TurnCredentialsAPIView.as_view(), name='call-turn-credentials'),
+    path("calls/<uuid:call_id>/<str:action>/", views.CallActionAPIView.as_view(), name='call-action'),
 
 ]

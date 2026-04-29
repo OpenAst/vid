@@ -208,14 +208,14 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       if (!video) return;
 
       if (idx === currentIndex) {
+        video.muted = card.isMuted;
         if (!card.isUserPaused) {
           void video.play().catch((error) => {
-            if ((error as Error).name !== "AbortError") {
+            if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
               console.error("Failed to start video playback:", error);
             }
           });
         }
-        video.muted = card.isUserPaused ? true : false;
       } else {
         video.pause();
         video.currentTime = 0;
@@ -224,9 +224,11 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     });
   }, [currentIndex]);
 
-  if (isError) {
-    router.push('/login');
-  }
+  useEffect(() => {
+    if (isError) {
+      router.push('/login');
+    }
+  }, [isError, router]);
 
   return (
     <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-base-100">

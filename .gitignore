@@ -10,3 +10,4 @@ node_modules
 backend/media/videos/*
 .codex
 venv
+live-calls-coolify.md

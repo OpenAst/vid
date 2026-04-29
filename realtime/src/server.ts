@@ -21,6 +21,13 @@ type ClientToServerEvents = {
   "comments:vote_comment": (payload: { roomId: string; commentId: string }) => void;
   "video-likes:join": () => void;
   "video-likes:like_video": (payload: { videoId: string }) => void;
+  "call:invite": (payload: CallInvitePayload) => void;
+  "call:accept": (payload: CallPeerPayload) => void;
+  "call:reject": (payload: CallPeerPayload) => void;
+  "call:end": (payload: CallPeerPayload) => void;
+  "call:offer": (payload: CallSignalPayload) => void;
+  "call:answer": (payload: CallSignalPayload) => void;
+  "call:ice-candidate": (payload: CallSignalPayload) => void;
 };
 
 type ServerToClientEvents = {
@@ -42,7 +49,34 @@ type ServerToClientEvents = {
     actorUserId: string;
   }) => void;
   video_view_updated: (payload: { videoId: string; views: number }) => void;
+  "call:incoming": (payload: CallInvitePayload & { caller: RealtimeUser }) => void;
+  "call:accepted": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
+  "call:rejected": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
+  "call:ended": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
+  "call:offer": (payload: CallSignalPayload & { fromUserId: string }) => void;
+  "call:answer": (payload: CallSignalPayload & { fromUserId: string }) => void;
+  "call:ice-candidate": (payload: CallSignalPayload & { fromUserId: string }) => void;
   "realtime:error": (payload: { message: string }) => void;
+};
+
+type CallType = "audio" | "video";
+
+type CallInvitePayload = {
+  callId: string;
+  calleeId: string;
+  callType: CallType;
+};
+
+type CallPeerPayload = {
+  callId: string;
+  peerId: string;
+  callType?: CallType;
+};
+
+type CallSignalPayload = {
+  callId: string;
+  toUserId: string;
+  signal: unknown;
 };
 
 type InterServerEvents = Record<string, never>;
@@ -89,6 +123,10 @@ function commentsRoom(roomId: string) {
 
 function videoLikesRoom() {
   return "video-likes";
+}
+
+function userRoom(userId: string) {
+  return `user:${userId}`;
 }
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
@@ -171,8 +209,8 @@ async function setupRedisAdapter(io: RealtimeIO): Promise<() => Promise<void>> {
   } catch (error) {
     logWarn("Redis adapter disabled", { error: getErrorMessage(error, "Unable to connect to Redis") });
     await Promise.allSettled([
-      Promise.resolve(pubClient.disconnect()),
-      Promise.resolve(subClient.disconnect()),
+      Promise.resolve(pubClient.destroy()),
+      Promise.resolve(subClient.destroy()),
     ]);
     return async () => {};
   }
@@ -486,6 +524,82 @@ async function handleLikeVideo(socket: RealtimeSocket, videoId: string) {
   }
 }
 
+function isValidCallType(callType: unknown): callType is CallType {
+  return callType === "audio" || callType === "video";
+}
+
+function validateCallId(socket: RealtimeSocket, callId: string) {
+  if (!isUuid(callId)) {
+    emitError(socket, "Invalid call id");
+    return false;
+  }
+
+  return true;
+}
+
+function validateUserId(socket: RealtimeSocket, userId: string) {
+  if (!isUuid(userId)) {
+    emitError(socket, "Invalid call user id");
+    return false;
+  }
+
+  return true;
+}
+
+function handleCallInvite(socket: RealtimeSocket, payload: CallInvitePayload) {
+  if (!validateCallId(socket, payload.callId) || !validateUserId(socket, payload.calleeId)) return;
+
+  if (!isValidCallType(payload.callType)) {
+    emitError(socket, "Invalid call type");
+    return;
+  }
+
+  socket.to(userRoom(payload.calleeId)).emit("call:incoming", {
+    ...payload,
+    caller: socket.data.user,
+  });
+  logInfo("Call invite relayed", {
+    connectionId: socket.data.connectionId,
+    callerId: socket.data.user.id,
+    calleeId: payload.calleeId,
+    callId: payload.callId,
+    callType: payload.callType,
+  });
+}
+
+function handleCallPeerEvent(
+  socket: RealtimeSocket,
+  payload: CallPeerPayload,
+  eventName: "call:accepted" | "call:rejected" | "call:ended"
+) {
+  if (!validateCallId(socket, payload.callId) || !validateUserId(socket, payload.peerId)) return;
+
+  socket.to(userRoom(payload.peerId)).emit(eventName, {
+    ...payload,
+    actor: socket.data.user,
+  });
+  logInfo("Call peer event relayed", {
+    connectionId: socket.data.connectionId,
+    actorId: socket.data.user.id,
+    peerId: payload.peerId,
+    callId: payload.callId,
+    eventName,
+  });
+}
+
+function handleCallSignal(
+  socket: RealtimeSocket,
+  payload: CallSignalPayload,
+  eventName: "call:offer" | "call:answer" | "call:ice-candidate"
+) {
+  if (!validateCallId(socket, payload.callId) || !validateUserId(socket, payload.toUserId)) return;
+
+  socket.to(userRoom(payload.toUserId)).emit(eventName, {
+    ...payload,
+    fromUserId: socket.data.user.id,
+  });
+}
+
 export async function createRealtimeServer() {
   let io!: RealtimeIO;
   let cleanupRedis: () => Promise<void> = async () => {};
@@ -551,6 +665,13 @@ export async function createRealtimeServer() {
       userId: socket.data.user.id,
     });
 
+    socket.join(userRoom(socket.data.user.id));
+    logInfo("Socket joined user room", {
+      connectionId: socket.data.connectionId,
+      userId: socket.data.user.id,
+      room: userRoom(socket.data.user.id),
+    });
+
     socket.emit("connected", {
       connectionId: socket.data.connectionId,
       user: socket.data.user,
@@ -614,6 +735,34 @@ export async function createRealtimeServer() {
         videoId,
       });
       await handleLikeVideo(socket, videoId);
+    });
+
+    socket.on("call:invite", (payload) => {
+      handleCallInvite(socket, payload);
+    });
+
+    socket.on("call:accept", (payload) => {
+      handleCallPeerEvent(socket, payload, "call:accepted");
+    });
+
+    socket.on("call:reject", (payload) => {
+      handleCallPeerEvent(socket, payload, "call:rejected");
+    });
+
+    socket.on("call:end", (payload) => {
+      handleCallPeerEvent(socket, payload, "call:ended");
+    });
+
+    socket.on("call:offer", (payload) => {
+      handleCallSignal(socket, payload, "call:offer");
+    });
+
+    socket.on("call:answer", (payload) => {
+      handleCallSignal(socket, payload, "call:answer");
+    });
+
+    socket.on("call:ice-candidate", (payload) => {
+      handleCallSignal(socket, payload, "call:ice-candidate");
     });
 
     socket.on("disconnect", (reason) => {

@@ -10,6 +10,8 @@ class Video(models.Model):
   title = models.CharField(max_length=255)
   description = models.TextField(blank=True)
   file_url = models.URLField(max_length=1000)
+  music_url = models.URLField(max_length=1000, blank=True, null=True)
+  processing_status = models.CharField(max_length=32, default="ready")
   thumbnail = models.URLField(blank=True, null=True)
   created_at = models.DateTimeField(auto_now_add=True)
   views = models.IntegerField(default=0, db_index=True)
@@ -78,3 +80,32 @@ class VideoView(models.Model):
 
     def __str__(self):
         return f"View of {self.video} by {self.user or self.ip_address}"
+
+
+class Call(models.Model):
+    CALL_TYPES = (
+        ("audio", "Audio"),
+        ("video", "Video"),
+    )
+    STATUSES = (
+        ("ringing", "Ringing"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+        ("missed", "Missed"),
+        ("ended", "Ended"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    caller = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="outgoing_calls")
+    callee = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="incoming_calls")
+    call_type = models.CharField(max_length=16, choices=CALL_TYPES)
+    status = models.CharField(max_length=16, choices=STATUSES, default="ringing")
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.call_type} call from {self.caller} to {self.callee}"

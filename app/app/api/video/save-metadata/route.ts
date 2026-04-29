@@ -12,12 +12,13 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { title, description, file_url } = await req.json();
+  const { title, description, file_url, music_url } = await req.json();
 
   const body = JSON.stringify({
     title,
     description,
-    file_url
+    file_url,
+    music_url
   });
 
   

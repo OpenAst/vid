@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const { file_name } = await req.json()
+  const { file_name, file_type } = await req.json()
 
   // 1️ Initiate multipart upload
   const initRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/videos/initiate_multipart_upload/`, {
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       'Authorization': `JWT ${accessToken}`,
       ...(csrfToken && { 'X-CSRFToken': csrfToken }),
     },
-    body: JSON.stringify({ file_name }),
+    body: JSON.stringify({ file_name, file_type }),
   });
 
   if (!initRes.ok) {

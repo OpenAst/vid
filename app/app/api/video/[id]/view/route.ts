@@ -6,13 +6,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const accessToken = req.cookies.get('access')?.value;
         const csrfToken = req.cookies.get('csrftoken')?.value;
 
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
+
+        if (accessToken) {
+            headers.Authorization = `JWT ${accessToken}`;
+        }
+
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/videos/${videoId}/view/`, {
             method: "POST",
-            headers: {
-                Authorization: accessToken ? `JWT ${accessToken}` : '',
-                'X-CSRFToken': csrfToken || '',
-                'Content-Type': 'application/json',
-            },
+            headers,
             credentials: 'include',
         });
 

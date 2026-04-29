@@ -1,10 +1,16 @@
 import uuid
+import base64
 import boto3
+import hmac
+import json
 import logging
+import os
+import time
 import subprocess
 import tempfile
 import threading
 import requests
+from hashlib import sha1
 from urllib.parse import urljoin
 from botocore.config import Config
 from django.conf import settings
@@ -15,13 +21,14 @@ from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import generics, permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Video, Comment, VideoVote, CommentVote, VideoView
-from .serializers import VideoSerializer, CommentSerializer, VideoVoteSerializer, CommentVoteSerializer, UserPublicSerializer
+from .models import Video, Comment, VideoVote, CommentVote, VideoView, Call
+from .serializers import VideoSerializer, CommentSerializer, VideoVoteSerializer, CommentVoteSerializer, UserPublicSerializer, CallSerializer
 from rest_framework.pagination import PageNumberPagination
 from accounts.permissions import IsOwnerOrReadOnly
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser, MultiPartParser
+from accounts.models import UserAccount
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +106,7 @@ class VideoUploadView(generics.CreateAPIView):
                 "title": request.data.get("title"),
                 "description": request.data.get("description", ""),
                 "file_url": request.data.get("file_url"),
+                "music_url": request.data.get("music_url"),
             }
             
             serializer = self.get_serializer(data=data)
@@ -115,6 +123,14 @@ class VideoUploadView(generics.CreateAPIView):
                 target=extract_and_upload_thumbnail, 
                 args=(video_instance.file_url, video_instance)
             ).start()
+
+            if video_instance.music_url:
+                video_instance.processing_status = "processing"
+                video_instance.save(update_fields=["processing_status"])
+                threading.Thread(
+                    target=mix_music_and_upload_video,
+                    args=(video_instance.id,)
+                ).start()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -401,58 +417,155 @@ class RealtimeVideoVoteToggleAPIView(generics.GenericAPIView):
             status=status.HTTP_200_OK,
         )
 
+
+class CallStartAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        callee_id = request.data.get("callee_id")
+        call_type = request.data.get("call_type", "audio")
+
+        if call_type not in {"audio", "video"}:
+            return Response({"detail": "Invalid call type"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not callee_id:
+            return Response({"detail": "callee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if str(request.user.id) == str(callee_id):
+            return Response({"detail": "You cannot call yourself"}, status=status.HTTP_400_BAD_REQUEST)
+
+        callee = get_object_or_404(UserAccount, pk=callee_id)
+        call = Call.objects.create(caller=request.user, callee=callee, call_type=call_type)
+
+        return Response(CallSerializer(call).data, status=status.HTTP_201_CREATED)
+
+
+class CallActionAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, call_id, action, *args, **kwargs):
+        call = get_object_or_404(Call, pk=call_id)
+
+        if request.user.id not in {call.caller_id, call.callee_id}:
+            return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
+
+        from django.utils import timezone
+
+        if action == "accept":
+            if request.user != call.callee:
+                return Response({"detail": "Only the callee can accept"}, status=status.HTTP_403_FORBIDDEN)
+            call.status = "accepted"
+            call.started_at = call.started_at or timezone.now()
+            call.save(update_fields=["status", "started_at"])
+        elif action == "reject":
+            if request.user != call.callee:
+                return Response({"detail": "Only the callee can reject"}, status=status.HTTP_403_FORBIDDEN)
+            call.status = "rejected"
+            call.ended_at = timezone.now()
+            call.save(update_fields=["status", "ended_at"])
+        elif action == "end":
+            call.status = "ended"
+            call.ended_at = timezone.now()
+            call.save(update_fields=["status", "ended_at"])
+        else:
+            return Response({"detail": "Invalid call action"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(CallSerializer(call).data, status=status.HTTP_200_OK)
+
+
+class TurnCredentialsAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        ttl = settings.TURN_CREDENTIAL_TTL_SECONDS
+        expiry = int(time.time()) + ttl
+        username = f"{expiry}:{request.user.id}"
+
+        if settings.TURN_SHARED_SECRET:
+            digest = hmac.new(
+                settings.TURN_SHARED_SECRET.encode("utf-8"),
+                username.encode("utf-8"),
+                sha1,
+            ).digest()
+            credential = base64.b64encode(digest).decode("utf-8")
+        else:
+            credential = ""
+
+        ice_server = {
+            "urls": settings.TURN_SERVER_URLS,
+            "username": username,
+            "credential": credential,
+        }
+
+        return Response(
+            {
+                "ttl": ttl,
+                "expires_at": expiry,
+                "iceServers": [ice_server],
+            },
+            status=status.HTTP_200_OK,
+        )
+
 class VideoViewAPIView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         video_id = self.kwargs.get("video_id")
         video = get_object_or_404(Video, pk=video_id)
-        
-        user = request.user if request.user.is_authenticated else None
-        ip_address = self.get_client_ip(request)
-        session_key = request.session.session_key or ""
 
-        # Logic for unique views: 
-        # 1. If authenticated, check if this user has viewed this video in the last 24 hours.
-        # 2. If anonymous, check if this IP has viewed this video in the last 24 hours.
-        
-        from django.utils import timezone
-        from datetime import timedelta
-        
-        # Reduced window for testing/verification, can be increased later
-        time_threshold = timezone.now() - timedelta(minutes=1)
-        
-        if user:
-            already_viewed = VideoView.objects.filter(
-                video=video, user=user, created_at__gt=time_threshold
-            ).exists()
-        else:
-            already_viewed = VideoView.objects.filter(
-                video=video, ip_address=ip_address, created_at__gt=time_threshold
-            ).exists()
+        try:
+            user = request.user if request.user.is_authenticated else None
+            ip_address = self.get_client_ip(request)
+            session = getattr(request, "session", None)
+            session_key = getattr(session, "session_key", "") or ""
 
-        if not already_viewed:
-            VideoView.objects.create(
-                video=video,
-                user=user,
-                ip_address=ip_address,
-                session_key=session_key
+            # Logic for unique views:
+            # 1. If authenticated, check if this user has viewed this video in the last 24 hours.
+            # 2. If anonymous, check if this IP has viewed this video in the last 24 hours.
+
+            from django.utils import timezone
+            from datetime import timedelta
+
+            # Reduced window for testing/verification, can be increased later
+            time_threshold = timezone.now() - timedelta(minutes=1)
+
+            if user:
+                already_viewed = VideoView.objects.filter(
+                    video=video, user=user, created_at__gt=time_threshold
+                ).exists()
+            else:
+                already_viewed = VideoView.objects.filter(
+                    video=video, ip_address=ip_address, created_at__gt=time_threshold
+                ).exists()
+
+            if not already_viewed:
+                VideoView.objects.create(
+                    video=video,
+                    user=user,
+                    ip_address=ip_address,
+                    session_key=session_key
+                )
+                # Increment the views count on the video model for fast access
+                video.views += 1
+                video.save(update_fields=['views'])
+
+                notify_realtime_server(
+                    "video_view_updated",
+                    {
+                        "videoId": str(video.id),
+                        "views": video.views,
+                    },
+                )
+
+                return Response({"detail": "View recorded", "total_views": video.views}, status=status.HTTP_201_CREATED)
+
+            return Response({"detail": "Already viewed", "total_views": video.views}, status=status.HTTP_200_OK)
+        except Exception:
+            logger.exception("Failed to record view for video %s", video_id)
+            return Response(
+                {"detail": "View tracking unavailable", "total_views": video.views},
+                status=status.HTTP_200_OK,
             )
-            # Increment the views count on the video model for fast access
-            video.views += 1
-            video.save(update_fields=['views'])
-
-            notify_realtime_server(
-                "video_view_updated",
-                {
-                    "videoId": str(video.id),
-                    "views": video.views,
-                },
-            )
-
-            return Response({"detail": "View recorded", "total_views": video.views}, status=status.HTTP_201_CREATED)
-        
-        return Response({"detail": "Already viewed", "total_views": video.views}, status=status.HTTP_200_OK)
 
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -466,6 +579,7 @@ class VideoViewAPIView(generics.CreateAPIView):
 @permission_classes([IsAuthenticated])
 def initiate_multipart_upload(request):
     file_name = request.data['file_name']
+    file_type = request.data.get('file_type', 'application/octet-stream')
     object_key = f"user_{request.user.id}/{uuid.uuid4()}_{file_name}"
 
     s3 = boto3.client(
@@ -479,7 +593,7 @@ def initiate_multipart_upload(request):
         Bucket=settings.AWS_STORAGE_BUCKET_NAME,
         Key=object_key,
         ACL='public-read',
-        ContentType='application/octet-stream'
+        ContentType=file_type
     )
     public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{object_key}"
 
@@ -684,7 +798,152 @@ def extract_and_upload_thumbnail(video_url, video_instance):
         print(f"Error in extract_and_upload_thumbnail: {str(e)}")
     finally:
         # Cleanup
-        if temp_video and os.path.exists(temp_video):
-            os.remove(temp_video)
-        if temp_thumb and os.path.exists(temp_thumb):
-            os.remove(temp_thumb)
+        try:
+            if temp_video and os.path.exists(temp_video):
+                os.remove(temp_video)
+            if temp_thumb and os.path.exists(temp_thumb):
+                os.remove(temp_thumb)
+        except OSError:
+            logger.exception("Failed to clean up thumbnail extraction temp files")
+
+
+def download_to_temp_file(url, suffix):
+    temp_path = tempfile.NamedTemporaryFile(suffix=suffix, delete=False).name
+    response = requests.get(url, stream=True, timeout=30)
+    response.raise_for_status()
+    with open(temp_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=1024 * 1024):
+            if chunk:
+                f.write(chunk)
+    return temp_path
+
+
+def video_has_audio_stream(video_path):
+    try:
+        result = subprocess.run(
+            [
+                'ffprobe',
+                '-v',
+                'error',
+                '-select_streams',
+                'a',
+                '-show_entries',
+                'stream=index',
+                '-of',
+                'json',
+                video_path,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        data = json.loads(result.stdout or '{}')
+        return bool(data.get('streams'))
+    except Exception:
+        logger.exception("Failed to inspect video audio stream")
+        return False
+
+
+def mix_music_and_upload_video(video_id):
+    temp_video = None
+    temp_music = None
+    temp_output = None
+
+    try:
+        video_instance = Video.objects.get(id=video_id)
+        if not video_instance.music_url:
+            return
+
+        temp_video = download_to_temp_file(video_instance.file_url, ".mp4")
+        temp_music = download_to_temp_file(video_instance.music_url, ".audio")
+        temp_output = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+
+        if video_has_audio_stream(temp_video):
+            ffmpeg_command = [
+                'ffmpeg',
+                '-y',
+                '-i',
+                temp_video,
+                '-stream_loop',
+                '-1',
+                '-i',
+                temp_music,
+                '-filter_complex',
+                '[0:a]volume=0.55[a0];[1:a]volume=0.45[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]',
+                '-map',
+                '0:v:0',
+                '-map',
+                '[aout]',
+                '-c:v',
+                'copy',
+                '-c:a',
+                'aac',
+                '-shortest',
+                temp_output,
+            ]
+        else:
+            ffmpeg_command = [
+                'ffmpeg',
+                '-y',
+                '-i',
+                temp_video,
+                '-stream_loop',
+                '-1',
+                '-i',
+                temp_music,
+                '-map',
+                '0:v:0',
+                '-map',
+                '1:a:0',
+                '-c:v',
+                'copy',
+                '-c:a',
+                'aac',
+                '-shortest',
+                temp_output,
+            ]
+
+        subprocess.run(ffmpeg_command, check=True, capture_output=True, text=True)
+
+        s3 = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name='auto',
+            config=Config(
+                signature_version='s3v4',
+                s3={'addressing_style': 'path'}
+            )
+        )
+
+        key = f"processed/{video_instance.uploader_id}/{video_instance.id}_with_music.mp4"
+        with open(temp_output, 'rb') as f:
+            s3.put_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=key,
+                Body=f,
+                ACL='public-read',
+                ContentType='video/mp4'
+            )
+
+        video_instance.file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
+        video_instance.processing_status = "ready"
+        video_instance.save(update_fields=["file_url", "processing_status"])
+
+        threading.Thread(
+            target=extract_and_upload_thumbnail,
+            args=(video_instance.file_url, video_instance)
+        ).start()
+        logger.info("Successfully mixed music into video %s", video_instance.id)
+
+    except Exception:
+        logger.exception("Failed to mix music into video %s", video_id)
+        Video.objects.filter(id=video_id).update(processing_status="failed")
+    finally:
+        for temp_path in (temp_video, temp_music, temp_output):
+            try:
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except OSError:
+                logger.exception("Failed to clean up music processing temp file")

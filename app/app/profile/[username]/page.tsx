@@ -6,6 +6,7 @@ import { fetchPublicUser } from '@/app/store/authSlice';
 import { RootState, AppDispatch } from '@/app/store/store';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
+import CallButton from '@/app/components/calls/CallButton';
 
 
 function PublicProfilePage() {
@@ -21,6 +22,7 @@ function PublicProfilePage() {
   const isOwnProfile = user && isAuthenticated && user.username === safeUsername;
 
   const [userDetails, setUserDetails] = useState({
+    id: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -43,9 +45,10 @@ function PublicProfilePage() {
         .unwrap()
         .then((userData) => {
           setUserDetails({
+            id: userData.id || '',
             firstName: userData.first_name || '',
             lastName: userData.last_name || '',
-            email: '', // Restricted in public view
+            email: '', 
             username: userData.username || '',
             avatar: userData.profile?.avatar || '',
             followers: String(userData.profile?.followers) || '0',
@@ -98,6 +101,28 @@ function PublicProfilePage() {
         </p>
         <p className='text-base-content/60'>@{userDetails.username}</p>
         <p className='text-base-content/70'>{userDetails.followers} followers</p>
+        {isAuthenticated && userDetails.id && !isOwnProfile && (
+          <div className="mt-4 flex justify-center gap-3">
+            <CallButton
+              peer={{
+                id: userDetails.id,
+                username: userDetails.username,
+                first_name: userDetails.firstName,
+                last_name: userDetails.lastName,
+              }}
+              type="audio"
+            />
+            <CallButton
+              peer={{
+                id: userDetails.id,
+                username: userDetails.username,
+                first_name: userDetails.firstName,
+                last_name: userDetails.lastName,
+              }}
+              type="video"
+            />
+          </div>
+        )}
       </div>
 
       {/* Videos Section */}

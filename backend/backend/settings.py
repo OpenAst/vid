@@ -26,6 +26,9 @@ PRIMARY_FRONTEND_URL = config("PRIMARY_FRONTEND_URL", default="http://localhost:
 API_BASE_URL = config("API_BASE_URL", default="http://localhost:8000")
 REALTIME_SERVER_INTERNAL_URL = config("REALTIME_SERVER_INTERNAL_URL", default="http://localhost:4000")
 REALTIME_INTERNAL_SECRET = config("REALTIME_INTERNAL_SECRET", default="")
+TURN_SERVER_URLS = csv_config("TURN_SERVER_URLS", "stun:localhost:3478,turn:localhost:3478")
+TURN_SHARED_SECRET = config("TURN_SHARED_SECRET", default="")
+TURN_CREDENTIAL_TTL_SECONDS = config("TURN_CREDENTIAL_TTL_SECONDS", default=3600, cast=int)
 COOKIE_DOMAIN = config("COOKIE_DOMAIN", default="")
 
 FRONTEND_PROTOCOL, FRONTEND_DOMAIN = PRIMARY_FRONTEND_URL.split("://", 1)
