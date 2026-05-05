@@ -42,6 +42,7 @@ type ActiveCall = {
 type CallContextValue = {
   startCall: (peer: CallUser, callType: CallType) => Promise<void>;
   isCalling: boolean;
+  isCallReady: boolean;
 };
 
 const CallContext = createContext<CallContextValue | null>(null);
@@ -68,6 +69,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   const socketRef = useRef<RealtimeSocket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -148,8 +150,13 @@ export default function CallProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const startCall = useCallback(async (peer: CallUser, callType: CallType) => {
-    if (!socketRef.current || !user) {
-      toast.error("Realtime connection is not ready");
+    if (!user) {
+      toast.error("Please log in to start a call");
+      return;
+    }
+
+    if (!socketRef.current || !isSocketConnected) {
+      toast.error("Call connection is still getting ready");
       return;
     }
 
@@ -188,7 +195,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       cleanupCall();
       toast.error(error instanceof Error ? error.message : "Unable to start call");
     }
-  }, [cleanupCall, createPeerConnection, getLocalStream, user]);
+  }, [cleanupCall, createPeerConnection, getLocalStream, isSocketConnected, user]);
 
   const acceptIncomingCall = useCallback(async () => {
     if (!incomingCall || !socketRef.current) return;
@@ -258,6 +265,18 @@ export default function CallProvider({ children }: { children: React.ReactNode }
 
     const socket = createRealtimeSocket(token);
     socketRef.current = socket;
+
+    socket.on("connect", () => {
+      setIsSocketConnected(true);
+    });
+
+    socket.on("disconnect", () => {
+      setIsSocketConnected(false);
+    });
+
+    socket.on("connect_error", () => {
+      setIsSocketConnected(false);
+    });
 
     socket.on("call:incoming", (payload: IncomingCall) => {
       if (activeCallRef.current) {
@@ -329,11 +348,18 @@ export default function CallProvider({ children }: { children: React.ReactNode }
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      setIsSocketConnected(false);
     };
   }, [cleanupCall, isAuthenticated, token]);
 
   return (
-    <CallContext.Provider value={{ startCall, isCalling: Boolean(activeCall) }}>
+    <CallContext.Provider
+      value={{
+        startCall,
+        isCalling: Boolean(activeCall),
+        isCallReady: isAuthenticated && isSocketConnected,
+      }}
+    >
       {children}
 
       {incomingCall && (

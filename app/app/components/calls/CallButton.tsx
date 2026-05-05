@@ -14,14 +14,16 @@ type CallButtonProps = {
 };
 
 export default function CallButton({ peer, type }: CallButtonProps) {
-  const { startCall, isCalling } = useCall();
+  const { startCall, isCalling, isCallReady } = useCall();
   const Icon = type === "video" ? Video : Phone;
+  const isDisabled = isCalling || !isCallReady;
 
   return (
     <button
       type="button"
-      disabled={isCalling}
+      disabled={isDisabled}
       onClick={() => startCall(peer, type)}
+      title={!isCallReady ? "Call connection is getting ready" : undefined}
       className="btn btn-sm btn-outline gap-2"
     >
       <Icon size={16} />

@@ -7,6 +7,7 @@ import { RootState, AppDispatch } from '@/app/store/store';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import CallButton from '@/app/components/calls/CallButton';
+import VideoGridSkeleton from '@/app/components/video/VideoGridSkeleton';
 
 
 function PublicProfilePage() {
@@ -77,8 +78,14 @@ function PublicProfilePage() {
 
 
   if (isLoading) return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+    <div className="mx-auto mt-10 w-full max-w-4xl px-4">
+      <div className="mx-auto h-32 w-32 rounded-full bg-base-300 animate-pulse" />
+      <div className="mx-auto mt-6 h-5 w-40 rounded-full bg-base-300 animate-pulse" />
+      <div className="mx-auto mt-3 h-4 w-28 rounded-full bg-base-300 animate-pulse" />
+      <div className="mt-12">
+        <div className="mb-6 h-8 w-28 rounded-full bg-base-300 animate-pulse" />
+        <VideoGridSkeleton count={8} />
+      </div>
     </div>
   );
   if (isError) return <p className='text-center text-red-500'>Error loading profile</p>;
@@ -129,9 +136,7 @@ function PublicProfilePage() {
       <div className="w-full max-w-4xl mt-12 px-4 mb-10">
         <h2 className="text-2xl font-bold mb-6 text-base-content border-b border-base-300 pb-2">Videos</h2>
         {isVideosLoading ? (
-          <div className="flex justify-center py-10">
-            <span className="loading loading-spinner loading-lg"></span>
-          </div>
+          <VideoGridSkeleton count={8} />
         ) : videos.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {videos.map((video) => (

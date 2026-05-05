@@ -41,6 +41,8 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+    const [isMediaReady, setIsMediaReady] = useState(false);
+    const [hasMediaError, setHasMediaError] = useState(false);
     const [overlayIcon, setOverlayIcon] = useState<"play" | "pause" | "mute" | "unmute" | null>(null);
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -107,11 +109,24 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       }
     };
 
+    const markMediaReady = () => {
+      setIsMediaReady(true);
+      setHasMediaError(false);
+    };
+
     const handleLoadedMetadata = () => {
       if (videoRef.current) {
         setDuration(videoRef.current.duration);
         setIsPortrait(videoRef.current.videoHeight > videoRef.current.videoWidth);
+        if (videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          markMediaReady();
+        }
       }
+    };
+
+    const handleMediaError = () => {
+      setHasMediaError(true);
+      setIsMediaReady(false);
     };
 
     const handleSeek = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
@@ -232,10 +247,19 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       if (zoomScale < 1.1) setZoomScale(1);
     };
 
-    // Reset zoom when video changes
     useEffect(() => {
       setZoomScale(1);
-    }, [id]);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsPortrait(false);
+      setIsMediaReady(false);
+      setHasMediaError(false);
+      hasViewedOnce.current = false;
+      if (viewTimerRef.current) {
+        clearTimeout(viewTimerRef.current);
+        viewTimerRef.current = null;
+      }
+    }, [id, file_url]);
 
     useEffect(() => {
       if (overlayIcon) {
@@ -269,11 +293,50 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
           playsInline
           autoPlay
           loop
+          preload="auto"
           muted={isMuted}
           onClick={handleVideoClick}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
+          onLoadedData={markMediaReady}
+          onCanPlay={markMediaReady}
+          onPlaying={markMediaReady}
+          onError={handleMediaError}
         />
+        <AnimatePresence>
+          {(!isMediaReady || hasMediaError) && (
+            <motion.div
+              key="media-readiness"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="absolute inset-0 z-10 pointer-events-none overflow-hidden rounded-2xl bg-neutral-950"
+            >
+              {thumbnail_url ? (
+                <div
+                  className="absolute inset-0 scale-105 bg-cover bg-center blur-xl opacity-70"
+                  style={{ backgroundImage: `url("${thumbnail_url}")` }}
+                />
+              ) : (
+                <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-950" />
+              )}
+              <div className="absolute inset-0 bg-black/35" />
+              {!hasMediaError && (
+                <div className="absolute left-4 right-14 bottom-5 space-y-3 opacity-80">
+                  <div className="h-3 w-24 rounded-full bg-white/20" />
+                  <div className="h-3 w-4/5 rounded-full bg-white/14" />
+                  <div className="h-3 w-1/2 rounded-full bg-white/10" />
+                </div>
+              )}
+              {hasMediaError && (
+                <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 rounded-lg bg-black/45 px-4 py-3 text-center text-sm text-white">
+                  Video is still being prepared.
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
         <button
           onClick={toggleMute}
           className="absolute top-4 left-4 p-2 rounded-full bg-white/80 backdrop-blur-md border border-white transition-all z-20 hover:scale-110 active:scale-90 shadow-lg"

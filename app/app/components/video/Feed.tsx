@@ -12,11 +12,13 @@ import {
 import { RootState, AppDispatch } from "../../store/store";
 import VideoCard, { VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
-import { Heart, Eye, Share2, MessageCircle } from "lucide-react";
+import FeedSkeleton from "./FeedSkeleton";
+import { Heart, Eye, Share2, MessageCircle, Phone } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createRealtimeSocket, type RealtimeSocket } from "@/app/lib/socket";
 import toast from "react-hot-toast";
 import { Video } from "../../store/videoSlice";
+import { useCall } from "@/app/components/calls/CallProvider";
 
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -34,12 +36,13 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const next = useSelector((state: RootState) => state.video.next);
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
+  const videoCount = Array.isArray(videos) ? videos.length : 0;
+  const { startCall, isCalling, isCallReady } = useCall();
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
   const socketRef = useRef<RealtimeSocket | null>(null);
 
-  // Initialize Socket for Video Likes
   useEffect(() => {
     if (!token) return;
 
@@ -93,11 +96,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }, [token, dispatch, user?.id]);
 
   const handleLikeVideo = (video: Video) => {
-    if (!user || !socketRef.current) {
-      // Optimistic UI or error if not logged in? 
-      // For now, assume login enforced by auth protection or just do nothing
-      return;
-    }
+    if (!user || !socketRef.current) return;
 
     const liked = video.user_vote !== 1;
     dispatch(
@@ -181,7 +180,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
     wrapperRefs.current.forEach((el) => el && observer.observe(el));
 
-    // Intersection Observer for Infinite Scroll (observing the last element)
     const lastElementObserver = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -222,16 +220,20 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
         video.muted = true;
       }
     });
-  }, [currentIndex]);
+  }, [currentIndex, videoCount]);
 
   useEffect(() => {
     if (isError) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [isError, router]);
 
+  const showInitialSkeleton = isLoading && (!Array.isArray(videos) || videos.length === 0);
+
   return (
     <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-base-100">
+      {showInitialSkeleton && <FeedSkeleton count={2} />}
+
       {Array.isArray(videos) &&
         videos.map((video, idx) => (
           <div
@@ -242,7 +244,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             }}
             className="h-[90vh] w-full snap-start flex items-center justify-center relative mb-2"
           >
-            {/* Constrained Center Wrapper */}
             <div className="relative h-full w-[47vh] max-w-full flex items-start justify-center rounded-2xl overflow-hidden shadow-xl bg-black">
               <VideoCard
                 ref={(el) => {
@@ -270,7 +271,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 }}
               />
 
-              {/* username + metadata wrapper */}
               <div className="absolute bottom-4 left-4 right-12 text-white z-20 pointer-events-none">
                 {openCommentsFor !== video.id && (
                   <div className="drop-shadow-lg">
@@ -285,13 +285,14 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 )}
               </div>
 
-              {/* Action Buttons - Internal Overlay */}
               <div className="absolute bottom-12 right-2 flex flex-col justify-center items-center gap-2 z-30">
                 <div className="flex flex-col items-center">
                   <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
                     <Eye size={20} className="text-white" fill="currentColor" />
                   </div>
-                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">{video.views || 0}</span>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">
+                    {video.views || 0}
+                  </span>
                 </div>
 
                 <button
@@ -305,7 +306,9 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                       fill="currentColor"
                     />
                   </div>
-                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">{video.likes}</span>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">
+                    {video.likes}
+                  </span>
                 </button>
 
                 <button
@@ -317,6 +320,30 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                   </div>
                   <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">Chat</span>
                 </button>
+
+                {video.uploader?.id && video.uploader.id !== user?.id && (
+                  <button
+                    onClick={() =>
+                      startCall(
+                        {
+                          id: video.uploader.id,
+                          username: video.uploader.username,
+                          first_name: video.uploader.first_name,
+                          last_name: video.uploader.last_name,
+                        },
+                        "audio"
+                      )
+                    }
+                    disabled={isCalling || !isCallReady}
+                    className="flex flex-col items-center hover:scale-110 active:scale-95 transition disabled:cursor-not-allowed disabled:opacity-50"
+                    title={!isCallReady ? "Call connection is getting ready" : "Audio call"}
+                  >
+                    <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
+                      <Phone className="w-5 h-5 text-white" fill="currentColor" />
+                    </div>
+                    <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">Call</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleShare(video)}
@@ -345,13 +372,10 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             </div>
           </div>
         ))}
-      {/* Bottom Spacer to allow last video to snap to top */}
+
+      {loadingMore && <FeedSkeleton count={1} />}
+
       <div className="h-[40vh] w-full shrink-0" />
-      {loadingMore && (
-        <div className="h-20 w-full flex items-center justify-center p-4">
-          <span className="loading loading-spinner loading-md text-primary"></span>
-        </div>
-      )}
     </div>
   );
 };

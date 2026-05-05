@@ -9,6 +9,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { setUnAuthenticated } from '@/app/store/authSlice';
 import { Plus } from "lucide-react";
 import Header from './components/layout/Header';
+import FeedSkeleton from './components/video/FeedSkeleton';
 
 
 function HomePage() {
@@ -55,8 +56,11 @@ function HomePage() {
 
   if (!authChecked || isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen sm:h-[80vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" />
+      <div className="flex min-h-screen flex-col items-center justify-center overflow-x-hidden bg-base-100">
+        <Header />
+        <div className="mt-12 h-[calc(100vh-48px)] w-full overflow-y-hidden">
+          <FeedSkeleton count={2} />
+        </div>
       </div>
     );
   }

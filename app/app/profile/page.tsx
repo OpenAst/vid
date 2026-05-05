@@ -7,6 +7,7 @@ import { RootState, AppDispatch } from '@/app/store/store';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ToastContainer, toast } from 'react-toastify';
+import VideoGridSkeleton from '@/app/components/video/VideoGridSkeleton';
 
 function ProfilePage() {
   const dispatch: AppDispatch = useDispatch();
@@ -263,9 +264,7 @@ function ProfilePage() {
       <div className="w-full max-w-4xl mt-12 px-4 mb-10">
         <h2 className="text-2xl font-bold mb-6 text-base-content border-b border-base-300 pb-2">My Videos</h2>
         {isVideosLoading ? (
-          <div className="flex justify-center py-10">
-            <span className="loading loading-spinner loading-lg"></span>
-          </div>
+          <VideoGridSkeleton count={10} />
         ) : videos.length > 0 ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
             {videos.map((video) => (

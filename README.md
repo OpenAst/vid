@@ -16,6 +16,7 @@ The root [`.env.example`](./.env.example) has a deployment checklist of the vari
 - `frontend` -> public website
 - `backend` -> public API
 - `realtime` -> realtime service
+- `coturn` -> WebRTC STUN/TURN relay for live calls
 - `postgres` -> database
 - `redis` -> Socket.IO adapter for scaling
 
@@ -32,6 +33,10 @@ Use these values as the baseline:
 - `PRIMARY_FRONTEND_URL`
 - `API_BASE_URL`
 - `REALTIME_INTERNAL_SECRET`
+- `TURN_SERVER_URLS`
+- `TURN_SHARED_SECRET`
+- `TURN_CREDENTIAL_TTL_SECONDS`
+- `TURN_REALM`
 - `SOCIAL_AUTH_GOOGLE_OAUTH2_KEY`
 - `SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET`
 - `EMAIL_*`
@@ -46,6 +51,8 @@ For the backend service:
 - `DB_NAME`, `DB_USER`, `DB_PASSWORD`
 - `DB_PORT=5432`
 - `REALTIME_SERVER_INTERNAL_URL=http://realtime:4000`
+- `TURN_SERVER_URLS=stun:turn.your-domain.com:3478,turn:turn.your-domain.com:3478`
+- `TURN_SHARED_SECRET=<same value used by coturn>`
 
 For the frontend service:
 
@@ -82,3 +89,13 @@ If you want to run the same stack locally with Docker, use:
 ```bash
 docker compose -f docker-compose.coolify.yml up --build
 ```
+
+For local live-call testing, use browser-facing TURN URLs:
+
+```bash
+TURN_SERVER_URLS=stun:localhost:3478,turn:localhost:3478
+TURN_SHARED_SECRET=local-turn-secret
+TURN_REALM=localhost
+```
+
+Then open two different browsers or browser profiles, log in as two users, and press `Audio` on a public profile or `Call` on a feed video.
