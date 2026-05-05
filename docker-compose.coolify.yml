@@ -68,19 +68,13 @@ services:
     command:
       - -n
       - --listening-port=3478
-      - --listening-ip=0.0.0.0
       - --log-file=stdout
-      - --simple-log
-      - --no-cli
       - --fingerprint
       - --use-auth-secret
       - --static-auth-secret=${TURN_SHARED_SECRET:-local-turn-secret}
       - --realm=${TURN_REALM:-localhost}
-      - --no-multicast-peers
-      - --no-loopback-peers
       - --min-port=49152
       - --max-port=49200
-      - --verbose
     ports:
       - "3478:3478/tcp"
       - "3478:3478/udp"
