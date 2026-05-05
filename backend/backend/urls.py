@@ -5,6 +5,7 @@ from django.urls import path, include
 from accounts.views import (
   CustomTokenObtainPairView, ProfileUpdateView, PublicProfileView, UserDetailView, home, total_users,
   csrf, LogoutView, ActivateUserView, check_email, get_avatar_url, google_auth_redirect,
+  PushSubscriptionView, PendingIncomingCallView,
   google_auth_start, google_auth_callback
 )
 from video.views import (
@@ -29,6 +30,8 @@ urlpatterns = [
     path('auth/users/profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
     path('users/profile/get_avatar_url/', get_avatar_url, name='get_avatar_url'),
     path('auth/check_email/', check_email, name='check_email'),
+    path('auth/push/subscription/', PushSubscriptionView.as_view(), name='push-subscription'),
+    path('auth/calls/pending/', PendingIncomingCallView.as_view(), name='pending-call'),
     path('users/', total_users, name='total_users'),
     path('auth/csrf/', csrf, name='csrf'),
     path('api/', include('video.urls')),

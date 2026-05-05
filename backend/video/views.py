@@ -28,7 +28,8 @@ from accounts.permissions import IsOwnerOrReadOnly
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser, MultiPartParser
-from accounts.models import UserAccount
+from accounts.models import UserAccount, PushSubscription
+from accounts.push import send_call_push_notification
 
 logger = logging.getLogger(__name__)
 
@@ -436,6 +437,24 @@ class CallStartAPIView(generics.GenericAPIView):
 
         callee = get_object_or_404(UserAccount, pk=callee_id)
         call = Call.objects.create(caller=request.user, callee=callee, call_type=call_type)
+
+        notification_payload = {
+            "title": f"{request.user.username or request.user.first_name or 'Someone'} is calling",
+            "body": f"Incoming {call_type} call on OneClyq",
+            "tag": f"call-{call.id}",
+            "url": "/",
+            "callId": str(call.id),
+            "callType": call_type,
+            "caller": {
+                "id": str(request.user.id),
+                "username": request.user.username,
+                "first_name": request.user.first_name,
+                "last_name": request.user.last_name,
+            },
+        }
+
+        for subscription in PushSubscription.objects.filter(user=callee):
+            send_call_push_notification(subscription, notification_payload)
 
         return Response(CallSerializer(call).data, status=status.HTTP_201_CREATED)
 

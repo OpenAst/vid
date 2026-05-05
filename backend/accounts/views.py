@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, generics, permissions
 from django.db import models
-from .models import UserAccount, Profile
+from .models import UserAccount, Profile, PushSubscription
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import (
@@ -23,6 +23,8 @@ import boto3
 import time
 from django.conf import settings
 from django.http import JsonResponse
+from video.models import Call
+from video.serializers import CallSerializer
 
 
 
@@ -126,6 +128,61 @@ class PublicProfileView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
 
     lookup_field = "username" #Lookup field for username
+
+
+class PushSubscriptionView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        endpoint = request.data.get("endpoint")
+        keys = request.data.get("keys") or {}
+        p256dh = keys.get("p256dh")
+        auth = keys.get("auth")
+
+        if not endpoint or not p256dh or not auth:
+            return Response({"detail": "Invalid push subscription payload"}, status=status.HTTP_400_BAD_REQUEST)
+
+        subscription, _ = PushSubscription.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                "user": request.user,
+                "p256dh": p256dh,
+                "auth": auth,
+            },
+        )
+
+        return Response(
+            {
+                "id": str(subscription.id),
+                "endpoint": subscription.endpoint,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request):
+        endpoint = request.data.get("endpoint")
+        if not endpoint:
+            return Response({"detail": "endpoint is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PendingIncomingCallView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        call = (
+            Call.objects.select_related("caller", "callee")
+            .filter(callee=request.user, status="ringing")
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not call:
+            return Response({"call": None}, status=status.HTTP_200_OK)
+
+        return Response({"call": CallSerializer(call).data}, status=status.HTTP_200_OK)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

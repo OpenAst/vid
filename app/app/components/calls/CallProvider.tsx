@@ -43,6 +43,7 @@ type CallContextValue = {
   startCall: (peer: CallUser, callType: CallType) => Promise<void>;
   isCalling: boolean;
   isCallReady: boolean;
+  activeCallType: CallType | null;
 };
 
 const CallContext = createContext<CallContextValue | null>(null);
@@ -352,12 +353,43 @@ export default function CallProvider({ children }: { children: React.ReactNode }
     };
   }, [cleanupCall, isAuthenticated, token]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !token || activeCallRef.current) return;
+
+    let cancelled = false;
+
+    const loadPendingCall = async () => {
+      const response = await fetch("/api/calls/pending");
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const pendingCall = data?.call;
+      if (!pendingCall || cancelled || activeCallRef.current) return;
+
+      setIncomingCall({
+        callId: pendingCall.id,
+        callType: pendingCall.call_type,
+        calleeId: pendingCall.callee?.id,
+        caller: pendingCall.caller,
+      });
+    };
+
+    void loadPendingCall().catch((error) => {
+      console.error("Failed to load pending call", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, token]);
+
   return (
     <CallContext.Provider
       value={{
         startCall,
         isCalling: Boolean(activeCall),
         isCallReady: isAuthenticated && isSocketConnected,
+        activeCallType: activeCall?.callType ?? null,
       }}
     >
       {children}

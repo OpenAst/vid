@@ -9,6 +9,7 @@ import { fetchUser, refresh, setUnAuthenticated } from '@/app/store/authSlice';
 import Image from 'next/image';
 import { lusitana } from './fonts';
 import CallProvider from '@/app/components/calls/CallProvider';
+import PushRegistration from '@/app/components/calls/PushRegistration';
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -135,6 +136,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
         </aside>
       )}
       <CallProvider>
+        <PushRegistration />
         <div className="w-full h-full mx-auto">{children}</div>
       </CallProvider>
 

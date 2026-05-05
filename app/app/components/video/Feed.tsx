@@ -205,6 +205,12 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       const video = card?.video;
       if (!video) return;
 
+      if (isCalling) {
+        video.pause();
+        video.muted = true;
+        return;
+      }
+
       if (idx === currentIndex) {
         video.muted = card.isMuted;
         if (!card.isUserPaused) {
@@ -220,7 +226,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
         video.muted = true;
       }
     });
-  }, [currentIndex, videoCount]);
+  }, [currentIndex, videoCount, isCalling]);
 
   useEffect(() => {
     if (isError) {

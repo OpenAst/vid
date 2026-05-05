@@ -37,6 +37,9 @@ Use these values as the baseline:
 - `TURN_SHARED_SECRET`
 - `TURN_CREDENTIAL_TTL_SECONDS`
 - `TURN_REALM`
+- `WEB_PUSH_VAPID_PUBLIC_KEY`
+- `WEB_PUSH_VAPID_PRIVATE_KEY`
+- `WEB_PUSH_VAPID_SUBJECT`
 - `SOCIAL_AUTH_GOOGLE_OAUTH2_KEY`
 - `SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET`
 - `EMAIL_*`
@@ -53,6 +56,9 @@ For the backend service:
 - `REALTIME_SERVER_INTERNAL_URL=http://realtime:4000`
 - `TURN_SERVER_URLS=stun:turn.your-domain.com:3478,turn:turn.your-domain.com:3478`
 - `TURN_SHARED_SECRET=<same value used by coturn>`
+- `WEB_PUSH_VAPID_PUBLIC_KEY=<generated VAPID public key>`
+- `WEB_PUSH_VAPID_PRIVATE_KEY=<generated VAPID private key>`
+- `WEB_PUSH_VAPID_SUBJECT=mailto:you@your-domain.com`
 
 For the frontend service:
 
@@ -61,6 +67,7 @@ For the frontend service:
 - `NEXT_PUBLIC_REALTIME_URL=https://realtime.your-domain.com`
 - `NEXT_PUBLIC_SITE_URL=https://www.your-domain.com`
 - `NEXT_PUBLIC_MEDIA_HOST=media.your-domain.com` or `NEXT_PUBLIC_MEDIA_URL=https://media.your-domain.com`
+- `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=<same public VAPID key as backend>`
 
 If you use a cookie domain, set it to the parent domain, for example:
 
@@ -99,3 +106,9 @@ TURN_REALM=localhost
 ```
 
 Then open two different browsers or browser profiles, log in as two users, and press `Audio` on a public profile or `Call` on a feed video.
+
+For push notifications, generate VAPID keys once and use them in both backend and frontend env:
+
+```bash
+npx web-push generate-vapid-keys
+```
