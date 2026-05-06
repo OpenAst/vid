@@ -12,6 +12,21 @@
 :root{
   --purple: rgb(68, 13, 156);
   --orange: rgb(249 115 22);
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --app-header-row-height: 48px;
+  --app-header-height: calc(var(--safe-area-top) + var(--app-header-row-height));
+  --feed-shell-height: calc(100dvh - var(--app-header-height));
+  --feed-bottom-offset: calc(var(--safe-area-bottom) + 16px);
+  --feed-floating-offset: calc(var(--safe-area-bottom) + 16px);
+}
+
+@media (max-width: 390px) {
+  :root {
+    --app-header-row-height: 44px;
+    --feed-bottom-offset: calc(var(--safe-area-bottom) + 28px);
+    --feed-floating-offset: calc(var(--safe-area-bottom) + 72px);
+  }
 }
 
 .no-scrollbar {
@@ -21,4 +36,9 @@
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+html,
+body {
+  min-height: 100dvh;
 }

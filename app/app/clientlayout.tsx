@@ -52,10 +52,10 @@ export default function ClientProvider({ children }: { children: React.ReactNode
   }, [darkMode]);
 
   return (
-    <div className="flex h-screen transition-colors">
+    <div className="flex min-h-[100dvh] transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed top-2 left-[22px] z-50 p-1 rounded-md bg-base-100 shadow-sm border border-base-300"
+          className="md:hidden fixed left-3 top-[calc(var(--safe-area-top)+6px)] z-50 rounded-md border border-base-300 bg-base-100 p-1 shadow-sm"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <svg
@@ -77,7 +77,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
       {isAuthenticated && (
         <aside
           className={`${lusitana.className}
-            w-[80px] md:w-[100px] h-screen border-r border-base-300 fixed left-0 top-0 bg-base-100 z-40 flex flex-col justify-between transition-all duration-300
+            fixed left-0 top-0 z-40 flex min-h-[100dvh] w-[80px] flex-col justify-between border-r border-base-300 bg-base-100 transition-all duration-300 md:w-[100px]
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >

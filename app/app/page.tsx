@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { fetchUser } from '@/app/store/authSlice';
+import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
 import Feed from './components/video/Feed';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { setUnAuthenticated } from '@/app/store/authSlice';
 import { Plus } from "lucide-react";
 import Header from './components/layout/Header';
@@ -13,52 +12,22 @@ import FeedSkeleton from './components/video/FeedSkeleton';
 
 
 function HomePage() {
-  const { isAuthenticated, isLoading, token } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isLoading, isBootstrapped, token } = useSelector((state: RootState) => state.auth);
   const dispatch: AppDispatch = useDispatch();
-  const pathname = usePathname();
-  const [authChecked, setAuthChecked] = useState(false);
   const router = useRouter();
 
-  const [userDetails, setUserDetails] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-  });
-  console.log("The user details", userDetails);
-
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const resultAction = await dispatch(fetchUser());
-        if (fetchUser.fulfilled.match(resultAction)) {
-          const userData = resultAction.payload;
-          setUserDetails({
-            firstName: userData.first_name || '',
-            lastName: userData.last_name || '',
-            email: userData.email || '',
-          });
-        }
-      } catch (error) {
-        console.error('Error loading user details', error);
-      } finally {
-        setAuthChecked(true);
-      }
-    };
-    fetchData();
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname === '/') {
+    if (isBootstrapped && !isLoading && !isAuthenticated) {
       dispatch(setUnAuthenticated());
       router.replace('/login');
     }
-  }, [isLoading, isAuthenticated, pathname, dispatch, router]);
+  }, [isBootstrapped, isLoading, isAuthenticated, dispatch, router]);
 
-  if (!authChecked || isLoading) {
+  if (!isBootstrapped || isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center overflow-x-hidden bg-base-100">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center overflow-x-hidden bg-base-100">
         <Header />
-        <div className="mt-12 h-[calc(100vh-48px)] w-full overflow-y-hidden">
+        <div className="mt-[var(--app-header-height)] h-[var(--feed-shell-height)] w-full overflow-y-hidden">
           <FeedSkeleton count={2} />
         </div>
       </div>
@@ -66,15 +35,16 @@ function HomePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-base-100 transition-colors overflow-x-hidden">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center overflow-x-hidden bg-base-100 transition-colors">
       <Header />
 
-      <div className="mt-12 h-[calc(100vh-48px)] w-full flex flex-col items-center">
+      <div className="mt-[var(--app-header-height)] h-[var(--feed-shell-height)] w-full flex flex-col items-center">
         <Feed jwtToken={token} />
 
         <button
           onClick={() => router.push("/upload")}
-          className="fixed bottom-2 left-1/2 -translate-x-1/2 w-10 h-10 bg-white/90 backdrop-blur-md text-black border border-white/20 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-110 active:scale-95 transition-all z-30"
+          className="fixed left-1/2 z-30 flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border border-white/20 bg-white/90 text-black shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md transition-all hover:scale-110 active:scale-95"
+          style={{ bottom: "var(--feed-floating-offset)" }}
         >
           <Plus className="w-6 h-6" />
         </button>

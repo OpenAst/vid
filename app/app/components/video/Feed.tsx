@@ -248,9 +248,9 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
             ref={(el) => {
               wrapperRefs.current[idx] = el;
             }}
-            className="h-[90vh] w-full snap-start flex items-center justify-center relative mb-2"
+            className="relative mb-2 flex h-[calc(var(--feed-shell-height)-8px)] w-full snap-start items-center justify-center px-2 sm:px-0"
           >
-            <div className="relative h-full w-[47vh] max-w-full flex items-start justify-center rounded-2xl overflow-hidden shadow-xl bg-black">
+            <div className="relative flex h-full w-full max-w-[47vh] items-start justify-center overflow-hidden rounded-[22px] bg-black shadow-xl sm:w-[47vh] sm:rounded-2xl">
               <VideoCard
                 ref={(el) => {
                   videoRefs.current[idx] = el;
@@ -277,7 +277,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 }}
               />
 
-              <div className="absolute bottom-4 left-4 right-12 text-white z-20 pointer-events-none">
+              <div className="pointer-events-none absolute bottom-[calc(var(--feed-bottom-offset)+10px)] left-3 right-14 z-20 text-white sm:bottom-4 sm:left-4 sm:right-12">
                 {openCommentsFor !== video.id && (
                   <div className="drop-shadow-lg">
                     <div className="flex items-center gap-2 text-sm opacity-90">
@@ -291,7 +291,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 )}
               </div>
 
-              <div className="absolute bottom-12 right-2 flex flex-col justify-center items-center gap-2 z-30">
+              <div className="absolute bottom-[calc(var(--feed-bottom-offset)+24px)] right-1 z-30 flex flex-col items-center justify-center gap-2 sm:bottom-12 sm:right-2">
                 <div className="flex flex-col items-center">
                   <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
                     <Eye size={20} className="text-white" fill="currentColor" />

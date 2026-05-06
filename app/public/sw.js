@@ -11,6 +11,9 @@ self.addEventListener("push", (event) => {
     badge: "/user_icon.png",
     tag: payload.tag || "incoming-call",
     renotify: true,
+    requireInteraction: true,
+    silent: false,
+    vibrate: [200, 120, 200, 120, 450],
     data: {
       url: payload.url || "/",
       callId: payload.callId || null,

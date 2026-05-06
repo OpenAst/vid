@@ -26,12 +26,14 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-20 bg-base-100/80 backdrop-blur-md py-2 px-6 flex items-center justify-center border-b border-base-300">
-      <h1 className="relative text-lg font-semibold text-center flex-1 text-base-content">
+    <header className="fixed left-0 right-0 top-0 z-20 border-b border-base-300 bg-base-100/80 px-3 pt-[var(--safe-area-top)] backdrop-blur-md sm:px-6">
+      <div className="relative flex h-[var(--app-header-row-height)] items-center justify-center">
+      <div className="w-12 shrink-0 sm:w-0" />
+      <h1 className="relative flex-1 text-center text-[1.15rem] font-semibold text-base-content sm:text-lg">
         OneClyq
       </h1>
 
-      <div className="absolute right-1">
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 sm:right-1">
         {!showSearch ? (
           <button
             onClick={() => setShowSearch(true)}
@@ -66,6 +68,7 @@ export default function Header() {
             </button>
           </div>
         )}
+      </div>
       </div>
     </header>
   );

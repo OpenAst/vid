@@ -26,7 +26,7 @@ const LoginPage = () => {
 
 
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, isError, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isLoading, isError, isAuthenticated, isBootstrapped } = useSelector((state: RootState) => state.auth);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
   const isLoadingUi = mounted ? isLoading : false;
@@ -109,10 +109,10 @@ const LoginPage = () => {
   }, []);
 
   useEffect(() => {
-    if (mounted && isAuthenticated) {
+    if (mounted && isBootstrapped && isAuthenticated) {
       router.replace('/');
     }
-  }, [mounted, isAuthenticated, router]);
+  }, [mounted, isBootstrapped, isAuthenticated, router]);
 
   return (
     <main className="min-h-screen bg-white text-slate-950 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">

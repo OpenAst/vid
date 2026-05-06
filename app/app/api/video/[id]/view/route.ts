@@ -26,7 +26,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         if (!response.ok) {
             const errText = await response.text();
-            return NextResponse.json({ error: 'Backend error', detail: errText }, { status: response.status });
+            console.error("[Proxy] Backend video view failed", {
+                videoId,
+                status: response.status,
+                detail: errText,
+            });
+
+            return NextResponse.json(
+                {
+                    detail: "View tracking unavailable",
+                    total_views: null,
+                },
+                { status: 200 }
+            );
         }
 
         const data = await response.json();
@@ -35,8 +47,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     } catch (err) {
         console.error('[Proxy] Error in video view proxy:', err);
         return NextResponse.json(
-            { error: 'Failed to record view', detail: err instanceof Error ? err.message : String(err) },
-            { status: 500 }
+            {
+                detail: 'View tracking unavailable',
+                total_views: null,
+                error: err instanceof Error ? err.message : String(err),
+            },
+            { status: 200 }
         );
     }
 }

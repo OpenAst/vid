@@ -44,6 +44,7 @@ interface AuthState {
   user: User | null;
   token: string;
   isLoading: boolean;
+  isBootstrapped: boolean;
   registerSuccess: boolean;
   logged_out: boolean;
   isError: boolean;
@@ -57,6 +58,7 @@ const initialState: AuthState = {
   user: null,
   token: '',
   isLoading: false,
+  isBootstrapped: false,
   registerSuccess: false,
   logged_out: false,
   isError: false,
@@ -279,6 +281,8 @@ const authSlice = createSlice({
     setUnAuthenticated(state) {
       state.isAuthenticated = false;
       state.user = null;
+      state.token = '';
+      state.isBootstrapped = true;
     },
     resetError: (state) => {
       state.isError = false;
@@ -295,10 +299,12 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.access;
         state.isAuthenticated = true;
+        state.isBootstrapped = true;
       })
       .addCase(login.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
+        state.isBootstrapped = true;
       })
       .addCase(register.pending, (state) => {
         state.isLoading = true;
@@ -342,10 +348,15 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.token = action.payload;
         state.isError = false;
+        state.isBootstrapped = true;
       })
       .addCase(refresh.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = '';
+        state.isBootstrapped = true;
       })
       .addCase(fetchUser.pending, (state) => {
         state.isLoading = true;
@@ -354,12 +365,17 @@ const authSlice = createSlice({
       .addCase(fetchUser.rejected, (state) => {
         state.isLoading = false;
         state.isError = true;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = '';
+        state.isBootstrapped = true;
       })
       .addCase(fetchUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
         state.token = action.payload.token;
+        state.isBootstrapped = true;
       })
       .addCase(updateUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -391,8 +407,7 @@ const authSlice = createSlice({
       })
       .addCase(fetchPublicUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.isAuthenticated = true;
+        state.isError = false;
       })
       .addCase(fetchPublicUser.rejected, (state) => {
         state.isLoading = false;

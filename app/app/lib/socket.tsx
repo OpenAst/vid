@@ -19,5 +19,6 @@ export function createRealtimeSocket(token: string): RealtimeSocket {
     autoConnect: false,
     reconnectionDelay: 1000,
     reconnectionAttempts: 5,
+    transports: ["websocket"],
   });
 }
