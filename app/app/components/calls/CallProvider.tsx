@@ -211,7 +211,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const startCall = useCallback(async (peer: CallUser, callType: CallType) => {
-    if (!user) {
+    if (!isAuthenticated || !token) {
       toast.error("Please log in to start a call");
       return;
     }
@@ -256,7 +256,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       cleanupCall();
       toast.error(error instanceof Error ? error.message : "Unable to start call");
     }
-  }, [cleanupCall, createPeerConnection, getLocalStream, isSocketConnected, user]);
+  }, [cleanupCall, createPeerConnection, getLocalStream, isAuthenticated, isSocketConnected, token]);
 
   const acceptIncomingCall = useCallback(async () => {
     if (!incomingCall || !socketRef.current) return;
