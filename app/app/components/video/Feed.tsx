@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchVideos,
@@ -30,7 +30,6 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const isError = useSelector((state: RootState) => state.video.isError);
   const { token, user } = useSelector((state: RootState) => state.auth);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -42,6 +41,8 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
   const socketRef = useRef<RealtimeSocket | null>(null);
+  const currentIndexRef = useRef(0);
+  const rafPlaybackRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -95,7 +96,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     };
   }, [token, dispatch, user?.id]);
 
-  const handleLikeVideo = (video: Video) => {
+  const handleLikeVideo = useCallback((video: Video) => {
     if (!user || !socketRef.current) return;
 
     const liked = video.user_vote !== 1;
@@ -107,9 +108,9 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     );
 
     socketRef.current.emit("video-likes:like_video", { videoId: video.id });
-  };
+  }, [dispatch, user]);
 
-  const handleShare = async (video: Video) => {
+  const handleShare = useCallback(async (video: Video) => {
     const shareData = {
       title: video.title,
       text: `Check out this video: ${video.title}`,
@@ -129,7 +130,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
         toast.error("Failed to share");
       }
     }
-  };
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -152,7 +153,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     return () => window.clearTimeout(id);
   }, [dispatch, search, cacheQuery]);
 
-  const fetchMoreVideos = () => {
+  const fetchMoreVideos = useCallback(() => {
     if (next && !isLoading && !loadingMore) {
       setLoadingMore(true);
       const nextPage = page + 1;
@@ -160,19 +161,60 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
       dispatch(fetchVideos({ page: nextPage, limit: 10, search: search || "", append: true }))
         .finally(() => setLoadingMore(false));
     }
-  };
+  }, [dispatch, isLoading, loadingMore, next, page, search]);
+
+  const syncPlaybackForIndex = useCallback((targetIndex: number) => {
+    currentIndexRef.current = targetIndex;
+
+    videoRefs.current.forEach((card, idx) => {
+      const video = card?.video;
+      if (!video) return;
+
+      if (isCalling) {
+        video.pause();
+        video.muted = true;
+        return;
+      }
+
+      if (idx === targetIndex) {
+        video.muted = card.isMuted;
+        if (!card.isUserPaused) {
+          void video.play().catch((error) => {
+            if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
+              console.error("Failed to start video playback:", error);
+            }
+          });
+        }
+      } else {
+        video.pause();
+        video.currentTime = 0;
+        video.muted = true;
+      }
+    });
+  }, [isCalling]);
 
   useEffect(() => {
     if (!Array.isArray(videos) || videos.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const indexAttr = entry.target.getAttribute("data-index");
-            const index = indexAttr ? Number(indexAttr) : NaN;
-            if (!Number.isNaN(index)) setCurrentIndex(index);
-          }
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+        const bestEntry = visibleEntries[0];
+        if (!bestEntry) return;
+
+        const indexAttr = bestEntry.target.getAttribute("data-index");
+        const nextIndex = indexAttr ? Number(indexAttr) : NaN;
+        if (Number.isNaN(nextIndex) || nextIndex === currentIndexRef.current) return;
+
+        if (rafPlaybackRef.current) {
+          cancelAnimationFrame(rafPlaybackRef.current);
+        }
+
+        rafPlaybackRef.current = requestAnimationFrame(() => {
+          syncPlaybackForIndex(nextIndex);
         });
       },
       { threshold: 0.65 }
@@ -195,38 +237,18 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     }
 
     return () => {
+      if (rafPlaybackRef.current) {
+        cancelAnimationFrame(rafPlaybackRef.current);
+        rafPlaybackRef.current = null;
+      }
       observer.disconnect();
       lastElementObserver.disconnect();
     };
-  }, [videos, next, isLoading, loadingMore, page, search, dispatch]);
+  }, [fetchMoreVideos, loadingMore, next, search, syncPlaybackForIndex, videos]);
 
   useEffect(() => {
-    videoRefs.current.forEach((card, idx) => {
-      const video = card?.video;
-      if (!video) return;
-
-      if (isCalling) {
-        video.pause();
-        video.muted = true;
-        return;
-      }
-
-      if (idx === currentIndex) {
-        video.muted = card.isMuted;
-        if (!card.isUserPaused) {
-          void video.play().catch((error) => {
-            if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
-              console.error("Failed to start video playback:", error);
-            }
-          });
-        }
-      } else {
-        video.pause();
-        video.currentTime = 0;
-        video.muted = true;
-      }
-    });
-  }, [currentIndex, videoCount, isCalling]);
+    syncPlaybackForIndex(currentIndexRef.current);
+  }, [isCalling, videoCount, syncPlaybackForIndex]);
 
   useEffect(() => {
     if (isError) {

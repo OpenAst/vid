@@ -1,6 +1,6 @@
 "use client";
 
-import React, { forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
+import React, { memo, forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VolumeX, Volume2, Play, Pause } from "lucide-react";
 
@@ -22,7 +22,7 @@ export type VideoCardHandle = {
   isMuted: boolean;
 };
 
-const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
+const VideoCard = memo(forwardRef<VideoCardHandle, VideoCardProps>(
   (
     {
       id,
@@ -389,7 +389,7 @@ const VideoCard = forwardRef<VideoCardHandle, VideoCardProps>(
       </motion.div>
     );
   }
-);
+));
 
 VideoCard.displayName = "VideoCard";
 
