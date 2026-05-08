@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { lusitana } from './fonts';
 import CallProvider from '@/app/components/calls/CallProvider';
 import PushRegistration from '@/app/components/calls/PushRegistration';
+import { MessageCircle } from 'lucide-react';
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -108,6 +109,15 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             >
               <Image src="/file.svg" alt="Upload" width={22} height={22} className="dark:invert" />
               <span className="hidden md:block text-xs mt-1">Upload</span>
+            </Link>
+
+            <Link
+              href="/messages"
+              className="flex flex-col items-center justify-center p-2 hover:bg-base-200 rounded text-xs transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <MessageCircle size={22} />
+              <span className="hidden md:block text-xs mt-1">Messages</span>
             </Link>
 
             <Link

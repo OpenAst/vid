@@ -1,5 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function extractErrorMessage(payload: unknown): string {
+  if (typeof payload === "string" && payload.trim()) {
+    return payload;
+  }
+
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+
+    if (typeof record.detail === "string" && record.detail.trim()) {
+      return record.detail;
+    }
+
+    if (typeof record.error === "string" && record.error.trim()) {
+      return record.error;
+    }
+
+    if (typeof record.details === "string" && record.details.trim()) {
+      return record.details;
+    }
+
+    for (const value of Object.values(record)) {
+      if (Array.isArray(value) && value.length > 0) {
+        const first = value[0];
+        if (typeof first === "string" && first.trim()) {
+          return first;
+        }
+      }
+    }
+  }
+
+  return "Metadata upload failed";
+}
 
 export async function POST(req: NextRequest) {
   const csrfToken = req.cookies.get('csrftoken')?.value;
@@ -12,11 +44,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { title, description, file_url, music_url } = await req.json();
+  const { title, description, file_url, music_url, skill_category } = await req.json();
 
   const body = JSON.stringify({
     title,
     description,
+    skill_category: skill_category || "general",
     file_url,
     music_url
   });
@@ -36,9 +69,12 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
 
     if (!res.ok) {
+      const errorMessage = extractErrorMessage(data);
       return NextResponse.json(
-        { error: 'Metadata upload failed', 
-        details: data}, 
+        {
+          error: errorMessage,
+          details: data,
+        },
         {status: res.status });
     }
     console.log('Upload response', data);

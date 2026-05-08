@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
-import Feed from './components/video/Feed';
+import Feed from '@/app/components/video/Feed';
 import { useRouter } from 'next/navigation';
 import { setUnAuthenticated } from '@/app/store/authSlice';
 import { Plus } from "lucide-react";

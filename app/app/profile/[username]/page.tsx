@@ -110,6 +110,13 @@ function PublicProfilePage() {
         <p className='text-base-content/70'>{userDetails.followers} followers</p>
         {isAuthenticated && userDetails.id && !isOwnProfile && (
           <div className="mt-4 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.push(`/messages?user=${userDetails.id}`)}
+              className="btn btn-sm gap-2"
+            >
+              Message
+            </button>
             <CallButton
               peer={{
                 id: userDetails.id,

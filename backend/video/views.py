@@ -106,6 +106,7 @@ class VideoUploadView(generics.CreateAPIView):
             data = {
                 "title": request.data.get("title"),
                 "description": request.data.get("description", ""),
+                "skill_category": request.data.get("skill_category") or "general",
                 "file_url": request.data.get("file_url"),
                 "music_url": request.data.get("music_url"),
             }
@@ -499,6 +500,14 @@ class TurnCredentialsAPIView(generics.GenericAPIView):
         ttl = settings.TURN_CREDENTIAL_TTL_SECONDS
         expiry = int(time.time()) + ttl
         username = f"{expiry}:{request.user.id}"
+        urls = settings.TURN_SERVER_URLS
+
+        if isinstance(urls, str):
+            urls = [item.strip() for item in urls.split(",") if item.strip()]
+
+        stun_urls = [url for url in urls if isinstance(url, str) and url.startswith("stun:")]
+        turn_urls = [url for url in urls if isinstance(url, str) and url.startswith("turn:")]
+        ice_servers = []
 
         if settings.TURN_SHARED_SECRET:
             digest = hmac.new(
@@ -510,17 +519,23 @@ class TurnCredentialsAPIView(generics.GenericAPIView):
         else:
             credential = ""
 
-        ice_server = {
-            "urls": settings.TURN_SERVER_URLS,
-            "username": username,
-            "credential": credential,
-        }
+        if stun_urls:
+            ice_servers.append({
+                "urls": stun_urls,
+            })
+
+        if turn_urls and username and credential:
+            ice_servers.append({
+                "urls": turn_urls,
+                "username": username,
+                "credential": credential,
+            })
 
         return Response(
             {
                 "ttl": ttl,
                 "expires_at": expiry,
-                "iceServers": [ice_server],
+                "iceServers": ice_servers,
             },
             status=status.HTTP_200_OK,
         )
@@ -749,41 +764,42 @@ def cleanup_multipart_upload(request):
 
 def extract_and_upload_thumbnail(video_url, video_instance):
     """
-    Downloads the first part of the video, extracts a thumbnail using ffmpeg,
+    Downloads the video, extracts a thumbnail using ffmpeg,
     and uploads it to R2.
     """
     temp_video = None
     temp_thumb = None
     try:
         # Create temp files
-        temp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+        temp_video = download_to_temp_file(video_url, ".mp4")
         temp_thumb = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False).name
-
-        # Download video (first 2MB should be enough for metadata and frame at 3s)
-        # However, for simplicity and reliability with S3 urls, we'll download enough or use stream if ffmpeg supports it.
-        # Deep diving: ffmpeg can take a URL directly, but it might be slow or fail without headers.
-        # For now, let's download the first bit using requests.
-        response = requests.get(video_url, stream=True, timeout=10)
-        with open(temp_video, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024*1024):
-                f.write(chunk)
-                if f.tell() > 5 * 1024 * 1024: # 5MB limit for thumbnail extraction
-                    break
         
         # Extract frame
-        subprocess.call([
-            'ffmpeg',
-            '-y', # Overwrite 
-            '-i', temp_video,
-            '-ss', '00:00:03.000',
-            '-vframes', '1',
-            '-f', 'image2',
-            temp_thumb
-        ])
+        result = subprocess.run(
+            [
+                'ffmpeg',
+                '-y',
+                '-ss',
+                '00:00:03.000',
+                '-i',
+                temp_video,
+                '-vframes',
+                '1',
+                '-f',
+                'image2',
+                temp_thumb,
+            ],
+            capture_output=True,
+            text=True,
+        )
 
         # Verify thumb was created
-        if not os.path.exists(temp_thumb) or os.path.getsize(temp_thumb) == 0:
-            print(f"Thumbnail extraction failed for video {video_instance.id}")
+        if result.returncode != 0 or not os.path.exists(temp_thumb) or os.path.getsize(temp_thumb) == 0:
+            logger.error(
+                "Thumbnail extraction failed for video %s: %s",
+                video_instance.id,
+                (result.stderr or result.stdout or "ffmpeg returned no output").strip(),
+            )
             return
 
         # Upload to S3/R2
@@ -811,10 +827,10 @@ def extract_and_upload_thumbnail(video_url, video_instance):
         public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
         video_instance.thumbnail = public_url
         video_instance.save()
-        print(f"Successfully generated and uploaded thumbnail for {video_instance.id}")
+        logger.info("Successfully generated and uploaded thumbnail for %s", video_instance.id)
 
     except Exception as e:
-        print(f"Error in extract_and_upload_thumbnail: {str(e)}")
+        logger.exception("Error in extract_and_upload_thumbnail for video %s: %s", video_instance.id, str(e))
     finally:
         # Cleanup
         try:

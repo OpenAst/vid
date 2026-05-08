@@ -22,7 +22,7 @@ export type VideoCardHandle = {
   isMuted: boolean;
 };
 
-const VideoCard = memo(forwardRef<VideoCardHandle, VideoCardProps>(
+const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
   (
     {
       id,
@@ -389,8 +389,11 @@ const VideoCard = memo(forwardRef<VideoCardHandle, VideoCardProps>(
       </motion.div>
     );
   }
-));
+);
 
-VideoCard.displayName = "VideoCard";
+VideoCardBase.displayName = "VideoCard";
+
+const VideoCard = memo(VideoCardBase);
+VideoCard.displayName = "MemoizedVideoCard";
 
 export default VideoCard;

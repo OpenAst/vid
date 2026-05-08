@@ -9,6 +9,7 @@ class Video(models.Model):
   uploader = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="videos")
   title = models.CharField(max_length=255)
   description = models.TextField(blank=True)
+  skill_category = models.CharField(max_length=100, default="general")
   file_url = models.URLField(max_length=1000)
   music_url = models.URLField(max_length=1000, blank=True, null=True)
   processing_status = models.CharField(max_length=32, default="ready")

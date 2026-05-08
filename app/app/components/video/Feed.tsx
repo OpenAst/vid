@@ -10,15 +10,17 @@ import {
   applyOptimisticView,
 } from "../../store/videoSlice";
 import { RootState, AppDispatch } from "../../store/store";
-import VideoCard, { VideoCardHandle } from "./VideoCard";
+import VideoCard, { type VideoCardHandle } from "./VideoCard";
 import CommentsDrawer from "./CommentsDrawer";
 import FeedSkeleton from "./FeedSkeleton";
-import { Heart, Eye, Share2, MessageCircle, Phone } from "lucide-react";
+import { Heart, Eye, Share2, MessageCircle, Bookmark } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createRealtimeSocket, type RealtimeSocket } from "@/app/lib/socket";
 import toast from "react-hot-toast";
-import { Video } from "../../store/videoSlice";
+import { type Video } from "../../store/videoSlice";
 import { useCall } from "@/app/components/calls/CallProvider";
+
+const FEED_BOOKMARKS_STORAGE_KEY = "feed_bookmarked_videos";
 
 const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -31,12 +33,13 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const { token, user } = useSelector((state: RootState) => state.auth);
 
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
+  const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const next = useSelector((state: RootState) => state.video.next);
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
   const videoCount = Array.isArray(videos) ? videos.length : 0;
-  const { startCall, isCalling, isCallReady } = useCall();
+  const { isCalling } = useCall();
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -46,7 +49,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
 
   useEffect(() => {
     if (!token) return;
-
+    
     const socket = createRealtimeSocket(token);
     socketRef.current = socket;
 
@@ -96,6 +99,22 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     };
   }, [token, dispatch, user?.id]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const saved = window.localStorage.getItem(FEED_BOOKMARKS_STORAGE_KEY);
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        setBookmarkedVideoIds(new Set(parsed.filter((id): id is string => typeof id === "string")));
+      }
+    } catch (error) {
+      console.error("Failed to load feed bookmarks:", error);
+    }
+  }, []);
+
   const handleLikeVideo = useCallback((video: Video) => {
     if (!user || !socketRef.current) return;
 
@@ -130,6 +149,33 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
         toast.error("Failed to share");
       }
     }
+  }, []);
+
+  const handleBookmarkToggle = useCallback((video: Video) => {
+    setBookmarkedVideoIds((prev) => {
+      const nextBookmarks = new Set(prev);
+      const isBookmarked = nextBookmarks.has(video.id);
+
+      if (isBookmarked) {
+        nextBookmarks.delete(video.id);
+      } else {
+        nextBookmarks.add(video.id);
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(
+            FEED_BOOKMARKS_STORAGE_KEY,
+            JSON.stringify(Array.from(nextBookmarks))
+          );
+        } catch (error) {
+          console.error("Failed to save feed bookmarks:", error);
+        }
+      }
+
+      toast.success(isBookmarked ? "Removed from bookmarks" : "Saved to bookmarks");
+      return nextBookmarks;
+    });
   }, []);
 
   useEffect(() => {
@@ -349,29 +395,25 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                   <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">Chat</span>
                 </button>
 
-                {video.uploader?.id && video.uploader.id !== user?.id && (
-                  <button
-                    onClick={() =>
-                      startCall(
-                        {
-                          id: video.uploader.id,
-                          username: video.uploader.username,
-                          first_name: video.uploader.first_name,
-                          last_name: video.uploader.last_name,
-                        },
-                        "audio"
-                      )
-                    }
-                    disabled={isCalling || !isCallReady}
-                    className="flex flex-col items-center hover:scale-110 active:scale-95 transition disabled:cursor-not-allowed disabled:opacity-50"
-                    title={!isCallReady ? "Call connection is getting ready" : "Audio call"}
-                  >
-                    <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
-                      <Phone className="w-5 h-5 text-white" fill="currentColor" />
-                    </div>
-                    <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">Call</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => handleBookmarkToggle(video)}
+                  className="flex flex-col items-center hover:scale-110 active:scale-95 transition"
+                  title={bookmarkedVideoIds.has(video.id) ? "Remove bookmark" : "Save video"}
+                >
+                  <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
+                    <Bookmark
+                      className={
+                        bookmarkedVideoIds.has(video.id)
+                          ? "w-5 h-5 text-amber-300 fill-amber-300"
+                          : "w-5 h-5 text-white"
+                      }
+                      fill={bookmarkedVideoIds.has(video.id) ? "currentColor" : "none"}
+                    />
+                  </div>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">
+                    {bookmarkedVideoIds.has(video.id) ? "Saved" : "Save"}
+                  </span>
+                </button>
 
                 <button
                   onClick={() => handleShare(video)}

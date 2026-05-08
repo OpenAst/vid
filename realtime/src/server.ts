@@ -21,10 +21,12 @@ type ClientToServerEvents = {
   "comments:vote_comment": (payload: { roomId: string; commentId: string }) => void;
   "video-likes:join": () => void;
   "video-likes:like_video": (payload: { videoId: string }) => void;
+  "messages:send": (payload: DirectMessageRelayPayload) => void;
   "call:invite": (payload: CallInvitePayload) => void;
   "call:accept": (payload: CallPeerPayload) => void;
   "call:reject": (payload: CallPeerPayload) => void;
   "call:end": (payload: CallPeerPayload) => void;
+  "call:media-update": (payload: CallPeerPayload & { callType: CallType }) => void;
   "call:offer": (payload: CallSignalPayload) => void;
   "call:answer": (payload: CallSignalPayload) => void;
   "call:ice-candidate": (payload: CallSignalPayload) => void;
@@ -49,10 +51,12 @@ type ServerToClientEvents = {
     actorUserId: string;
   }) => void;
   video_view_updated: (payload: { videoId: string; views: number }) => void;
+  "messages:new": (payload: DirectMessageRelayPayload & { fromUserId: string }) => void;
   "call:incoming": (payload: CallInvitePayload & { caller: RealtimeUser }) => void;
   "call:accepted": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
   "call:rejected": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
   "call:ended": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
+  "call:media-updated": (payload: CallPeerPayload & { actor: RealtimeUser; callType: CallType }) => void;
   "call:offer": (payload: CallSignalPayload & { fromUserId: string }) => void;
   "call:answer": (payload: CallSignalPayload & { fromUserId: string }) => void;
   "call:ice-candidate": (payload: CallSignalPayload & { fromUserId: string }) => void;
@@ -77,6 +81,12 @@ type CallSignalPayload = {
   callId: string;
   toUserId: string;
   signal: unknown;
+};
+
+type DirectMessageRelayPayload = {
+  conversationId: string;
+  toUserId: string;
+  message: unknown;
 };
 
 type InterServerEvents = Record<string, never>;
@@ -570,7 +580,7 @@ function handleCallInvite(socket: RealtimeSocket, payload: CallInvitePayload) {
 function handleCallPeerEvent(
   socket: RealtimeSocket,
   payload: CallPeerPayload,
-  eventName: "call:accepted" | "call:rejected" | "call:ended"
+  eventName: "call:accepted" | "call:rejected" | "call:ended" | "call:media-updated"
 ) {
   if (!validateCallId(socket, payload.callId) || !validateUserId(socket, payload.peerId)) return;
 
@@ -597,6 +607,31 @@ function handleCallSignal(
   socket.to(userRoom(payload.toUserId)).emit(eventName, {
     ...payload,
     fromUserId: socket.data.user.id,
+  });
+}
+
+function handleDirectMessageRelay(socket: RealtimeSocket, payload: DirectMessageRelayPayload) {
+  if (!isUuid(payload.conversationId)) {
+    emitError(socket, "Invalid conversation id");
+    return;
+  }
+
+  if (!validateUserId(socket, payload.toUserId)) {
+    return;
+  }
+
+  const eventPayload = {
+    ...payload,
+    fromUserId: socket.data.user.id,
+  };
+
+  socket.to(userRoom(payload.toUserId)).emit("messages:new", eventPayload);
+  socket.to(userRoom(socket.data.user.id)).emit("messages:new", eventPayload);
+  logInfo("Direct message relayed", {
+    connectionId: socket.data.connectionId,
+    fromUserId: socket.data.user.id,
+    toUserId: payload.toUserId,
+    conversationId: payload.conversationId,
   });
 }
 
@@ -737,6 +772,10 @@ export async function createRealtimeServer() {
       await handleLikeVideo(socket, videoId);
     });
 
+    socket.on("messages:send", (payload) => {
+      handleDirectMessageRelay(socket, payload);
+    });
+
     socket.on("call:invite", (payload) => {
       handleCallInvite(socket, payload);
     });
@@ -751,6 +790,10 @@ export async function createRealtimeServer() {
 
     socket.on("call:end", (payload) => {
       handleCallPeerEvent(socket, payload, "call:ended");
+    });
+
+    socket.on("call:media-update", (payload) => {
+      handleCallPeerEvent(socket, payload, "call:media-updated");
     });
 
     socket.on("call:offer", (payload) => {

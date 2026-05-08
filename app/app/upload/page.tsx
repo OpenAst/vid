@@ -256,6 +256,7 @@ const UploadVideo = () => {
       const metadata = {
         title: formData.title,
         description: formData.description || '',
+        skill_category: "general",
         file_url: uploadedVideo.publicUrl,
         music_url: uploadedMusic?.publicUrl || null,
         file_key: uploadedVideo.objectKey,
@@ -276,7 +277,11 @@ const UploadVideo = () => {
 
       if (!metaRes.ok) {
         const errorData = await metaRes.json();
-        throw new Error(errorData.error || "Failed to save metadata");
+        const details =
+          errorData?.details?.detail ||
+          errorData?.details?.error ||
+          (typeof errorData?.details === "string" ? errorData.details : "");
+        throw new Error(details || errorData.error || "Failed to save metadata");
       }
 
       const metaDataRes = await metaRes.json();

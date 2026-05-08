@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserAccount
+from .models import UserAccount, DirectConversation, DirectMessage
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
@@ -128,3 +128,44 @@ class UserDeleteSerializer(serializers.ModelSerializer):
     user = UserAccount.objects.get(id=validated_data['id'])
     user.delete()
     return user
+
+
+class DirectMessageSerializer(serializers.ModelSerializer):
+  sender = UserPublicSerializer(read_only=True)
+  is_own = serializers.SerializerMethodField()
+
+  class Meta:
+    model = DirectMessage
+    fields = ["id", "sender", "body", "created_at", "read_at", "is_own"]
+    read_only_fields = ["id", "sender", "created_at", "read_at", "is_own"]
+
+  def get_is_own(self, obj):
+    request = self.context.get("request")
+    return bool(request and request.user.is_authenticated and obj.sender_id == request.user.id)
+
+
+class DirectConversationSerializer(serializers.ModelSerializer):
+  other_user = serializers.SerializerMethodField()
+  last_message = serializers.SerializerMethodField()
+  last_message_at = serializers.DateTimeField(read_only=True)
+
+  class Meta:
+    model = DirectConversation
+    fields = ["id", "other_user", "last_message", "last_message_at", "created_at"]
+    read_only_fields = ["id", "other_user", "last_message", "last_message_at", "created_at"]
+
+  def get_other_user(self, obj):
+    request = self.context.get("request")
+    if not request or not request.user.is_authenticated:
+      return None
+
+    other_user = obj.user_two if obj.user_one_id == request.user.id else obj.user_one
+    return UserPublicSerializer(other_user, context=self.context).data
+
+  def get_last_message(self, obj):
+    message = getattr(obj, "_prefetched_last_message", None)
+    if message is None:
+      message = obj.messages.select_related("sender", "sender__profile").order_by("-created_at").first()
+    if not message:
+      return None
+    return DirectMessageSerializer(message, context=self.context).data

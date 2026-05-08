@@ -6,7 +6,8 @@ from accounts.views import (
   CustomTokenObtainPairView, ProfileUpdateView, PublicProfileView, UserDetailView, home, total_users,
   csrf, LogoutView, ActivateUserView, check_email, get_avatar_url, google_auth_redirect,
   PushSubscriptionView, PendingIncomingCallView,
-  google_auth_start, google_auth_callback
+  google_auth_start, google_auth_callback, DirectConversationListCreateAPIView,
+  DirectConversationMessagesAPIView, UserDirectoryAPIView
 )
 from video.views import (
   get_presigned_part_url, initiate_multipart_upload,
@@ -32,6 +33,9 @@ urlpatterns = [
     path('auth/check_email/', check_email, name='check_email'),
     path('auth/push/subscription/', PushSubscriptionView.as_view(), name='push-subscription'),
     path('auth/calls/pending/', PendingIncomingCallView.as_view(), name='pending-call'),
+    path('auth/messages/conversations/', DirectConversationListCreateAPIView.as_view(), name='message-conversations'),
+    path('auth/messages/conversations/<uuid:conversation_id>/messages/', DirectConversationMessagesAPIView.as_view(), name='message-conversation-messages'),
+    path('auth/messages/users/', UserDirectoryAPIView.as_view(), name='message-users'),
     path('users/', total_users, name='total_users'),
     path('auth/csrf/', csrf, name='csrf'),
     path('api/', include('video.urls')),

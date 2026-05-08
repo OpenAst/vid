@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Phone, PhoneOff, Video, Mic, MicOff } from "lucide-react";
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Minus, Maximize2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store/store";
 import { createRealtimeSocket, type RealtimeSocket } from "@/app/lib/socket";
@@ -52,7 +52,19 @@ async function getTurnIceServers() {
   const response = await fetch("/api/calls/turn-credentials");
   if (!response.ok) return [];
   const data = await response.json();
-  return Array.isArray(data.iceServers) ? data.iceServers : [];
+  if (!Array.isArray(data.iceServers)) return [];
+
+  return data.iceServers.filter((server: { urls?: unknown; username?: unknown; credential?: unknown }) => {
+    const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+    const hasTurnUrl = urls.some((url) => typeof url === "string" && url.startsWith("turn:"));
+
+    if (!hasTurnUrl) {
+      return urls.some((url) => typeof url === "string" && url.startsWith("stun:"));
+    }
+
+    return typeof server.username === "string" && server.username.length > 0
+      && typeof server.credential === "string" && server.credential.length > 0;
+  });
 }
 
 export function useCall() {
@@ -71,6 +83,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [isCallMinimized, setIsCallMinimized] = useState(false);
 
   const socketRef = useRef<RealtimeSocket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -173,6 +186,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
     setIncomingCall(null);
     setActiveCall(null);
     setIsMicMuted(false);
+    setIsCallMinimized(false);
   }, [stopRingtone]);
 
   const createPeerConnection = useCallback(async (callId: string, peerId: string) => {
@@ -197,6 +211,13 @@ export default function CallProvider({ children }: { children: React.ReactNode }
     return peerConnection;
   }, []);
 
+  const syncLocalStreamState = useCallback((stream: MediaStream) => {
+    const nextStream = new MediaStream(stream.getTracks());
+    localStreamRef.current = nextStream;
+    setLocalStream(nextStream);
+    return nextStream;
+  }, []);
+
   const getLocalStream = useCallback(async (callType: CallType) => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Calls are not supported in this browser");
@@ -206,9 +227,88 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       audio: true,
       video: callType === "video",
     });
+    localStreamRef.current = stream;
     setLocalStream(stream);
     return stream;
   }, []);
+
+  const renegotiateCall = useCallback(async () => {
+    const call = activeCallRef.current;
+    const peerConnection = peerConnectionRef.current;
+    const socket = socketRef.current;
+
+    if (!call || !peerConnection || !socket) return;
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit("call:offer", {
+      callId: call.callId,
+      toUserId: call.peer.id,
+      signal: offer,
+    });
+  }, []);
+
+  const toggleVideoMode = useCallback(async () => {
+    const call = activeCallRef.current;
+    const peerConnection = peerConnectionRef.current;
+    const socket = socketRef.current;
+    const stream = localStreamRef.current;
+
+    if (!call || !peerConnection || !socket || !stream) return;
+
+    const nextCallType: CallType = call.callType === "video" ? "audio" : "video";
+
+    try {
+      if (nextCallType === "video") {
+        const cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+        const videoTrack = cameraStream.getVideoTracks()[0];
+        if (!videoTrack) {
+          throw new Error("Unable to access camera");
+        }
+
+        const existingVideoSender = peerConnection.getSenders().find((sender) => sender.track?.kind === "video");
+        if (existingVideoSender) {
+          await existingVideoSender.replaceTrack(videoTrack);
+        } else {
+          stream.addTrack(videoTrack);
+          peerConnection.addTrack(videoTrack, stream);
+        }
+
+        if (!stream.getVideoTracks().includes(videoTrack)) {
+          stream.addTrack(videoTrack);
+        }
+        syncLocalStreamState(stream);
+      } else {
+        const videoSenders = peerConnection.getSenders().filter((sender) => sender.track?.kind === "video");
+        videoSenders.forEach((sender) => {
+          try {
+            peerConnection.removeTrack(sender);
+          } catch {
+            sender.track?.stop();
+          }
+        });
+
+        stream.getVideoTracks().forEach((track) => {
+          track.stop();
+          stream.removeTrack(track);
+        });
+        syncLocalStreamState(stream);
+      }
+
+      setActiveCall((current) => current ? { ...current, callType: nextCallType } : current);
+      socket.emit("call:media-update", {
+        callId: call.callId,
+        peerId: call.peer.id,
+        callType: nextCallType,
+      });
+      await renegotiateCall();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to switch call mode");
+    }
+  }, [renegotiateCall, syncLocalStreamState]);
 
   const startCall = useCallback(async (peer: CallUser, callType: CallType) => {
     if (!isAuthenticated || !token) {
@@ -242,6 +342,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
         status: "ringing",
       };
       setActiveCall(nextCall);
+      setIsCallMinimized(false);
 
       const stream = await getLocalStream(callType);
       const peerConnection = await createPeerConnection(call.id, peer.id);
@@ -271,6 +372,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
         status: "connecting",
       };
       setActiveCall(nextCall);
+      setIsCallMinimized(false);
       setIncomingCall(null);
 
       const stream = await getLocalStream(incomingCall.callType);
@@ -357,13 +459,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       if (!call || call.role !== "caller" || !peerConnection || !socketRef.current) return;
 
       setActiveCall({ ...call, status: "connecting" });
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      socketRef.current.emit("call:offer", {
-        callId: call.callId,
-        toUserId: call.peer.id,
-        signal: offer,
-      });
+      await renegotiateCall();
     });
 
     socket.on("call:rejected", () => {
@@ -373,6 +469,12 @@ export default function CallProvider({ children }: { children: React.ReactNode }
 
     socket.on("call:ended", () => {
       cleanupCall();
+    });
+
+    socket.on("call:media-updated", (payload: { callId: string; callType: CallType }) => {
+      const call = activeCallRef.current;
+      if (!call || call.callId !== payload.callId) return;
+      setActiveCall({ ...call, callType: payload.callType });
     });
 
     socket.on("call:offer", async (payload: { callId: string; fromUserId: string; signal: RTCSessionDescriptionInit }) => {
@@ -411,7 +513,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       socketRef.current = null;
       setIsSocketConnected(false);
     };
-  }, [cleanupCall, isAuthenticated, token]);
+  }, [cleanupCall, isAuthenticated, renegotiateCall, token]);
 
   useEffect(() => {
     if (!isAuthenticated || !token || activeCallRef.current) return;
@@ -452,6 +554,9 @@ export default function CallProvider({ children }: { children: React.ReactNode }
     stopRingtone();
   }, [activeCall, incomingCall, startRingtone, stopRingtone]);
 
+  const localHasVideo = Boolean(localStream?.getVideoTracks().some((track) => track.readyState === "live"));
+  const remoteHasVideo = Boolean(remoteStream?.getVideoTracks().some((track) => track.readyState === "live"));
+
   return (
     <CallContext.Provider
       value={{
@@ -488,49 +593,127 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       )}
 
       {activeCall && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4 text-white">
-          <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
-            <div className="relative aspect-video bg-neutral-900">
-              {activeCall.callType === "video" ? (
-                <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-3xl font-bold">
-                    {(activeCall.peer.username || "U").slice(0, 1).toUpperCase()}
-                  </div>
-                  <p className="mt-4 text-lg font-semibold">@{activeCall.peer.username || "user"}</p>
-                  <p className="text-sm text-white/60">{activeCall.status}</p>
+        <>
+          <audio ref={remoteAudioRef} autoPlay />
+
+          {isCallMinimized ? (
+            <div className="fixed right-3 top-[calc(var(--app-header-height)+6px)] z-[90] w-auto max-w-[calc(100vw-24px)] overflow-hidden rounded-full border border-white/10 bg-neutral-950/95 text-white shadow-2xl backdrop-blur md:right-4">
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCallMinimized(false)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/8 text-[11px] font-semibold text-white/85"
+                  aria-label="Open call"
+                >
+                  {(activeCall.peer.username || "U").slice(0, 1).toUpperCase()}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCallMinimized(false)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <p className="truncate text-[12px] font-semibold leading-4">@{activeCall.peer.username || "user"}</p>
+                  <p className="truncate text-[10px] uppercase tracking-wide text-white/55">
+                    {activeCall.callType} · {activeCall.status}
+                  </p>
+                </button>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={toggleVideoMode}
+                    className="btn btn-circle btn-xs btn-outline border-white/15 text-white hover:bg-white/10"
+                    aria-label={activeCall.callType === "video" ? "Switch to audio call" : "Switch to video call"}
+                  >
+                    {activeCall.callType === "video" ? <VideoOff size={12} /> : <Video size={12} />}
+                  </button>
+                  <button
+                    onClick={toggleMic}
+                    className="btn btn-circle btn-xs btn-outline border-white/15 text-white hover:bg-white/10"
+                    aria-label={isMicMuted ? "Unmute microphone" : "Mute microphone"}
+                  >
+                    {isMicMuted ? <MicOff size={12} /> : <Mic size={12} />}
+                  </button>
+                  <button
+                    onClick={endCall}
+                    className="btn btn-circle btn-xs border-0 bg-red-600 text-white hover:bg-red-700"
+                    aria-label="End call"
+                  >
+                    <PhoneOff size={12} />
+                  </button>
                 </div>
-              )}
-              <audio ref={remoteAudioRef} autoPlay />
-
-              {activeCall.callType === "video" && (
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="absolute bottom-4 right-4 h-28 w-20 rounded-xl border border-white/20 object-cover shadow-xl"
-                />
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-3 p-4">
-              <div>
-                <p className="font-semibold">@{activeCall.peer.username || "user"}</p>
-                <p className="text-sm text-white/60">{activeCall.status}</p>
-              </div>
-              <div className="flex gap-3">
-                <button onClick={toggleMic} className="btn btn-circle btn-outline text-white">
-                  {isMicMuted ? <MicOff size={20} /> : <Mic size={20} />}
-                </button>
-                <button onClick={endCall} className="btn btn-circle bg-red-600 text-white hover:bg-red-700">
-                  <PhoneOff size={20} />
-                </button>
               </div>
             </div>
-          </div>
-        </div>
+          ) : (
+            <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4 text-white">
+              <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
+                <div className="relative aspect-video bg-neutral-900">
+                  <button
+                    type="button"
+                    onClick={() => setIsCallMinimized(true)}
+                    className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/65"
+                    aria-label="Minimize call"
+                  >
+                    <Minus size={18} />
+                  </button>
+
+                  {remoteHasVideo ? (
+                    <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center">
+                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-3xl font-bold">
+                        {(activeCall.peer.username || "U").slice(0, 1).toUpperCase()}
+                      </div>
+                      <p className="mt-4 text-lg font-semibold">@{activeCall.peer.username || "user"}</p>
+                      <p className="text-sm text-white/60">
+                        {activeCall.callType === "video" && localHasVideo ? "video enabled" : activeCall.status}
+                      </p>
+                    </div>
+                  )}
+
+                  {localHasVideo && (
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="absolute bottom-4 right-4 h-28 w-20 rounded-xl border border-white/20 object-cover shadow-xl"
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3 p-4">
+                  <div>
+                    <p className="font-semibold">@{activeCall.peer.username || "user"}</p>
+                    <p className="text-sm text-white/60">{activeCall.status}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={toggleVideoMode}
+                      className="btn btn-circle btn-outline text-white"
+                      aria-label={activeCall.callType === "video" ? "Switch to audio call" : "Switch to video call"}
+                    >
+                      {activeCall.callType === "video" ? <VideoOff size={18} /> : <Video size={18} />}
+                    </button>
+                    <button
+                      onClick={() => setIsCallMinimized(true)}
+                      className="btn btn-circle btn-outline text-white"
+                      aria-label="Minimize call"
+                    >
+                      <Maximize2 size={18} />
+                    </button>
+                    <button onClick={toggleMic} className="btn btn-circle btn-outline text-white">
+                      {isMicMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                    </button>
+                    <button onClick={endCall} className="btn btn-circle bg-red-600 text-white hover:bg-red-700">
+                      <PhoneOff size={20} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </CallContext.Provider>
   );

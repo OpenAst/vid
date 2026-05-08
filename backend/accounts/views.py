@@ -5,12 +5,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, generics, permissions
 from django.db import models
-from .models import UserAccount, Profile, PushSubscription
+from .models import UserAccount, Profile, PushSubscription, DirectConversation, DirectMessage
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from .serializers import (
     CustomTokenObtainPairSerializer, UserUpdateSerializer, ProfileSerializer, 
-    UserDetailSerializer, UserPublicSerializer
+    UserDetailSerializer, UserPublicSerializer, DirectConversationSerializer, DirectMessageSerializer
 )
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -25,6 +25,8 @@ from django.conf import settings
 from django.http import JsonResponse
 from video.models import Call
 from video.serializers import CallSerializer
+from django.db.models import Q, Prefetch
+from django.shortcuts import get_object_or_404
 
 
 
@@ -183,6 +185,106 @@ class PendingIncomingCallView(generics.GenericAPIView):
             return Response({"call": None}, status=status.HTTP_200_OK)
 
         return Response({"call": CallSerializer(call).data}, status=status.HTTP_200_OK)
+
+
+def build_conversation_pair_key(user_a_id, user_b_id):
+    ordered = sorted([str(user_a_id), str(user_b_id)])
+    return f"{ordered[0]}:{ordered[1]}"
+
+
+def get_direct_conversation_queryset(user):
+    return DirectConversation.objects.filter(
+        Q(user_one=user) | Q(user_two=user)
+    ).select_related(
+        "user_one", "user_one__profile", "user_two", "user_two__profile"
+    ).prefetch_related(
+        Prefetch(
+            "messages",
+            queryset=DirectMessage.objects.select_related("sender", "sender__profile").order_by("-created_at"),
+            to_attr="prefetched_messages_desc",
+        )
+    )
+
+
+class DirectConversationListCreateAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        conversations = list(get_direct_conversation_queryset(request.user))
+        for conversation in conversations:
+            prefetched = getattr(conversation, "prefetched_messages_desc", [])
+            conversation._prefetched_last_message = prefetched[0] if prefetched else None
+
+        serializer = DirectConversationSerializer(conversations, many=True, context={"request": request})
+        return Response({"results": serializer.data}, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        participant_id = request.data.get("participant_id")
+        if not participant_id:
+            return Response({"detail": "participant_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        participant = get_object_or_404(UserAccount, pk=participant_id)
+        if participant.id == request.user.id:
+            return Response({"detail": "You cannot start a conversation with yourself"}, status=status.HTTP_400_BAD_REQUEST)
+
+        pair_key = build_conversation_pair_key(request.user.id, participant.id)
+        defaults = {
+            "user_one": request.user if str(request.user.id) < str(participant.id) else participant,
+            "user_two": participant if str(request.user.id) < str(participant.id) else request.user,
+        }
+        conversation, _ = DirectConversation.objects.get_or_create(pair_key=pair_key, defaults=defaults)
+        serializer = DirectConversationSerializer(conversation, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DirectConversationMessagesAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_conversation(self, request, conversation_id):
+        return get_object_or_404(
+            DirectConversation.objects.select_related(
+                "user_one", "user_one__profile", "user_two", "user_two__profile"
+            ),
+            Q(user_one=request.user) | Q(user_two=request.user),
+            pk=conversation_id,
+        )
+
+    def get(self, request, conversation_id, *args, **kwargs):
+        conversation = self.get_conversation(request, conversation_id)
+        messages = conversation.messages.select_related("sender", "sender__profile").order_by("created_at")
+        serializer = DirectMessageSerializer(messages, many=True, context={"request": request})
+        return Response({"conversation": DirectConversationSerializer(conversation, context={"request": request}).data, "results": serializer.data}, status=status.HTTP_200_OK)
+
+    def post(self, request, conversation_id, *args, **kwargs):
+        conversation = self.get_conversation(request, conversation_id)
+        body = (request.data.get("body") or "").strip()
+        if not body:
+            return Response({"detail": "Message body is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        message = DirectMessage.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            body=body,
+        )
+        conversation.last_message_at = message.created_at
+        conversation.save(update_fields=["last_message_at", "updated_at"])
+
+        serializer = DirectMessageSerializer(message, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class UserDirectoryAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        users = (
+            UserAccount.objects.filter(is_active=True)
+            .exclude(pk=request.user.id)
+            .select_related("profile")
+            .order_by("first_name", "username")
+        )
+        serializer = UserPublicSerializer(users, many=True, context={"request": request})
+        return Response({"results": serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

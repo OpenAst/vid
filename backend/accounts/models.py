@@ -84,3 +84,34 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f"Push subscription for {self.user.email}"
+
+
+class DirectConversation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user_one = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="direct_conversations_started")
+    user_two = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="direct_conversations_received")
+    pair_key = models.CharField(max_length=80, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_message_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ["-last_message_at", "-updated_at"]
+
+    def __str__(self):
+        return f"Conversation {self.user_one.username} <-> {self.user_two.username}"
+
+
+class DirectMessage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    conversation = models.ForeignKey(DirectConversation, on_delete=models.CASCADE, related_name="messages")
+    sender = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="direct_messages_sent")
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Message from {self.sender.username}"
