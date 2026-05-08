@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/store/store";
@@ -50,7 +50,7 @@ const formatStamp = (value?: string) => {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 };
 
-export default function MessagesPage() {
+function MessagesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const peerId = searchParams.get("user");
@@ -589,5 +589,19 @@ export default function MessagesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[100dvh] items-center justify-center bg-base-100">
+          <div className="h-10 w-10 animate-pulse rounded-2xl bg-base-300" aria-hidden="true" />
+        </div>
+      }
+    >
+      <MessagesPageContent />
+    </Suspense>
   );
 }
