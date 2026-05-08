@@ -255,8 +255,14 @@ function MessagesPageContent() {
     };
 
     updateLayoutMode();
-    mediaQuery.addEventListener("change", updateLayoutMode);
-    return () => mediaQuery.removeEventListener("change", updateLayoutMode);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateLayoutMode);
+      return () => mediaQuery.removeEventListener("change", updateLayoutMode);
+    }
+
+    mediaQuery.addListener(updateLayoutMode);
+    return () => mediaQuery.removeListener(updateLayoutMode);
   }, []);
 
   useEffect(() => {
@@ -508,7 +514,7 @@ function MessagesPageContent() {
                       {Array.from({ length: 6 }).map((_, index) => (
                         <div
                           key={index}
-                          className={`h-12 animate-pulse rounded-2xl ${index % 2 === 0 ? "mr-10 bg-base-200 sm:mr-16" : "ml-10 bg-sky-200 sm:ml-16"}`}
+                          className={`h-12 animate-pulse rounded-2xl ${index % 2 === 0 ? "mr-10 bg-base-200 sm:mr-16" : "ml-10 bg-green-200 sm:ml-16"}`}
                         />
                       ))}
                     </div>
@@ -530,7 +536,7 @@ function MessagesPageContent() {
                           <div
                             className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm sm:max-w-[80%] ${
                               message.is_own
-                                ? "bg-sky-600 text-white"
+                                ? "bg-green-600 text-white"
                                 : "border border-base-300 bg-base-200 text-base-content"
                             }`}
                           >
