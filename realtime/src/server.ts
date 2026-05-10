@@ -22,9 +22,13 @@ type ClientToServerEvents = {
   "video-likes:join": () => void;
   "video-likes:like_video": (payload: { videoId: string }) => void;
   "messages:send": (payload: DirectMessageRelayPayload) => void;
+  "messages:read": (payload: DirectMessageReadPayload) => void;
+  "messages:typing": (payload: DirectMessageTypingPayload) => void;
+  "presence:subscribe": (payload: { userIds: string[] }) => void;
   "call:invite": (payload: CallInvitePayload) => void;
   "call:accept": (payload: CallPeerPayload) => void;
   "call:reject": (payload: CallPeerPayload) => void;
+  "call:missed": (payload: CallPeerPayload) => void;
   "call:end": (payload: CallPeerPayload) => void;
   "call:media-update": (payload: CallPeerPayload & { callType: CallType }) => void;
   "call:offer": (payload: CallSignalPayload) => void;
@@ -52,9 +56,14 @@ type ServerToClientEvents = {
   }) => void;
   video_view_updated: (payload: { videoId: string; views: number }) => void;
   "messages:new": (payload: DirectMessageRelayPayload & { fromUserId: string }) => void;
+  "messages:read": (payload: DirectMessageReadPayload & { fromUserId: string }) => void;
+  "messages:typing": (payload: DirectMessageTypingPayload & { fromUserId: string }) => void;
+  "presence:snapshot": (payload: { onlineUserIds: string[] }) => void;
+  "presence:changed": (payload: { userId: string; isOnline: boolean }) => void;
   "call:incoming": (payload: CallInvitePayload & { caller: RealtimeUser }) => void;
   "call:accepted": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
   "call:rejected": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
+  "call:missed": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
   "call:ended": (payload: CallPeerPayload & { actor: RealtimeUser }) => void;
   "call:media-updated": (payload: CallPeerPayload & { actor: RealtimeUser; callType: CallType }) => void;
   "call:offer": (payload: CallSignalPayload & { fromUserId: string }) => void;
@@ -87,6 +96,19 @@ type DirectMessageRelayPayload = {
   conversationId: string;
   toUserId: string;
   message: unknown;
+};
+
+type DirectMessageReadPayload = {
+  conversationId: string;
+  toUserId: string;
+  messageIds: string[];
+  readAt: string;
+};
+
+type DirectMessageTypingPayload = {
+  conversationId: string;
+  toUserId: string;
+  isTyping: boolean;
 };
 
 type InterServerEvents = Record<string, never>;
@@ -137,6 +159,18 @@ function videoLikesRoom() {
 
 function userRoom(userId: string) {
   return `user:${userId}`;
+}
+
+async function isUserOnline(io: RealtimeIO, userId: string) {
+  const sockets = await io.in(userRoom(userId)).fetchSockets();
+  return sockets.length > 0;
+}
+
+async function emitPresenceChange(io: RealtimeIO, userId: string) {
+  io.emit("presence:changed", {
+    userId,
+    isOnline: await isUserOnline(io, userId),
+  });
 }
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
@@ -580,7 +614,7 @@ function handleCallInvite(socket: RealtimeSocket, payload: CallInvitePayload) {
 function handleCallPeerEvent(
   socket: RealtimeSocket,
   payload: CallPeerPayload,
-  eventName: "call:accepted" | "call:rejected" | "call:ended" | "call:media-updated"
+  eventName: "call:accepted" | "call:rejected" | "call:missed" | "call:ended" | "call:media-updated"
 ) {
   if (!validateCallId(socket, payload.callId) || !validateUserId(socket, payload.peerId)) return;
 
@@ -594,6 +628,20 @@ function handleCallPeerEvent(
     peerId: payload.peerId,
     callId: payload.callId,
     eventName,
+  });
+}
+
+async function handlePresenceSubscribe(socket: RealtimeSocket, io: RealtimeIO, userIds: string[]) {
+  const uniqueUserIds = [...new Set(userIds.filter((userId) => isUuid(userId)))];
+  const onlineChecks = await Promise.all(
+    uniqueUserIds.map(async (userId) => ({
+      userId,
+      isOnline: await isUserOnline(io, userId),
+    }))
+  );
+
+  socket.emit("presence:snapshot", {
+    onlineUserIds: onlineChecks.filter((check) => check.isOnline).map((check) => check.userId),
   });
 }
 
@@ -633,6 +681,61 @@ function handleDirectMessageRelay(socket: RealtimeSocket, payload: DirectMessage
     toUserId: payload.toUserId,
     conversationId: payload.conversationId,
   });
+}
+
+function handleDirectMessageRead(socket: RealtimeSocket, payload: DirectMessageReadPayload) {
+  if (!isUuid(payload.conversationId)) {
+    emitError(socket, "Invalid conversation id");
+    return;
+  }
+
+  if (!validateUserId(socket, payload.toUserId)) {
+    return;
+  }
+
+  const messageIds = Array.isArray(payload.messageIds)
+    ? payload.messageIds.filter((messageId) => isUuid(messageId))
+    : [];
+
+  if (messageIds.length === 0 || typeof payload.readAt !== "string") {
+    return;
+  }
+
+  const eventPayload = {
+    ...payload,
+    messageIds,
+    fromUserId: socket.data.user.id,
+  };
+
+  socket.to(userRoom(payload.toUserId)).emit("messages:read", eventPayload);
+  socket.to(userRoom(socket.data.user.id)).emit("messages:read", eventPayload);
+  logInfo("Direct message read receipt relayed", {
+    connectionId: socket.data.connectionId,
+    fromUserId: socket.data.user.id,
+    toUserId: payload.toUserId,
+    conversationId: payload.conversationId,
+    count: messageIds.length,
+  });
+}
+
+function handleDirectMessageTyping(socket: RealtimeSocket, payload: DirectMessageTypingPayload) {
+  if (!isUuid(payload.conversationId)) {
+    emitError(socket, "Invalid conversation id");
+    return;
+  }
+
+  if (!validateUserId(socket, payload.toUserId)) {
+    return;
+  }
+
+  const eventPayload = {
+    conversationId: payload.conversationId,
+    toUserId: payload.toUserId,
+    isTyping: Boolean(payload.isTyping),
+    fromUserId: socket.data.user.id,
+  };
+
+  socket.to(userRoom(payload.toUserId)).emit("messages:typing", eventPayload);
 }
 
 export async function createRealtimeServer() {
@@ -711,6 +814,7 @@ export async function createRealtimeServer() {
       connectionId: socket.data.connectionId,
       user: socket.data.user,
     });
+    void emitPresenceChange(io, socket.data.user.id);
 
     socket.on("comments:join", async ({ roomId }) => {
       logInfo("Received comments:join", {
@@ -775,6 +879,16 @@ export async function createRealtimeServer() {
     socket.on("messages:send", (payload) => {
       handleDirectMessageRelay(socket, payload);
     });
+    socket.on("messages:read", (payload) => {
+      handleDirectMessageRead(socket, payload);
+    });
+    socket.on("messages:typing", (payload) => {
+      handleDirectMessageTyping(socket, payload);
+    });
+
+    socket.on("presence:subscribe", ({ userIds }) => {
+      void handlePresenceSubscribe(socket, io, Array.isArray(userIds) ? userIds : []);
+    });
 
     socket.on("call:invite", (payload) => {
       handleCallInvite(socket, payload);
@@ -786,6 +900,10 @@ export async function createRealtimeServer() {
 
     socket.on("call:reject", (payload) => {
       handleCallPeerEvent(socket, payload, "call:rejected");
+    });
+
+    socket.on("call:missed", (payload) => {
+      handleCallPeerEvent(socket, payload, "call:missed");
     });
 
     socket.on("call:end", (payload) => {
@@ -814,6 +932,9 @@ export async function createRealtimeServer() {
         userId: socket.data.user.id,
         reason,
       });
+      setTimeout(() => {
+        void emitPresenceChange(io, socket.data.user.id);
+      }, 0);
     });
   });
 

@@ -11,6 +11,7 @@ import type { ActiveCall, CallContextValue, CallRecord, CallType, CallUser, Inco
 import { useRingtone } from "./useRingtone";
 
 const CallContext = createContext<CallContextValue | null>(null);
+const UNANSWERED_CALL_TIMEOUT_MS = 30_000;
 
 export function useCall() {
   const context = useContext(CallContext);
@@ -37,6 +38,7 @@ export default function CallProvider({ children }: { children: React.ReactNode }
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const unansweredCallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { startRingtone, stopRingtone } = useRingtone();
 
   useEffect(() => {
@@ -63,6 +65,10 @@ export default function CallProvider({ children }: { children: React.ReactNode }
   }, [activeCall?.callType, remoteStream]);
 
   const cleanupCall = useCallback(() => {
+    if (unansweredCallTimerRef.current) {
+      clearTimeout(unansweredCallTimerRef.current);
+      unansweredCallTimerRef.current = null;
+    }
     stopRingtone();
     peerConnectionRef.current?.close();
     peerConnectionRef.current = null;
@@ -301,6 +307,24 @@ export default function CallProvider({ children }: { children: React.ReactNode }
     cleanupCall();
   }, [cleanupCall]);
 
+  const markCallMissed = useCallback(async (call: ActiveCall, showToast = true) => {
+    try {
+      await fetch(`/api/calls/${call.callId}/missed`, { method: "POST" });
+      socketRef.current?.emit("call:missed", {
+        callId: call.callId,
+        peerId: call.peer.id,
+        callType: call.callType,
+      });
+    } catch (error) {
+      console.error("Failed to mark call as missed", error);
+    } finally {
+      cleanupCall();
+      if (showToast) {
+        toast("No answer");
+      }
+    }
+  }, [cleanupCall]);
+
   const toggleMic = () => {
     setIsMicMuted((current) => {
       localStream?.getAudioTracks().forEach((track) => {
@@ -354,6 +378,11 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       cleanupCall();
     });
 
+    socket.on("call:missed", () => {
+      toast("Missed call");
+      cleanupCall();
+    });
+
     socket.on("call:ended", () => {
       cleanupCall();
     });
@@ -401,6 +430,46 @@ export default function CallProvider({ children }: { children: React.ReactNode }
       setIsSocketConnected(false);
     };
   }, [cleanupCall, isAuthenticated, renegotiateCall, token]);
+
+  useEffect(() => {
+    if (unansweredCallTimerRef.current) {
+      clearTimeout(unansweredCallTimerRef.current);
+      unansweredCallTimerRef.current = null;
+    }
+
+    if (activeCall?.role === "caller" && activeCall.status === "ringing") {
+      unansweredCallTimerRef.current = setTimeout(() => {
+        const call = activeCallRef.current;
+        if (call?.role === "caller" && call.status === "ringing") {
+          void markCallMissed(call);
+        }
+      }, UNANSWERED_CALL_TIMEOUT_MS);
+    }
+
+    return () => {
+      if (unansweredCallTimerRef.current) {
+        clearTimeout(unansweredCallTimerRef.current);
+        unansweredCallTimerRef.current = null;
+      }
+    };
+  }, [activeCall?.callId, activeCall?.role, activeCall?.status, markCallMissed]);
+
+  useEffect(() => {
+    if (!incomingCall || activeCall) return;
+
+    const timer = setTimeout(() => {
+      const call: ActiveCall = {
+        callId: incomingCall.callId,
+        callType: incomingCall.callType,
+        peer: incomingCall.caller,
+        role: "callee",
+        status: "ringing",
+      };
+      void markCallMissed(call, false);
+    }, UNANSWERED_CALL_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [activeCall, incomingCall, markCallMissed]);
 
   useEffect(() => {
     if (!isAuthenticated || !token || activeCallRef.current) return;

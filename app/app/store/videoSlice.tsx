@@ -16,6 +16,14 @@ export interface Video {
   likes: number;
   dislikes: number;
   user_vote: number;
+  is_saved?: boolean;
+  watch_progress?: {
+    progress_seconds: number;
+    duration_seconds: number;
+    completed: boolean;
+    updated_at: string;
+  } | null;
+  skill_category?: string;
   uploader: {
     id: string;
     email: string;
@@ -51,13 +59,19 @@ const initialState: VideoState = {
 export const fetchVideos = createAsyncThunk(
   "videos/fetchVideos",
   async (
-    { page, limit, search, append, background }: { page: number; limit: number; search: string; append: boolean; background?: boolean },
+    { page, limit, search, append, background, feed, category }: { page: number; limit: number; search: string; append: boolean; background?: boolean; feed?: string; category?: string },
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/videos/?page=${page}&limit=${limit}&search=${search}`
-      );
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        search,
+      });
+      if (feed) params.set("feed", feed);
+      if (category) params.set("category", category);
+
+      const response = await fetch(`/api/video/fetch?${params.toString()}`);
       if (!response.ok) {
         throw new Error("Failed to fetch videos");
       }
@@ -148,6 +162,13 @@ const videoSlice = createSlice({
         saveToCache(state);
       }
     },
+    updateSaveState: (state, action: PayloadAction<{ videoId: string; isSaved: boolean }>) => {
+      const video = state.videos?.find((v) => v.id === action.payload.videoId);
+      if (video) {
+        video.is_saved = action.payload.isSaved;
+        saveToCache(state);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -170,7 +191,7 @@ const videoSlice = createSlice({
           state.videos = newVideos;
         }
         state.next = action.payload.next;
-        state.cacheQuery = action.meta.arg.search;
+        state.cacheQuery = [action.meta.arg.search, action.meta.arg.feed || "for-you", action.meta.arg.category || ""].join("|");
         saveToCache(state);
       })
       .addCase(fetchVideos.rejected, (state, action) => {
@@ -191,6 +212,7 @@ export const {
   updateViews,
   applyOptimisticLike,
   applyOptimisticView,
+  updateSaveState,
 } = videoSlice.actions;
 
 export default videoSlice.reducer;

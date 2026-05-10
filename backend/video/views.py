@@ -10,25 +10,27 @@ import subprocess
 import tempfile
 import threading
 import requests
+from datetime import timedelta
 from hashlib import sha1
 from urllib.parse import urljoin
 from botocore.config import Config
 from django.conf import settings
 from rest_framework import status
-from django.db.models import Count
+from django.db.models import Avg, Case, Count, F, IntegerField, Q, Sum, Value, When
+from django.utils import timezone
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import generics, permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Video, Comment, VideoVote, CommentVote, VideoView, Call
+from .models import Video, Comment, VideoVote, CommentVote, VideoView, VideoWatchProgress, Call, SavedVideo, SavedCollection, SavedCollectionItem
 from .serializers import VideoSerializer, CommentSerializer, VideoVoteSerializer, CommentVoteSerializer, UserPublicSerializer, CallSerializer
 from rest_framework.pagination import PageNumberPagination
 from accounts.permissions import IsOwnerOrReadOnly
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import JSONParser, MultiPartParser
-from accounts.models import UserAccount, PushSubscription
+from accounts.models import UserAccount, PushSubscription, UserFollow, Notification, UserBlock
 from accounts.push import send_call_push_notification
 
 logger = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ def get_room_comments(room_id, request):
             "replies__user",
             "replies__user__profile",
         )
-        .order_by("created_at")
+        .order_by("-is_pinned", "created_at")
     )
 
     serialized_comments = []
@@ -152,8 +154,6 @@ class VideoUploadView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(uploader=self.request.user)
 
-from django.db.models import Q
-
 class VideoListView(generics.ListAPIView):
   serializer_class = VideoSerializer
   permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -163,9 +163,11 @@ class VideoListView(generics.ListAPIView):
     return {"request": self.request}
   
   def get_queryset(self):
-    queryset = Video.objects.order_by('-created_at')
+    queryset = Video.objects.all()
     search_query = self.request.query_params.get('search', None)
     username = self.request.query_params.get('username', None)
+    feed = self.request.query_params.get('feed', None)
+    category = self.request.query_params.get('category', None)
     
     if search_query:
       queryset = queryset.filter(
@@ -173,8 +175,49 @@ class VideoListView(generics.ListAPIView):
         Q(description__icontains=search_query)
       )
     
+    if self.request.user.is_authenticated:
+      blocked_user_ids = UserBlock.objects.filter(blocker=self.request.user).values_list("blocked_id", flat=True)
+      blocked_by_ids = UserBlock.objects.filter(blocked=self.request.user).values_list("blocker_id", flat=True)
+      queryset = queryset.exclude(uploader_id__in=blocked_user_ids)
+      queryset = queryset.exclude(uploader_id__in=blocked_by_ids)
+
     if username:
+      if self.request.user.is_authenticated:
+        user = UserAccount.objects.filter(username=username, is_active=True).select_related("profile").first()
+      else:
+        user = UserAccount.objects.filter(username=username, is_active=True).select_related("profile").first()
+      if user and user.profile.is_private:
+        if not self.request.user.is_authenticated or not UserFollow.objects.filter(follower=self.request.user, following=user).exists():
+          return queryset.none()
       queryset = queryset.filter(uploader__username=username)
+
+    if category:
+      queryset = queryset.filter(skill_category__iexact=category)
+
+    if feed == "following":
+      if not self.request.user.is_authenticated:
+        return queryset.none()
+
+      followed_user_ids = UserFollow.objects.filter(
+        follower=self.request.user
+      ).values_list("following_id", flat=True)
+      queryset = queryset.filter(uploader_id__in=followed_user_ids)
+
+    if feed == "for-you" or not feed:
+      queryset = queryset.annotate(
+        like_count=Count("votes", filter=Q(votes__value=1), distinct=True),
+        comment_count_value=Count("comments", distinct=True),
+        freshness_boost=Case(
+          When(created_at__gte=timezone.now() - timedelta(days=2), then=Value(30)),
+          When(created_at__gte=timezone.now() - timedelta(days=7), then=Value(15)),
+          default=Value(0),
+          output_field=IntegerField(),
+        ),
+      ).annotate(
+        feed_score=(F("like_count") * 8) + (F("comment_count_value") * 5) + F("views") + F("freshness_boost")
+      ).order_by("-feed_score", "-created_at")
+    else:
+      queryset = queryset.order_by("-created_at")
       
     return queryset
 
@@ -184,6 +227,348 @@ class VideoDetailView(generics.RetrieveAPIView):
 
   def get_queryset(self):
     return Video.objects.order_by('-created_at')
+
+
+class SavedVideoListAPIView(generics.ListAPIView):
+  serializer_class = VideoSerializer
+  permission_classes = [IsAuthenticated]
+  pagination_class = VideoPagination
+
+  def get_queryset(self):
+    return (
+      Video.objects.filter(saved_by__user=self.request.user)
+      .select_related("uploader")
+      .order_by("-saved_by__created_at")
+    )
+
+
+class SavedVideoToggleAPIView(generics.GenericAPIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request, video_id):
+    video = get_object_or_404(Video, id=video_id)
+    SavedVideo.objects.get_or_create(user=request.user, video=video)
+    return Response({"video_id": str(video.id), "saved": True}, status=status.HTTP_200_OK)
+
+  def delete(self, request, video_id):
+    video = get_object_or_404(Video, id=video_id)
+    SavedVideo.objects.filter(user=request.user, video=video).delete()
+    return Response({"video_id": str(video.id), "saved": False}, status=status.HTTP_200_OK)
+
+
+def serialize_saved_collection(collection):
+  return {
+    "id": str(collection.id),
+    "name": collection.name,
+    "count": getattr(collection, "item_count", collection.items.count()),
+    "created_at": collection.created_at.isoformat(),
+  }
+
+
+class SavedCollectionListCreateAPIView(generics.GenericAPIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    collections = (
+      SavedCollection.objects.filter(user=request.user)
+      .annotate(item_count=Count("items", distinct=True))
+      .order_by("-created_at")
+    )
+    return Response({"results": [serialize_saved_collection(collection) for collection in collections]}, status=status.HTTP_200_OK)
+
+  def post(self, request):
+    name = (request.data.get("name") or "").strip()
+    if not name:
+      return Response({"detail": "Collection name is required"}, status=status.HTTP_400_BAD_REQUEST)
+    if len(name) > 80:
+      return Response({"detail": "Collection name is too long"}, status=status.HTTP_400_BAD_REQUEST)
+
+    collection, created = SavedCollection.objects.get_or_create(user=request.user, name=name)
+    status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    return Response(serialize_saved_collection(collection), status=status_code)
+
+
+class SavedCollectionDetailAPIView(generics.GenericAPIView):
+  permission_classes = [IsAuthenticated]
+
+  def get_collection(self):
+    return get_object_or_404(SavedCollection, id=self.kwargs["collection_id"], user=self.request.user)
+
+  def get(self, request, collection_id):
+    collection = self.get_collection()
+    videos = (
+      Video.objects.filter(saved_by__collection_items__collection=collection)
+      .select_related("uploader")
+      .order_by("-saved_by__collection_items__created_at")
+    )
+    serializer = VideoSerializer(videos, many=True, context={"request": request})
+    return Response(
+      {
+        "collection": serialize_saved_collection(collection),
+        "results": serializer.data,
+      },
+      status=status.HTTP_200_OK,
+    )
+
+  def delete(self, request, collection_id):
+    collection = self.get_collection()
+    collection.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SavedCollectionItemAPIView(generics.GenericAPIView):
+  permission_classes = [IsAuthenticated]
+
+  def get_collection(self):
+    return get_object_or_404(SavedCollection, id=self.kwargs["collection_id"], user=self.request.user)
+
+  def post(self, request, collection_id, video_id):
+    collection = self.get_collection()
+    video = get_object_or_404(Video, id=video_id)
+    saved_video, _ = SavedVideo.objects.get_or_create(user=request.user, video=video)
+    SavedCollectionItem.objects.get_or_create(collection=collection, saved_video=saved_video)
+    return Response({"added": True, "collection_id": str(collection.id), "video_id": str(video.id)}, status=status.HTTP_200_OK)
+
+  def delete(self, request, collection_id, video_id):
+    collection = self.get_collection()
+    SavedCollectionItem.objects.filter(
+      collection=collection,
+      saved_video__user=request.user,
+      saved_video__video_id=video_id,
+    ).delete()
+    return Response({"removed": True, "collection_id": str(collection.id), "video_id": str(video_id)}, status=status.HTTP_200_OK)
+
+
+def serialize_watch_progress(progress, request):
+  video_data = VideoSerializer(progress.video, context={"request": request}).data
+  return {
+    "id": str(progress.id),
+    "video": video_data,
+    "progress_seconds": progress.progress_seconds,
+    "duration_seconds": progress.duration_seconds,
+    "completed": progress.completed,
+    "updated_at": progress.updated_at.isoformat(),
+  }
+
+
+class WatchHistoryAPIView(generics.GenericAPIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    progress = (
+      VideoWatchProgress.objects.filter(user=request.user)
+      .select_related("video", "video__uploader")
+      .order_by("-updated_at")[:80]
+    )
+    return Response({"results": [serialize_watch_progress(item, request) for item in progress]}, status=status.HTTP_200_OK)
+
+  def delete(self, request):
+    VideoWatchProgress.objects.filter(user=request.user).delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class VideoWatchProgressAPIView(generics.GenericAPIView):
+  permission_classes = [IsAuthenticated]
+
+  def post(self, request, video_id):
+    video = get_object_or_404(Video, id=video_id)
+    try:
+      progress_seconds = max(float(request.data.get("progress_seconds") or 0), 0)
+      duration_seconds = max(float(request.data.get("duration_seconds") or 0), 0)
+    except (TypeError, ValueError):
+      return Response({"detail": "Invalid progress values"}, status=status.HTTP_400_BAD_REQUEST)
+
+    completed = bool(request.data.get("completed"))
+    if duration_seconds > 0:
+      completed = completed or progress_seconds >= max(duration_seconds - 2, duration_seconds * 0.95)
+      if completed:
+        progress_seconds = duration_seconds
+
+    progress, _ = VideoWatchProgress.objects.update_or_create(
+      user=request.user,
+      video=video,
+      defaults={
+        "progress_seconds": progress_seconds,
+        "duration_seconds": duration_seconds,
+        "completed": completed,
+      },
+    )
+    return Response(serialize_watch_progress(progress, request), status=status.HTTP_200_OK)
+
+
+class CreatorAnalyticsAPIView(generics.GenericAPIView):
+  permission_classes = [IsAuthenticated]
+
+  def get(self, request):
+    videos = Video.objects.filter(uploader=request.user)
+    total_videos = videos.count()
+    total_views = videos.aggregate(total_views=Sum("views")).get("total_views") or 0
+    total_likes = VideoVote.objects.filter(video__uploader=request.user, value=1).count()
+    total_comments = Comment.objects.filter(video__uploader=request.user).count()
+    total_saves = SavedVideo.objects.filter(video__uploader=request.user).count()
+    progress_queryset = VideoWatchProgress.objects.filter(video__uploader=request.user)
+    total_watchers = progress_queryset.count()
+    completed_watches = progress_queryset.filter(completed=True).count()
+    average_progress = progress_queryset.aggregate(value=Avg("progress_seconds")).get("value") or 0
+
+    follower_count = UserFollow.objects.filter(following=request.user).count()
+    completion_rate = round((completed_watches / total_watchers) * 100) if total_watchers else 0
+
+    top_videos = (
+      videos.annotate(
+        like_count=Count("votes", filter=Q(votes__value=1), distinct=True),
+        comment_count=Count("comments", distinct=True),
+        save_count=Count("saved_by", distinct=True),
+        watcher_count=Count("watch_progress", distinct=True),
+        completed_count=Count("watch_progress", filter=Q(watch_progress__completed=True), distinct=True),
+        avg_progress=Avg("watch_progress__progress_seconds"),
+      )
+      .order_by("-views", "-like_count", "-comment_count", "-created_at")[:8]
+    )
+
+    top_clip_data = []
+    for video in top_videos:
+      watcher_count = getattr(video, "watcher_count", 0) or 0
+      completed_count = getattr(video, "completed_count", 0) or 0
+      top_clip_data.append({
+        "id": str(video.id),
+        "title": video.title,
+        "thumbnail_url": VideoSerializer(video, context={"request": request}).data.get("thumbnail_url"),
+        "views": video.views,
+        "likes": getattr(video, "like_count", 0) or 0,
+        "comments": getattr(video, "comment_count", 0) or 0,
+        "saves": getattr(video, "save_count", 0) or 0,
+        "watchers": watcher_count,
+        "completion_rate": round((completed_count / watcher_count) * 100) if watcher_count else 0,
+        "average_progress": round(getattr(video, "avg_progress", 0) or 0, 1),
+        "created_at": video.created_at.isoformat(),
+      })
+
+    return Response({
+      "summary": {
+        "total_videos": total_videos,
+        "total_views": total_views,
+        "total_likes": total_likes,
+        "total_comments": total_comments,
+        "total_saves": total_saves,
+        "followers": follower_count,
+        "watchers": total_watchers,
+        "completion_rate": completion_rate,
+        "average_progress": round(average_progress, 1),
+      },
+      "top_videos": top_clip_data,
+    }, status=status.HTTP_200_OK)
+
+
+def escape_ffmpeg_drawtext(value):
+    return str(value or "").replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+
+
+def get_public_storage_url(key):
+    if hasattr(settings, "AWS_S3_CUSTOM_DOMAIN") and settings.AWS_S3_CUSTOM_DOMAIN:
+        return f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
+    return f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
+
+
+def get_video_storage_client():
+    return boto3.client(
+        's3',
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name='auto',
+        config=Config(
+            signature_version='s3v4',
+            s3={'addressing_style': 'path'}
+        )
+    )
+
+
+class WatermarkedVideoExportAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def post(self, request, video_id, *args, **kwargs):
+        video = get_object_or_404(
+            Video.objects.select_related("uploader"),
+            pk=video_id,
+        )
+        key = f"watermarked/{video.uploader_id}/{video.id}.mp4"
+        public_url = get_public_storage_url(key)
+        s3 = get_video_storage_client()
+
+        try:
+            s3.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
+            return Response({"watermarked_url": public_url}, status=status.HTTP_200_OK)
+        except Exception:
+            pass
+
+        temp_video = None
+        temp_output = None
+        try:
+            temp_video = download_to_temp_file(video.file_url, ".mp4")
+            temp_output = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+            creator_handle = f"@{video.uploader.username or 'creator'}"
+            brand_text = escape_ffmpeg_drawtext("OneClyq")
+            creator_text = escape_ffmpeg_drawtext(creator_handle)
+            watermark_filter = (
+                "drawtext=text='"
+                + brand_text
+                + "':x=24:y=24:fontsize=28:fontcolor=white:"
+                + "box=1:boxcolor=black@0.42:boxborderw=12,"
+                + "drawtext=text='"
+                + creator_text
+                + "':x=24:y=78:fontsize=22:fontcolor=white:"
+                + "box=1:boxcolor=black@0.32:boxborderw=10"
+            )
+
+            subprocess.run(
+                [
+                    'ffmpeg',
+                    '-y',
+                    '-i',
+                    temp_video,
+                    '-vf',
+                    watermark_filter,
+                    '-c:v',
+                    'libx264',
+                    '-preset',
+                    'veryfast',
+                    '-crf',
+                    '23',
+                    '-c:a',
+                    'copy',
+                    '-movflags',
+                    '+faststart',
+                    temp_output,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            with open(temp_output, 'rb') as f:
+                s3.put_object(
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                    Key=key,
+                    Body=f,
+                    ACL='public-read',
+                    ContentType='video/mp4'
+                )
+
+            return Response({"watermarked_url": public_url}, status=status.HTTP_201_CREATED)
+        except Exception as exc:
+            logger.exception("Failed to create watermarked export for video %s", video_id)
+            return Response(
+                {"detail": "Watermarked export failed", "error": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        finally:
+            for temp_path in (temp_video, temp_output):
+                try:
+                    if temp_path and os.path.exists(temp_path):
+                        os.remove(temp_path)
+                except OSError:
+                    logger.exception("Failed to clean up watermarked export temp file")
 
 class CommentListAPIView(generics.ListAPIView):
    serializer_class = CommentSerializer
@@ -390,6 +775,23 @@ class RealtimeCommentVoteToggleAPIView(generics.GenericAPIView):
         )
 
 
+class CommentPinToggleAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk, *args, **kwargs):
+        comment = get_object_or_404(Comment.objects.select_related("video"), pk=pk, parent__isnull=True)
+        if comment.video.uploader_id != request.user.id:
+            return Response({"detail": "Only the video owner can pin comments."}, status=status.HTTP_403_FORBIDDEN)
+
+        next_pinned = bool(request.data.get("is_pinned", not comment.is_pinned))
+        if next_pinned:
+            Comment.objects.filter(video=comment.video, parent__isnull=True, is_pinned=True).exclude(pk=comment.pk).update(is_pinned=False)
+
+        comment.is_pinned = next_pinned
+        comment.save(update_fields=["is_pinned"])
+        return Response({"comment": serialize_comment_for_request(comment, request)}, status=status.HTTP_200_OK)
+
+
 class RealtimeVideoVoteToggleAPIView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -460,6 +862,34 @@ class CallStartAPIView(generics.GenericAPIView):
         return Response(CallSerializer(call).data, status=status.HTTP_201_CREATED)
 
 
+class CallHistoryAPIView(generics.ListAPIView):
+    serializer_class = CallSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Call.objects.filter(
+            Q(caller=self.request.user) | Q(callee=self.request.user)
+        ).select_related("caller", "callee")
+
+        peer_id = self.request.query_params.get("peer_id")
+        if peer_id:
+            try:
+                uuid.UUID(str(peer_id))
+            except ValueError:
+                return queryset.none()
+
+            queryset = queryset.filter(
+                Q(caller=self.request.user, callee_id=peer_id)
+                | Q(caller_id=peer_id, callee=self.request.user)
+            )
+
+        return queryset.order_by("-created_at")[:50]
+
+    def list(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+        return Response({"results": serializer.data}, status=status.HTTP_200_OK)
+
+
 class CallActionAPIView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -474,15 +904,34 @@ class CallActionAPIView(generics.GenericAPIView):
         if action == "accept":
             if request.user != call.callee:
                 return Response({"detail": "Only the callee can accept"}, status=status.HTTP_403_FORBIDDEN)
+            if call.status != "ringing":
+                return Response({"detail": "This call is no longer ringing"}, status=status.HTTP_400_BAD_REQUEST)
             call.status = "accepted"
             call.started_at = call.started_at or timezone.now()
             call.save(update_fields=["status", "started_at"])
         elif action == "reject":
             if request.user != call.callee:
                 return Response({"detail": "Only the callee can reject"}, status=status.HTTP_403_FORBIDDEN)
+            if call.status != "ringing":
+                return Response(CallSerializer(call).data, status=status.HTTP_200_OK)
             call.status = "rejected"
             call.ended_at = timezone.now()
             call.save(update_fields=["status", "ended_at"])
+        elif action == "missed":
+            if call.status != "ringing":
+                return Response(CallSerializer(call).data, status=status.HTTP_200_OK)
+            call.status = "missed"
+            call.ended_at = timezone.now()
+            call.save(update_fields=["status", "ended_at"])
+            display_name = call.caller.username or call.caller.first_name or "Someone"
+            Notification.objects.create(
+                recipient=call.callee,
+                actor=call.caller,
+                notification_type="call",
+                title=f"Missed {call.call_type} call",
+                body=f"@{display_name} tried to reach you.",
+                target_url=f"/messages?user={call.caller_id}",
+            )
         elif action == "end":
             call.status = "ended"
             call.ended_at = timezone.now()

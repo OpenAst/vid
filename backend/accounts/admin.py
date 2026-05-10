@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserAccount
+from .models import BookingRequest, BookingSlot, CollabApplication, CollabRequest, UserAccount
 from django.contrib.auth.admin import UserAdmin
 
 @admin.register(UserAccount)
@@ -24,3 +24,31 @@ class UserAccountAdmin(UserAdmin):
     )
 
   filter_horizontal = ('groups', 'user_permissions',)
+
+
+@admin.register(CollabRequest)
+class CollabRequestAdmin(admin.ModelAdmin):
+  list_display = ('title', 'creator', 'request_type', 'status', 'created_at')
+  list_filter = ('request_type', 'status', 'created_at')
+  search_fields = ('title', 'description', 'skills', 'creator__username')
+
+
+@admin.register(CollabApplication)
+class CollabApplicationAdmin(admin.ModelAdmin):
+  list_display = ('request', 'applicant', 'status', 'created_at')
+  list_filter = ('status', 'created_at')
+  search_fields = ('request__title', 'applicant__username', 'pitch')
+
+
+@admin.register(BookingSlot)
+class BookingSlotAdmin(admin.ModelAdmin):
+  list_display = ('creator', 'purpose', 'starts_at', 'duration_minutes', 'is_active')
+  list_filter = ('purpose', 'is_active', 'starts_at')
+  search_fields = ('creator__username', 'note')
+
+
+@admin.register(BookingRequest)
+class BookingRequestAdmin(admin.ModelAdmin):
+  list_display = ('slot', 'requester', 'status', 'created_at')
+  list_filter = ('status', 'created_at')
+  search_fields = ('slot__creator__username', 'requester__username', 'message')

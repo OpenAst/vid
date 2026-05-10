@@ -5,6 +5,9 @@ export type CallUser = {
   username?: string | null;
   first_name?: string;
   last_name?: string;
+  profile?: {
+    avatar?: string | null;
+  };
 };
 
 export type CallRecord = {

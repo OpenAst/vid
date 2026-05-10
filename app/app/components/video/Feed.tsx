@@ -8,6 +8,7 @@ import {
   updateViews,
   applyOptimisticLike,
   applyOptimisticView,
+  updateSaveState,
 } from "../../store/videoSlice";
 import { RootState, AppDispatch } from "../../store/store";
 import VideoCard, { type VideoCardHandle } from "./VideoCard";
@@ -20,9 +21,17 @@ import toast from "react-hot-toast";
 import { type Video } from "../../store/videoSlice";
 import { useCall } from "@/app/components/calls/CallProvider";
 
-const FEED_BOOKMARKS_STORAGE_KEY = "feed_bookmarked_videos";
+export type FeedMode = "for-you" | "following" | "latest";
 
-const Feed = ({ jwtToken }: { jwtToken: string }) => {
+const Feed = ({
+  jwtToken,
+  feedMode,
+  selectedCategory,
+}: {
+  jwtToken: string;
+  feedMode: FeedMode;
+  selectedCategory: string;
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,6 +49,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
   const videoCount = Array.isArray(videos) ? videos.length : 0;
   const { isCalling } = useCall();
+  const cacheKey = [search || "", feedMode, selectedCategory].join("|");
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -100,20 +110,9 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }, [token, dispatch, user?.id]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const saved = window.localStorage.getItem(FEED_BOOKMARKS_STORAGE_KEY);
-      if (!saved) return;
-
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        setBookmarkedVideoIds(new Set(parsed.filter((id): id is string => typeof id === "string")));
-      }
-    } catch (error) {
-      console.error("Failed to load feed bookmarks:", error);
-    }
-  }, []);
+    if (!Array.isArray(videos)) return;
+    setBookmarkedVideoIds(new Set(videos.filter((video) => video.is_saved).map((video) => video.id)));
+  }, [videos]);
 
   const handleLikeVideo = useCallback((video: Video) => {
     if (!user || !socketRef.current) return;
@@ -130,59 +129,96 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
   }, [dispatch, user]);
 
   const handleShare = useCallback(async (video: Video) => {
-    const shareData = {
-      title: video.title,
-      text: `Check out this video: ${video.title}`,
-      url: typeof window !== "undefined" ? window.location.origin + `?video=${video.id}` : "",
-    };
-
+    let exportToast: string | undefined;
     try {
+      exportToast = toast.loading("Preparing branded share...");
+      const response = await fetch(`/api/video/${video.id}/watermark`, { method: "POST" });
+      const data = await response.json().catch(() => null);
+      toast.dismiss(exportToast);
+      exportToast = undefined;
+
+      if (!response.ok || !data?.watermarked_url) {
+        throw new Error(data?.detail || "Unable to prepare branded share");
+      }
+
+      const shareData = {
+        title: video.title,
+        text: `Watch ${video.title} on OneClyq`,
+        url: data.watermarked_url as string,
+      };
+
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(shareData.url);
-        toast.success("Link copied to clipboard!");
+        toast.success("Branded video link copied");
       }
     } catch (err) {
+      if (exportToast) {
+        toast.dismiss(exportToast);
+      }
       if ((err as Error).name !== "AbortError") {
         console.error("Error sharing:", err);
-        toast.error("Failed to share");
+        const fallbackUrl = typeof window !== "undefined" ? window.location.origin + `/video/${video.id}` : "";
+        if (fallbackUrl) {
+          await navigator.clipboard.writeText(fallbackUrl).catch(() => undefined);
+        }
+        toast.error("Branded export failed. Clip link copied instead.");
       }
     }
   }, []);
 
-  const handleBookmarkToggle = useCallback((video: Video) => {
+  const handleBookmarkToggle = useCallback(async (video: Video) => {
+    if (!user) {
+      toast.error("Sign in to save videos");
+      router.push("/login");
+      return;
+    }
+
+    const wasSaved = bookmarkedVideoIds.has(video.id);
+    const nextSaved = !wasSaved;
+
     setBookmarkedVideoIds((prev) => {
       const nextBookmarks = new Set(prev);
-      const isBookmarked = nextBookmarks.has(video.id);
-
-      if (isBookmarked) {
-        nextBookmarks.delete(video.id);
-      } else {
+      if (nextSaved) {
         nextBookmarks.add(video.id);
+      } else {
+        nextBookmarks.delete(video.id);
       }
-
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(
-            FEED_BOOKMARKS_STORAGE_KEY,
-            JSON.stringify(Array.from(nextBookmarks))
-          );
-        } catch (error) {
-          console.error("Failed to save feed bookmarks:", error);
-        }
-      }
-
-      toast.success(isBookmarked ? "Removed from bookmarks" : "Saved to bookmarks");
       return nextBookmarks;
     });
-  }, []);
+    dispatch(updateSaveState({ videoId: video.id, isSaved: nextSaved }));
+
+    try {
+      const response = await fetch(`/api/video/${video.id}/save`, {
+        method: nextSaved ? "POST" : "DELETE",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.detail || data?.error || "Unable to update saved videos");
+      }
+      toast.success(nextSaved ? "Saved to your clips" : "Removed from saved");
+    } catch (error) {
+      setBookmarkedVideoIds((prev) => {
+        const nextBookmarks = new Set(prev);
+        if (wasSaved) {
+          nextBookmarks.add(video.id);
+        } else {
+          nextBookmarks.delete(video.id);
+        }
+        return nextBookmarks;
+      });
+      dispatch(updateSaveState({ videoId: video.id, isSaved: wasSaved }));
+      toast.error(error instanceof Error ? error.message : "Unable to update saved videos");
+    }
+  }, [bookmarkedVideoIds, dispatch, router, user]);
 
   useEffect(() => {
     setPage(1);
     const currentSearch = search || "";
     const hasCachedVideos = Array.isArray(videos) && videos.length > 0;
-    const canRefreshInBackground = hasCachedVideos && cacheQuery === currentSearch;
+    const canRefreshInBackground = hasCachedVideos && cacheQuery === cacheKey;
+    const apiFeed = feedMode === "following" ? "following" : feedMode === "latest" ? "latest" : "for-you";
 
     const id = window.setTimeout(() => {
       dispatch(
@@ -190,6 +226,8 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
           page: 1,
           limit: 10,
           search: currentSearch,
+          feed: apiFeed,
+          category: selectedCategory,
           append: false,
           background: canRefreshInBackground,
         })
@@ -197,17 +235,24 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     }, 0);
 
     return () => window.clearTimeout(id);
-  }, [dispatch, search, cacheQuery]);
+  }, [dispatch, search, cacheKey, cacheQuery, feedMode, selectedCategory]);
 
   const fetchMoreVideos = useCallback(() => {
     if (next && !isLoading && !loadingMore) {
       setLoadingMore(true);
       const nextPage = page + 1;
       setPage(nextPage);
-      dispatch(fetchVideos({ page: nextPage, limit: 10, search: search || "", append: true }))
+      dispatch(fetchVideos({
+        page: nextPage,
+        limit: 10,
+        search: search || "",
+        feed: feedMode === "following" ? "following" : feedMode === "latest" ? "latest" : "for-you",
+        category: selectedCategory,
+        append: true,
+      }))
         .finally(() => setLoadingMore(false));
     }
-  }, [dispatch, isLoading, loadingMore, next, page, search]);
+  }, [dispatch, feedMode, isLoading, loadingMore, next, page, search, selectedCategory]);
 
   const syncPlaybackForIndex = useCallback((targetIndex: number) => {
     currentIndexRef.current = targetIndex;
@@ -308,6 +353,21 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
     <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-base-100">
       {showInitialSkeleton && <FeedSkeleton count={2} />}
 
+      {!showInitialSkeleton && Array.isArray(videos) && videos.length === 0 && (
+        <div className="flex h-[calc(var(--feed-shell-height)-96px)] snap-start items-center justify-center px-6 text-center">
+          <div>
+            <p className="text-lg font-semibold text-base-content">
+              {feedMode === "following" ? "No videos from people you follow yet" : "No videos found"}
+            </p>
+            <p className="mt-2 max-w-xs text-sm leading-6 text-base-content/60">
+              {feedMode === "following"
+                ? "Follow a few creators from their profiles, then their videos will show up here."
+                : "Try another search or category."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {Array.isArray(videos) &&
         videos.map((video, idx) => (
           <div
@@ -326,6 +386,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                 id={video.id}
                 file_url={video.file_url || ""}
                 thumbnail_url={video.thumbnail_url || null}
+                resumeAt={video.watch_progress?.completed ? 0 : video.watch_progress?.progress_seconds || 0}
                 isCommentsOpen={openCommentsFor === video.id}
                 onCloseComments={() => setOpenCommentsFor(null)}
                 onViewOptimistic={() => {
@@ -435,6 +496,7 @@ const Feed = ({ jwtToken }: { jwtToken: string }) => {
                       id: user?.id || "",
                       username: user?.username || "Anonymous",
                     }}
+                    videoOwnerId={video.uploader?.id}
                     onClose={() => setOpenCommentsFor(null)}
                   />
                 </div>

@@ -3,12 +3,14 @@
 import React, { memo, forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VolumeX, Volume2, Play, Pause } from "lucide-react";
+import Image from "next/image";
 
 
 interface VideoCardProps {
   id: string;
   file_url: string;
   thumbnail_url: string | null;
+  resumeAt?: number;
   isCommentsOpen: boolean;
   onCloseComments: () => void;
   onLike?: () => void;
@@ -28,6 +30,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
       id,
       file_url,
       thumbnail_url,
+      resumeAt = 0,
       isCommentsOpen,
       onLike,
       onViewOptimistic,
@@ -47,6 +50,8 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const onViewRecordedRef = useRef(onViewRecorded);
+    const lastProgressSyncRef = useRef(0);
+    const hasAppliedResumeRef = useRef(false);
 
     useImperativeHandle(ref, () => ({
       video: videoRef.current,
@@ -105,7 +110,21 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
 
     const handleTimeUpdate = () => {
       if (videoRef.current && !isDragging) {
-        setCurrentTime(videoRef.current.currentTime);
+        const video = videoRef.current;
+        setCurrentTime(video.currentTime);
+        const now = Date.now();
+        if (now - lastProgressSyncRef.current > 5000 && video.currentTime > 1) {
+          lastProgressSyncRef.current = now;
+          void fetch(`/api/video/${id}/progress`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              progress_seconds: video.currentTime,
+              duration_seconds: Number.isFinite(video.duration) ? video.duration : 0,
+              completed: false,
+            }),
+          }).catch(() => undefined);
+        }
       }
     };
 
@@ -118,6 +137,16 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
       if (videoRef.current) {
         setDuration(videoRef.current.duration);
         setIsPortrait(videoRef.current.videoHeight > videoRef.current.videoWidth);
+        if (
+          !hasAppliedResumeRef.current &&
+          resumeAt > 2 &&
+          Number.isFinite(videoRef.current.duration) &&
+          resumeAt < videoRef.current.duration - 2
+        ) {
+          videoRef.current.currentTime = resumeAt;
+          setCurrentTime(resumeAt);
+          hasAppliedResumeRef.current = true;
+        }
         if (videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
           markMediaReady();
         }
@@ -140,6 +169,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
 
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
+      lastProgressSyncRef.current = 0;
     };
 
     const handleDragStart = () => setIsDragging(true);
@@ -198,6 +228,16 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
       const handleEnded = () => {
         handlePauseOrEnd();
         void recordView();
+        const durationSeconds = Number.isFinite(video.duration) ? video.duration : 0;
+        void fetch(`/api/video/${id}/progress`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            progress_seconds: durationSeconds,
+            duration_seconds: durationSeconds,
+            completed: true,
+          }),
+        }).catch(() => undefined);
       };
 
       video.addEventListener("play", handlePlay);
@@ -255,6 +295,8 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
       setIsMediaReady(false);
       setHasMediaError(false);
       hasViewedOnce.current = false;
+      hasAppliedResumeRef.current = false;
+      lastProgressSyncRef.current = 0;
       if (viewTimerRef.current) {
         clearTimeout(viewTimerRef.current);
         viewTimerRef.current = null;
@@ -340,6 +382,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
         <button
           onClick={toggleMute}
           className="absolute top-4 left-4 p-2 rounded-full bg-white/80 backdrop-blur-md border border-white transition-all z-20 hover:scale-110 active:scale-90 shadow-lg"
+          aria-label={isMuted ? "Unmute video" : "Mute video"}
         >
           {isMuted ? (
             <VolumeX className="w-5 h-5 text-black" />
@@ -347,6 +390,11 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
             <Volume2 className="w-5 h-5 text-black" />
           )}
         </button>
+
+        <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/35 px-2.5 py-1.5 text-white shadow-lg backdrop-blur-md">
+          <Image src="/oneclyq.png" alt="" width={18} height={18} className="rounded-full" />
+          <span className="text-[11px] font-bold tracking-wide">OneClyq</span>
+        </div>
 
         <AnimatePresence>
           {overlayIcon && (

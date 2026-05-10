@@ -8,20 +8,20 @@ export async function GET(req: NextRequest) {
     const limit = searchParams.get("limit") || "10";
     const search = searchParams.get("search");
     const username = searchParams.get("username");
+    const feed = searchParams.get("feed");
+    const category = searchParams.get("category");
 
     const csrfToken = req.cookies.get('csrftoken')?.value;
 
-    if (!csrfToken) {
-      throw new Error('CSRF token is missing');
-    }
-
     const searchStr = search ? `&search=${encodeURIComponent(search)}` : "";
     const usernameStr = username ? `&username=${encodeURIComponent(username)}` : "";
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/videos/?page=${page}&limit=${limit}${searchStr}${usernameStr}`, {
+    const feedStr = feed ? `&feed=${encodeURIComponent(feed)}` : "";
+    const categoryStr = category ? `&category=${encodeURIComponent(category)}` : "";
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/videos/?page=${page}&limit=${limit}${searchStr}${usernameStr}${feedStr}${categoryStr}`, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${req.cookies.get('access')?.value}`,
-        'X-CSRFToken': csrfToken,
+        ...(req.cookies.get('access')?.value && { Authorization: `JWT ${req.cookies.get('access')?.value}` }),
+        ...(csrfToken && { 'X-CSRFToken': csrfToken }),
       },
       credentials: 'include',
     });

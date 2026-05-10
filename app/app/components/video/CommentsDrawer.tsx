@@ -11,10 +11,11 @@ interface CommentsDrawerProps {
     username: string;
     avatar?: string;
   };
+  videoOwnerId?: string;
   onClose: () => void;
 }
 
-const CommentsDrawer = ({ videoId, jwtToken, currentUser, onClose }: CommentsDrawerProps) => {
+const CommentsDrawer = ({ videoId, jwtToken, currentUser, videoOwnerId, onClose }: CommentsDrawerProps) => {
   return (
     <AnimatePresence>
       <motion.div
@@ -32,7 +33,7 @@ const CommentsDrawer = ({ videoId, jwtToken, currentUser, onClose }: CommentsDra
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <Comments jwtToken={jwtToken} roomId={videoId} currentUser={currentUser} />
+          <Comments jwtToken={jwtToken} roomId={videoId} currentUser={currentUser} videoOwnerId={videoOwnerId} />
         </div>
       </motion.div>
     </AnimatePresence>

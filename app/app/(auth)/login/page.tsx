@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { login } from '@/app/store/authSlice';
+import { fetchUser, login } from '@/app/store/authSlice';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/app/store/store';
@@ -48,6 +48,7 @@ const LoginPage = () => {
       const res = await dispatch(login({ email, password, username })).unwrap();
       console.log('Login successful:', res);
 
+      await dispatch(fetchUser()).unwrap();
 
       window.history.replaceState(null, '/');
       router.replace('/');
@@ -149,25 +150,48 @@ const LoginPage = () => {
               </p>
             </div>
 
-            <div className="relative hidden min-h-[470px] lg:block">
-              <div className="absolute left-16 top-8 h-80 w-56 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-2xl shadow-cyan-950/40">
-                <div className="h-full bg-gradient-to-br from-fuchsia-500 via-blue-500 to-cyan-300 p-4">
-                  <div className="h-1.5 w-20 rounded-full bg-white/75" />
-                  <div className="mt-24 rounded-2xl bg-black/30 p-4 backdrop-blur-md">
-                    <p className="text-sm font-medium text-white/75">Now playing</p>
-                    <p className="mt-2 text-2xl font-bold">Creator stories</p>
-                  </div>
+            <div className="relative hidden min-h-[500px] lg:block">
+              <div className="absolute left-12 top-4 h-[440px] w-[250px] overflow-hidden rounded-[2rem] border border-white/15 bg-slate-950 shadow-2xl shadow-cyan-950/40">
+                <Image
+                  src="/auth-hero-creators.jpg"
+                  alt="People smiling together on OneClyq"
+                  fill
+                  sizes="250px"
+                  priority
+                  className="object-cover object-center"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-100/80">Featured creator</p>
+                  <p className="mt-1 text-2xl font-bold">Real moments</p>
+                  <p className="mt-1 text-sm text-white/75">Watch people share what they love.</p>
                 </div>
               </div>
 
-              <div className="absolute left-0 top-40 h-44 w-64 rounded-3xl border border-white/10 bg-white/10 p-4 shadow-xl backdrop-blur-xl">
-                <div className="h-28 rounded-2xl bg-gradient-to-br from-slate-200 via-cyan-200 to-fuchsia-300" />
-                <div className="mt-3 h-2 w-32 rounded-full bg-white/50" />
-                <div className="mt-2 h-2 w-20 rounded-full bg-white/25" />
+              <div className="absolute left-0 top-36 w-44 rounded-2xl border border-white/15 bg-white/10 p-3 shadow-xl backdrop-blur-xl">
+                <div className="flex items-center gap-2">
+                  <Image
+                    src="/user_icon.png"
+                    alt=""
+                    width={34}
+                    height={34}
+                    className="h-9 w-9 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">@creator</p>
+                    <p className="text-xs text-white/60">Active now</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <span className="rounded-full bg-cyan-300/20 px-2 py-1 text-[11px] font-medium text-cyan-100">dance</span>
+                  <span className="rounded-full bg-fuchsia-300/20 px-2 py-1 text-[11px] font-medium text-fuchsia-100">style</span>
+                </div>
               </div>
 
-              <div className="absolute bottom-10 left-36 h-28 w-28 rounded-full border-4 border-cyan-300 bg-gradient-to-br from-cyan-300 to-fuchsia-500 shadow-xl shadow-fuchsia-950/50" />
-              <div className="absolute right-8 bottom-28 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-3xl shadow-xl">♥</div>
+              <div className="absolute right-8 bottom-24 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-3xl shadow-xl">♥</div>
+              <div className="absolute bottom-8 left-36 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 shadow-xl backdrop-blur-xl">
+                <p className="text-sm font-semibold">12k clips shared</p>
+                <p className="mt-1 text-xs text-white/60">Find someone worth following.</p>
+              </div>
             </div>
           </div>
         </div>

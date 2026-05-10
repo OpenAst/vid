@@ -28,6 +28,30 @@ interface Profile {
   avatar?: string;
   bio?: string;
   followers?: number;
+  skill_tags?: string;
+  availability_status?: string;
+  onboarding_completed?: boolean;
+  skipped_profile_setup?: boolean;
+  skipped_interests?: boolean;
+  skipped_follow_suggestions?: boolean;
+  website_url?: string;
+  twitter_url?: string;
+  linkedin_url?: string;
+  featured_video_id?: string;
+  open_to_collab?: boolean;
+  open_to_hire?: boolean;
+  open_to_mentor?: boolean;
+  is_private?: boolean;
+  membership_tiers?: MembershipTier[];
+}
+
+export interface MembershipTier {
+  id: string;
+  name: string;
+  price: string;
+  description: string;
+  perks: string[];
+  enabled: boolean;
 }
 
 interface User {
@@ -37,6 +61,8 @@ interface User {
   first_name: string;
   last_name: string;
   profile?: Profile;
+  following_count?: number;
+  follower_count?: number;
 }
 
 interface AuthState {
@@ -230,7 +256,26 @@ export const fetchUser = createAsyncThunk(
 export const updateUser = createAsyncThunk(
   'auth/updateUser',
   async (
-    userUpdates: { avatar?: string; first_name?: string, last_name?: string, bio?: string }, { rejectWithValue }) => {
+    userUpdates: {
+      avatar?: string;
+      first_name?: string;
+      last_name?: string;
+      bio?: string;
+      skill_tags?: string;
+      availability_status?: string;
+      website_url?: string;
+      twitter_url?: string;
+      linkedin_url?: string;
+      featured_video_id?: string | null;
+      open_to_collab?: boolean;
+      open_to_hire?: boolean;
+      open_to_mentor?: boolean;
+      is_private?: boolean;
+      onboarding_completed?: boolean;
+      skipped_profile_setup?: boolean;
+      skipped_interests?: boolean;
+      skipped_follow_suggestions?: boolean;
+    }, { rejectWithValue }) => {
     try {
       const res = await fetch("/api/auth/profile_update", {
         method: 'PATCH',

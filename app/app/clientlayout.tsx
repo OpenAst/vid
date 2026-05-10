@@ -2,25 +2,51 @@
 
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
-import LogoutButton from '@/app/components/layout/LogoutButton';
 import { useDispatch, useSelector } from 'react-redux';
+import { usePathname, useRouter } from 'next/navigation';
 import { RootState, AppDispatch } from '@/app/store/store';
 import { fetchUser, refresh, setUnAuthenticated } from '@/app/store/authSlice';
-import Image from 'next/image';
 import { lusitana } from './fonts';
 import CallProvider from '@/app/components/calls/CallProvider';
 import PushRegistration from '@/app/components/calls/PushRegistration';
-import { MessageCircle } from 'lucide-react';
+import NotificationsButton from '@/app/components/layout/NotificationsButton';
+import { UploadProvider } from '@/app/components/upload/UploadProvider';
+import {
+  BarChart3,
+  Bookmark,
+  BriefcaseBusiness,
+  Clock,
+  Compass,
+  Home,
+  MessageCircle,
+  MoreHorizontal,
+  Moon,
+  Search,
+  Settings,
+  Sun,
+  UploadCloud,
+  User,
+} from 'lucide-react';
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isBootstrapped, user } = useSelector((state: RootState) => state.auth);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     // Initial theme setup
-    const storedTheme = localStorage.getItem('theme') || 'light';
+    let storedTheme = 'light';
+
+    try {
+      storedTheme = localStorage.getItem('theme') || 'light';
+    } catch (error) {
+      console.warn("Unable to read stored theme", error);
+    }
+
     setDarkMode(storedTheme === 'dark');
     document.documentElement.setAttribute('data-theme', storedTheme);
 
@@ -47,17 +73,65 @@ export default function ClientProvider({ children }: { children: React.ReactNode
   }, []);
 
   useEffect(() => {
+    if (!isBootstrapped || !isAuthenticated || !user) return;
+
+    const authRoutes = ['/login', '/register', '/activate', '/password-reset'];
+    const isAuthRoute = authRoutes.some((route) => pathname?.startsWith(route));
+    const isOnboardingRoute = pathname === '/onboarding';
+    const hasCompletedOnboarding = Boolean(user.profile?.onboarding_completed);
+
+    if (!hasCompletedOnboarding && !isOnboardingRoute && !isAuthRoute) {
+      router.replace('/onboarding');
+      return;
+    }
+
+    if (hasCompletedOnboarding && isOnboardingRoute) {
+      router.replace('/');
+    }
+  }, [isAuthenticated, isBootstrapped, pathname, router, user]);
+
+  useEffect(() => {
     const theme = darkMode ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
+    try {
+      localStorage.setItem('theme', theme);
+    } catch (error) {
+      console.warn("Unable to persist theme", error);
+    }
   }, [darkMode]);
+
+  const primaryNavItems = [
+    { href: '/', label: 'Home', icon: Home },
+    { href: '/discover', label: 'Discover', icon: Compass },
+    { href: '/upload', label: 'Upload', icon: UploadCloud },
+    { href: '/messages', label: 'Messages', icon: MessageCircle },
+    { href: '/profile', label: 'Profile', icon: User },
+  ];
+
+  const secondaryNavItems = [
+    { href: '/search', label: 'Search', icon: Search },
+    { href: '/collabs', label: 'Collabs', icon: BriefcaseBusiness },
+    { href: '/saved', label: 'Saved', icon: Bookmark },
+    { href: '/history', label: 'History', icon: Clock },
+    { href: '/creator', label: 'Creator Hub', icon: BarChart3 },
+  ];
+
+  const closeMenus = () => {
+    setIsMobileMenuOpen(false);
+    setIsMoreOpen(false);
+  };
+
+  const isActivePath = (href: string) => (
+    href === '/' ? pathname === '/' : Boolean(pathname?.startsWith(href))
+  );
 
   return (
     <div className="flex min-h-[100dvh] transition-colors">
       {isAuthenticated && (
         <button
-          className="md:hidden fixed left-3 top-[calc(var(--safe-area-top)+6px)] z-50 rounded-md border border-base-300 bg-base-100 p-1 shadow-sm"
+          className="fixed left-3 top-[calc(var(--safe-area-top)+6px)] z-50 rounded-md border border-base-300 bg-base-100 p-1 shadow-sm md:hidden"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label={isMobileMenuOpen ? "Close navigation" : "Open navigation"}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -82,78 +156,111 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
-          {/* Nav Icons */}
-          <nav className="space-y-10 p-2 mt-12 flex flex-col items-center">
-            <Link
-              href="/"
-              className="flex flex-col items-center justify-center p-2 hover:bg-base-200 rounded text-xs transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <Image src="/home.svg" alt="Home" width={22} height={22} className="dark:invert" />
-              <span className="hidden md:block text-xs mt-1">Home</span>
-            </Link>
+          <nav className="mt-12 flex flex-col items-center gap-2 p-2">
+            {primaryNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = isActivePath(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex w-full flex-col items-center justify-center rounded-xl px-2 py-2.5 text-xs transition-colors ${
+                    isActive
+                      ? 'bg-primary text-primary-content shadow-sm'
+                      : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
+                  }`}
+                  onClick={closeMenus}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon size={20} />
+                  <span className="hidden md:block text-xs mt-1">{item.label}</span>
+                </Link>
+              );
+            })}
 
-            <Link
-              href="/about"
-              className="flex flex-col items-center justify-center p-2 hover:bg-base-200  rounded text-xs transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <Image src="/globe.svg" alt="About" width={22} height={22} className="dark:invert" />
-              <span className="hidden md:block text-xs mt-1">About</span>
-            </Link>
+            <div className="relative w-full">
+              <button
+                type="button"
+                onClick={() => setIsMoreOpen((current) => !current)}
+                className={`flex w-full flex-col items-center justify-center rounded-xl px-2 py-2.5 text-xs transition-colors ${
+                  isMoreOpen
+                    ? 'bg-base-200 text-base-content'
+                    : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
+                }`}
+                aria-expanded={isMoreOpen}
+                aria-label="Open more navigation"
+              >
+                <MoreHorizontal size={20} />
+                <span className="hidden md:block text-xs mt-1">More</span>
+              </button>
 
-            <Link
-              href="/upload"
-              className="flex flex-col items-center justify-center p-2 hover:bg-base-200  rounded text-xs transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <Image src="/file.svg" alt="Upload" width={22} height={22} className="dark:invert" />
-              <span className="hidden md:block text-xs mt-1">Upload</span>
-            </Link>
+              {isMoreOpen && (
+                <div className="fixed inset-0 z-40" onClick={() => setIsMoreOpen(false)} aria-hidden="true" />
+              )}
 
-            <Link
-              href="/messages"
-              className="flex flex-col items-center justify-center p-2 hover:bg-base-200 rounded text-xs transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <MessageCircle size={22} />
-              <span className="hidden md:block text-xs mt-1">Messages</span>
-            </Link>
-
-            <Link
-              href="/profile"
-              className="flex flex-col items-center justify-center p-2 hover:bg-base-200 rounded text-xs transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <Image src="/user_icon.png" alt="Profile" width={28} height={28} className="dark:invert" />
-              <span className="hidden md:block text-xs mt-1">Profile</span>
-            </Link>
+              {isMoreOpen && (
+                <div className="absolute left-[calc(100%+10px)] top-0 z-50 w-52 rounded-2xl border border-base-300 bg-base-100 p-2 shadow-2xl">
+                  <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wide text-base-content/40">More</p>
+                  {secondaryNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isActivePath(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={closeMenus}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                          isActive
+                            ? 'bg-primary text-primary-content'
+                            : 'text-base-content/75 hover:bg-base-200 hover:text-base-content'
+                        }`}
+                      >
+                        <Icon size={18} />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
 
-          <div className="p-2 mb-10 space-y-4 flex flex-col items-center">
+          <div className="mb-4 flex flex-col items-center gap-2 border-t border-base-300 p-2 pt-3">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="w-full text-xs flex items-center justify-center px-2 py-2 rounded-lg bg-base-200 hover:bg-base-300 transition-colors"
+              className="flex w-full items-center justify-center rounded-xl bg-base-200 px-2 py-2 text-xs transition-colors hover:bg-base-300"
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {darkMode ? '☀️' : '🌙'}
-              <span className="hidden md:inline ml-1 font-medium">{darkMode ? 'Light' : 'Dark'}</span>
+              {darkMode ? <Sun size={17} /> : <Moon size={17} />}
+              <span className="ml-1 hidden font-medium md:inline">{darkMode ? 'Light' : 'Dark'}</span>
             </button>
 
-            <div className="w-full">
-              <LogoutButton />
-            </div>
+            <NotificationsButton />
+
+            <Link
+              href="/settings"
+              onClick={closeMenus}
+              className="flex w-full items-center justify-center rounded-xl px-2 py-2 text-xs text-base-content transition-colors hover:bg-base-200"
+              aria-label="Open settings"
+            >
+              <Settings size={18} />
+              <span className="ml-1 hidden font-medium md:inline">Settings</span>
+            </Link>
           </div>
         </aside>
       )}
       <CallProvider>
-        <PushRegistration />
-        <div className="w-full h-full mx-auto">{children}</div>
+        <UploadProvider>
+          <PushRegistration />
+          <div className="w-full h-full mx-auto">{children}</div>
+        </UploadProvider>
       </CallProvider>
 
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-opacity-25 z-30 md:hidden"
+          className="fixed inset-0 z-30 bg-black/20 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
         />
       )}
     </div>

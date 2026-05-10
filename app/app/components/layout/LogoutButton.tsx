@@ -46,11 +46,10 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="flex flex-col md:flex-row items-center
-       justify-center hover:bg-base-200 text-xs w-full py-2 rounded-lg transition-colors text-base-content"
+      className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm text-base-content transition-colors hover:bg-base-200"
     >
-      <Image src="new_logout.svg" alt="Logout" width={18} height={20} className="dark:invert" />
-      <span className="mt-1 md:mt-0 md:ml-2 font-medium">Logout</span>
+      <Image src="new_logout.svg" alt="Logout" width={16} height={16} className="dark:invert" />
+      <span className="font-medium">Logout</span>
     </button>
   )
 }

@@ -11,10 +11,11 @@ export async function GET(req: NextRequest) {
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const accessToken = req.cookies.get('access')?.value;
     const response = await fetch(`${backendUrl}/users/${username}/`, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${req.cookies.get('access')?.value}`,
+        ...(accessToken && { Authorization: `JWT ${accessToken}` }),
       },
     });
 

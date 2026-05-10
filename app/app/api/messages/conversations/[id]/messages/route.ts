@@ -80,3 +80,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const headers = await buildHeaders();
+
+    if (!headers.Authorization) {
+      return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/messages/conversations/${id}/messages/`, {
+      method: "PATCH",
+      headers,
+      credentials: "include",
+      body: JSON.stringify(body),
+    });
+
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? await response.json().catch(() => ({ detail: "Unable to update messages" }))
+      : { detail: await response.text().catch(() => "Unable to update messages") };
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    return NextResponse.json(
+      { detail: error instanceof Error ? error.message : "Unable to update messages" },
+      { status: 500 }
+    );
+  }
+}

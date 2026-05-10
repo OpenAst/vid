@@ -11,19 +11,31 @@ type CallButtonProps = {
     last_name?: string;
   };
   type: "audio" | "video";
+  availabilityStatus?: string;
 };
 
-export default function CallButton({ peer, type }: CallButtonProps) {
+function getAvailabilityLabel(status?: string) {
+  if (status === "available") return "Active";
+  return "Inactive";
+}
+
+export default function CallButton({ peer, type, availabilityStatus = "available" }: CallButtonProps) {
   const { startCall, isCalling, isCallReady } = useCall();
   const Icon = type === "video" ? Video : Phone;
-  const isDisabled = isCalling || !isCallReady;
+  const isActive = availabilityStatus === "available";
+  const isDisabled = isCalling || !isCallReady || !isActive;
+  const title = !isCallReady
+    ? "Call connection is getting ready"
+    : !isActive
+      ? `${peer.username || "This person"} is ${getAvailabilityLabel(availabilityStatus).toLowerCase()}`
+      : undefined;
 
   return (
     <button
       type="button"
       disabled={isDisabled}
       onClick={() => startCall(peer, type)}
-      title={!isCallReady ? "Call connection is getting ready" : undefined}
+      title={title}
       className="btn btn-sm btn-outline gap-2"
     >
       <Icon size={16} />

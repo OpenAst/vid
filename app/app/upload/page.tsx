@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Camera, Music2, Video, X, Square } from "lucide-react";
+import { useUploadManager } from "@/app/components/upload/UploadProvider";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser } from "@/app/store/authSlice";
 import { AppDispatch } from "@/app/store/store";
@@ -13,25 +14,46 @@ import { toast, ToastContainer } from 'react-toastify';
 interface FormDataState {
   title: string;
   description: string;
+  skill_category: string;
   thumbnail?: File;
 }
 
-const CHUNK_SIZE = 10 * 1024 * 1024;
+const UPLOAD_DRAFT_STORAGE_KEY = "oneclyq_upload_draft";
+
+const uploadCategories = [
+  { value: "general", label: "General" },
+  { value: "comedy", label: "Comedy" },
+  { value: "music", label: "Music" },
+  { value: "dance", label: "Dance" },
+  { value: "fashion", label: "Fashion" },
+  { value: "gaming", label: "Gaming" },
+  { value: "food", label: "Food" },
+  { value: "fitness", label: "Fitness" },
+  { value: "beauty", label: "Beauty" },
+  { value: "tech", label: "Tech" },
+  { value: "film", label: "Film" },
+  { value: "sports", label: "Sports" },
+  { value: "travel", label: "Travel" },
+];
+
+const emptyFormData: FormDataState = {
+  title: "",
+  description: "",
+  skill_category: "general",
+};
 
 const UploadVideo = () => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const { hasActiveUploads, startUpload } = useUploadManager();
 
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [musicFile, setMusicFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null);
-  const [formData, setFormData] = useState<FormDataState>({
-    title: "",
-    description: ""
-  });
-  const [isUploading, setIsUploading] = useState(false);
+  const [formData, setFormData] = useState<FormDataState>(emptyFormData);
+  const [didRestoreDraft, setDidRestoreDraft] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
@@ -106,7 +128,7 @@ const UploadVideo = () => {
 
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -143,94 +165,90 @@ const UploadVideo = () => {
     }
   }, [previewUrl, musicPreviewUrl]);
 
-  const uploadFile = async (file: File) => {
-    const sanitizedFileName = file.name
-      .replace(/\s+/g, '_')
-      .replace(/[^a-zA-Z0-9._-]/g, '_');
+  useEffect(() => {
+    try {
+      const rawDraft = window.localStorage.getItem(UPLOAD_DRAFT_STORAGE_KEY);
+      if (!rawDraft) {
+        setDidRestoreDraft(true);
+        return;
+      }
 
-    const initRes = await fetch("/api/video/initiate", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
-        file_name: sanitizedFileName,
-        file_type: file.type,
-      })
-    });
+      const savedDraft = JSON.parse(rawDraft) as Partial<FormDataState>;
+      const restoredDraft = {
+        ...emptyFormData,
+        title: savedDraft.title || "",
+        description: savedDraft.description || "",
+        skill_category: savedDraft.skill_category || "general",
+      };
 
-    if (!initRes.ok) {
-      throw new Error("Failed to initiate upload");
+      setFormData(restoredDraft);
+      setDidRestoreDraft(true);
+
+      if (
+        restoredDraft.title.trim() ||
+        restoredDraft.description.trim() ||
+        restoredDraft.skill_category !== "general"
+      ) {
+        toast.info("Upload draft restored.");
+      }
+    } catch (error) {
+      console.warn("Could not restore upload draft", error);
+      window.localStorage.removeItem(UPLOAD_DRAFT_STORAGE_KEY);
+      setDidRestoreDraft(true);
     }
+  }, []);
 
-    const { upload_id, object_key, public_url } = await initRes.json();
+  useEffect(() => {
+    if (!didRestoreDraft) return;
 
-    let partNumber = 1;
-    let start = 0;
-    const parts: { ETag: string; PartNumber: number }[] = [];
+    const hasDraftContent =
+      formData.title.trim() ||
+      formData.description.trim() ||
+      formData.skill_category !== "general";
 
-    while (start < file.size) {
-      const end = Math.min(start + CHUNK_SIZE, file.size);
-      const chunk = file.slice(start, end);
+    try {
+      if (!hasDraftContent) {
+        window.localStorage.removeItem(UPLOAD_DRAFT_STORAGE_KEY);
+        return;
+      }
 
-      const presignedRes = await fetch(
-        "/api/video/presigned",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            object_key,
-            file_type: file.type,
-            upload_id,
-            part_number: partNumber,
-          }),
-        }
+      window.localStorage.setItem(
+        UPLOAD_DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          skill_category: formData.skill_category,
+          savedAt: new Date().toISOString(),
+        })
       );
-
-      if (!presignedRes.ok) throw new Error("Failed to get presigned URL");
-
-      const { url } = await presignedRes.json();
-
-      let uploadRes;
-      try {
-        uploadRes = await fetch(url, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: chunk,
-        });
-      } catch (fetchErr) {
-        console.error(`Fetch failed for chunk ${partNumber}:`, fetchErr);
-        throw new Error(`Connection failed while uploading chunk ${partNumber}. This might be a CORS issue.`);
-      }
-
-      if (!uploadRes.ok) throw new Error(`Chunk ${partNumber} upload failed`);
-
-      const eTag = uploadRes.headers.get("ETag");
-      if (!eTag) throw new Error("Missing ETag from upload response");
-
-      parts.push({ ETag: eTag.replace(/"/g, ""), PartNumber: partNumber });
-
-      partNumber++;
-      start = end;
+    } catch (error) {
+      console.warn("Could not save upload draft", error);
     }
+  }, [didRestoreDraft, formData]);
 
-    const completeRes = await fetch(
-      "/api/video/complete_multipart",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ object_key, upload_id, parts }),
-      }
-    );
+  const hasSelectedMedia = Boolean(videoFile || musicFile || recordedChunks.length > 0);
 
-    if (!completeRes.ok) throw new Error("Failed to complete upload");
+  useEffect(() => {
+    if (!hasSelectedMedia || hasActiveUploads) return;
 
-    const completeData = await completeRes.json();
-
-    return {
-      objectKey: object_key,
-      publicUrl: completeData.public_url || public_url,
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
     };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasActiveUploads, hasSelectedMedia]);
+
+  const clearDraft = () => {
+    window.localStorage.removeItem(UPLOAD_DRAFT_STORAGE_KEY);
+    setFormData(emptyFormData);
+    setVideoFile(null);
+    setMusicFile(null);
+    setPreviewUrl(null);
+    setMusicPreviewUrl(null);
+    setRecordedChunks([]);
+    toast.info("Upload draft cleared.");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -246,56 +264,22 @@ const UploadVideo = () => {
       return;
     }
 
-    try {
-      setIsUploading(true);
-
-      const uploadedVideo = await uploadFile(videoFile);
-      const uploadedMusic = musicFile ? await uploadFile(musicFile) : null;
-
-      // Save metadata
-      const metadata = {
-        title: formData.title,
-        description: formData.description || '',
-        skill_category: "general",
-        file_url: uploadedVideo.publicUrl,
-        music_url: uploadedMusic?.publicUrl || null,
-        file_key: uploadedVideo.objectKey,
-        file_size: videoFile.size,
-        file_type: videoFile.type,
-      };
-
-      console.log("Metadata being sent", metadata);
-
-      const metaRes = await fetch("/api/video/save-metadata", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(metadata),
-      });
-
-      if (!metaRes.ok) {
-        const errorData = await metaRes.json();
-        const details =
-          errorData?.details?.detail ||
-          errorData?.details?.error ||
-          (typeof errorData?.details === "string" ? errorData.details : "");
-        throw new Error(details || errorData.error || "Failed to save metadata");
-      }
-
-      const metaDataRes = await metaRes.json();
-
-      console.log("Upload successful", metaDataRes);
-
-      toast.success("Video upload and metadata saved successfully");
-      router.push("/");
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error((error as Error).message || "Failed to upload video");
-    } finally {
-      setIsUploading(false);
-    }
+    startUpload({
+      videoFile,
+      musicFile,
+      title: formData.title,
+      description: formData.description,
+      skillCategory: formData.skill_category,
+    });
+    window.localStorage.removeItem(UPLOAD_DRAFT_STORAGE_KEY);
+    setFormData(emptyFormData);
+    setVideoFile(null);
+    setMusicFile(null);
+    setPreviewUrl(null);
+    setMusicPreviewUrl(null);
+    setRecordedChunks([]);
+    toast.success("Upload started. You can keep using the app.");
+    router.push("/");
   };
 
   useEffect(() => {
@@ -325,13 +309,41 @@ const UploadVideo = () => {
     return null;
   }
 
+  const hasDraftContent =
+    formData.title.trim() ||
+    formData.description.trim() ||
+    formData.skill_category !== "general";
+
   return (
     <div className="min-h-screen md:max-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-3xl mx-auto">
         <div className="bg-base-100 shadow-xl rounded-2xl p-6 sm:p-8 border border-base-300">
-          <h1 className="text-2xl font-bold text-base-content mb-6">Upload New Video</h1>
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-base-content">Upload New Video</h1>
+            {(hasDraftContent || hasSelectedMedia) && (
+              <button
+                type="button"
+                onClick={clearDraft}
+                className="btn btn-sm rounded-full border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+              >
+                Clear draft
+              </button>
+            )}
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 relative">
+            {hasDraftContent && (
+              <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-medium text-base-content">
+                Draft autosaved on this device. Selected media is kept only until you post or leave the page.
+              </div>
+            )}
+
+            {hasSelectedMedia && !hasActiveUploads && (
+              <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-base-content">
+                You have media selected but not posted yet. Refreshing or closing this page can lose that selection.
+              </div>
+            )}
+
             {/* Title Input */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-base-content/80 mb-1">
@@ -361,6 +373,25 @@ const UploadVideo = () => {
                 className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
                 maxLength={500}
               />
+            </div>
+
+            <div>
+              <label htmlFor="skill_category" className="block text-sm font-medium text-base-content/80 mb-1">
+                Category
+              </label>
+              <select
+                id="skill_category"
+                name="skill_category"
+                value={formData.skill_category}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
+              >
+                {uploadCategories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -535,19 +566,19 @@ const UploadVideo = () => {
             <div className="pt-4 sticky bottom-0 bg-base-100 z-10 border-t border-base-300">
               <button
                 type="submit"
-                disabled={isUploading || isRecording || (!videoFile && !isCameraActive)}
+                disabled={hasActiveUploads || isRecording || (!videoFile && !isCameraActive)}
                 className={`w-full mb-8 flex btn btn-primary justify-center py-4 
                   px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white 
                   hover:scale-[1.02] active:scale-[0.98] transition-all
-                ${(isUploading || isRecording) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                ${(hasActiveUploads || isRecording) ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                {isUploading ? (
+                {hasActiveUploads ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Uploading Video...
+                    Upload running...
                   </>
                 ) : 'Post Video'}
               </button>

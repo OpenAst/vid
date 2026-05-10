@@ -1,21 +1,17 @@
 import { useState } from "react";
 import { Search, X } from "lucide-react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../store/store";
-import { fetchVideos } from "../../store/videoSlice";
 import { useRouter } from "next/navigation";
 
-export default function Header() {
+export default function Header({ centerContent }: { centerContent?: React.ReactNode }) {
   const [showSearch, setShowSearch] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
   const handleSearch = () => {
     if (searchValue.trim()) {
-      router.push(`/?search=${encodeURIComponent(searchValue.trim())}`);
+      router.push(`/search?q=${encodeURIComponent(searchValue.trim())}`);
     } else {
-      router.push("/");
+      router.push("/search");
     }
   };
 
@@ -28,10 +24,14 @@ export default function Header() {
   return (
     <header className="fixed left-0 right-0 top-0 z-20 border-b border-base-300 bg-base-100/80 px-3 pt-[var(--safe-area-top)] backdrop-blur-md sm:px-6">
       <div className="relative flex h-[var(--app-header-row-height)] items-center justify-center">
-      <div className="w-12 shrink-0 sm:w-0" />
-      <h1 className="relative flex-1 text-center text-[1.15rem] font-semibold text-base-content sm:text-lg">
-        OneClyq
-      </h1>
+      <div className="w-8 shrink-0 sm:w-0" />
+      <div className="relative flex min-w-0 flex-1 justify-center px-8 sm:px-12">
+        {centerContent || (
+          <h1 className="text-center text-[1.15rem] font-semibold text-base-content sm:text-lg">
+            OneClyq
+          </h1>
+        )}
+      </div>
 
       <div className="absolute right-0 top-1/2 -translate-y-1/2 sm:right-1">
         {!showSearch ? (
@@ -57,7 +57,7 @@ export default function Header() {
               onClick={() => {
                 if (searchValue) {
                   setSearchValue("");
-                  router.push("/");
+                  router.push("/search");
                 } else {
                   setShowSearch(false);
                 }

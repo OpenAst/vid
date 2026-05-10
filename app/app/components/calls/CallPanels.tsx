@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 import { Maximize2, Mic, MicOff, Minus, Phone, PhoneOff, Video, VideoOff } from "lucide-react";
 import type { ActiveCall, IncomingCall } from "./callTypes";
+import UserAvatar from "@/app/components/common/UserAvatar";
 
 type IncomingCallBannerProps = {
   incomingCall: IncomingCall;
@@ -14,12 +15,13 @@ export function IncomingCallBanner({ incomingCall, onReject, onAccept }: Incomin
   return (
     <div className="fixed inset-x-4 top-6 z-[80] mx-auto max-w-sm rounded-2xl border border-base-300 bg-base-100 p-4 shadow-2xl">
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-          {incomingCall.callType === "video" ? <Video size={22} /> : <Phone size={22} />}
-        </div>
+        <UserAvatar user={incomingCall.caller} size={48} />
         <div className="min-w-0">
           <p className="truncate font-semibold">@{incomingCall.caller.username || "Someone"}</p>
-          <p className="text-sm text-base-content/60">Incoming {incomingCall.callType} call</p>
+          <p className="flex items-center gap-1.5 text-sm text-base-content/60">
+            {incomingCall.callType === "video" ? <Video size={14} /> : <Phone size={14} />}
+            Incoming {incomingCall.callType} call
+          </p>
         </div>
       </div>
       <div className="mt-4 flex gap-3">
@@ -63,7 +65,7 @@ export function MinimizedCallBar({
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/8 text-[11px] font-semibold text-white/85"
           aria-label="Open call"
         >
-          {(activeCall.peer.username || "U").slice(0, 1).toUpperCase()}
+          <UserAvatar user={activeCall.peer} size={28} alt="" />
         </button>
 
         <button type="button" onClick={onExpand} className="min-w-0 flex-1 text-left">
@@ -139,9 +141,7 @@ export function ActiveCallOverlay({
             <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full flex-col items-center justify-center">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-3xl font-bold">
-                {(activeCall.peer.username || "U").slice(0, 1).toUpperCase()}
-              </div>
+              <UserAvatar user={activeCall.peer} size={96} />
               <p className="mt-4 text-lg font-semibold">@{activeCall.peer.username || "user"}</p>
               <p className="text-sm text-white/60">
                 {activeCall.callType === "video" && localHasVideo ? "video enabled" : activeCall.status}

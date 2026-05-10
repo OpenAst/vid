@@ -13,7 +13,26 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    const { avatar, first_name,last_name, bio } = await req.json();
+    const {
+      avatar,
+      first_name,
+      last_name,
+      bio,
+      skill_tags,
+      website_url,
+      twitter_url,
+      linkedin_url,
+      featured_video_id,
+      open_to_collab,
+      open_to_hire,
+      open_to_mentor,
+      availability_status,
+      is_private,
+      onboarding_completed,
+      skipped_profile_setup,
+      skipped_interests,
+      skipped_follow_suggestions,
+    } = await req.json();
 
     const apiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/users/profile/update/`, {
       method: 'PATCH',
@@ -24,7 +43,24 @@ export async function PATCH(req: NextRequest) {
       },
       body: JSON.stringify(
         { 
-          avatar, first_name, last_name, bio 
+          avatar,
+          first_name,
+          last_name,
+          bio,
+          skill_tags,
+          website_url,
+          twitter_url,
+          linkedin_url,
+          featured_video_id,
+          open_to_collab,
+          open_to_hire,
+          open_to_mentor,
+          availability_status,
+          is_private,
+          onboarding_completed,
+          skipped_profile_setup,
+          skipped_interests,
+          skipped_follow_suggestions,
         }),
     });
 

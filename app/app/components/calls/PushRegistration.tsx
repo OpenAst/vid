@@ -26,8 +26,15 @@ export default function PushRegistration() {
 
   const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
 
+  const hasNotificationSupport = typeof window !== "undefined" && "Notification" in window;
+  const hasPushSupport =
+    typeof window !== "undefined"
+    && "serviceWorker" in navigator
+    && "PushManager" in window
+    && hasNotificationSupport;
+
   const registerSubscription = async (askPermission: boolean) => {
-    if (!vapidPublicKey || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (!vapidPublicKey || !hasPushSupport) {
       return;
     }
 
@@ -63,8 +70,8 @@ export default function PushRegistration() {
   };
 
   useEffect(() => {
-    setIsSupported("serviceWorker" in navigator && "PushManager" in window);
-    setPermission(Notification.permission);
+    setIsSupported(hasPushSupport);
+    setPermission(hasNotificationSupport ? Notification.permission : "denied");
   }, []);
 
   useEffect(() => {
@@ -108,7 +115,7 @@ export default function PushRegistration() {
       console.error("Push opt-in failed", error);
     } finally {
       setIsSubmitting(false);
-      setPermission(Notification.permission);
+      setPermission(hasNotificationSupport ? Notification.permission : "denied");
     }
   };
 
