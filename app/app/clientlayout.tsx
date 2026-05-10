@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { usePathname, useRouter } from 'next/navigation';
 import { RootState, AppDispatch } from '@/app/store/store';
@@ -36,6 +36,39 @@ export default function ClientProvider({ children }: { children: React.ReactNode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement | null>(null);
+  const moreButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!isMoreOpen) return;
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (
+        target &&
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(target) &&
+        moreButtonRef.current &&
+        !moreButtonRef.current.contains(target)
+      ) {
+        setIsMoreOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMoreOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMoreOpen]);
 
   useEffect(() => {
     // Initial theme setup
@@ -178,9 +211,10 @@ export default function ClientProvider({ children }: { children: React.ReactNode
               );
             })}
 
-            <div className="relative w-full">
+            <div className="relative w-full" ref={moreMenuRef}>
               <button
                 type="button"
+                ref={moreButtonRef}
                 onClick={() => setIsMoreOpen((current) => !current)}
                 className={`flex w-full flex-col items-center justify-center rounded-xl px-2 py-2.5 text-xs transition-colors ${
                   isMoreOpen
