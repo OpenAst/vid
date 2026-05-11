@@ -390,10 +390,8 @@ const authSlice = createSlice({
       })
       .addCase(refresh.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.isAuthenticated = true;
         state.token = action.payload;
         state.isError = false;
-        state.isBootstrapped = true;
       })
       .addCase(refresh.rejected, (state) => {
         state.isLoading = false;
@@ -419,7 +417,6 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
-        state.token = action.payload.token;
         state.isBootstrapped = true;
       })
       .addCase(updateUser.rejected, (state, action) => {
