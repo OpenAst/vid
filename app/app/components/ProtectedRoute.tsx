@@ -6,13 +6,13 @@ import { RootState } from "../store/store";
 
 export default function ProtectedRoute({children}: {children: React.ReactNode}) {
   const router = useRouter();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, isBootstrapped } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
+    if (isBootstrapped && !isAuthenticated) {
+      router.replace('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isBootstrapped, router]);
 
-  return isAuthenticated ? <>{children}</> : null;
+  return isBootstrapped && isAuthenticated ? <>{children}</> : null;
 }

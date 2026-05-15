@@ -17,6 +17,7 @@
     "cookie": "^1.0.2",
     "cookies": "^0.9.1",
     "daisyui": "^4.12.22",
+    "emoji-picker-react": "^4.19.1",
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
     "jsonwebtoken": "^9.0.2",

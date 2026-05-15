@@ -30,12 +30,13 @@ import {
 
 export default function ClientProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
-  const pathname = usePathname();
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, isBootstrapped, user } = useSelector((state: RootState) => state.auth);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const sessionRehydratedRef = useRef(false);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -83,22 +84,21 @@ export default function ClientProvider({ children }: { children: React.ReactNode
     setDarkMode(storedTheme === 'dark');
     document.documentElement.setAttribute('data-theme', storedTheme);
 
-    // Rehydrate session from cookies on mount
+    // Rehydrate session from cookies once on mount.
     const rehydrateSession = async () => {
-      if (!isAuthenticated) {
-        try {
-          // Attempt to refresh the access token first
-          const result = await dispatch(refresh()).unwrap();
-          if (result) {
-            // Then fetch user profile
-            await dispatch(fetchUser());
-          } else {
-            dispatch(setUnAuthenticated());
-          }
-        } catch (err) {
-          console.log("No valid session found during rehydration", err);
+      if (sessionRehydratedRef.current || isAuthenticated) return;
+      sessionRehydratedRef.current = true;
+
+      try {
+        const result = await dispatch(refresh()).unwrap();
+        if (result) {
+          await dispatch(fetchUser()).unwrap();
+        } else {
           dispatch(setUnAuthenticated());
         }
+      } catch (err) {
+        console.log("No valid session found during rehydration", err);
+        dispatch(setUnAuthenticated());
       }
     };
 

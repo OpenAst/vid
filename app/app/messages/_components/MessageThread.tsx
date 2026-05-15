@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import dynamic from "next/dynamic";
 import CallButton from "@/app/components/calls/CallButton";
 import UserSafetyActions from "@/app/components/safety/UserSafetyActions";
-import { ArrowLeft, CheckCheck, Copy, MessageCircle, Mic, Phone, PhoneMissed, Reply, Square, Trash2, Video, X } from "lucide-react";
+import { ArrowLeft, CheckCheck, Copy, MessageCircle, Mic, Phone, PhoneMissed, Reply, Smile, Square, Trash2, Video, X } from "lucide-react";
 import { formatStamp, getCallLabel, getPresenceMeta } from "../_lib/messageUtils";
 import type { Message, MessageReaction, MessageReply, TimelineItem, UserSummary } from "../_lib/types";
+import type { EmojiClickData } from "emoji-picker-react";
 
 type MessageThreadProps = {
   draft: string;
@@ -48,6 +50,15 @@ const reactionOptions: Array<{ key: MessageReaction; label: string }> = [
   { key: "sad", label: "😢" },
 ];
 
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[360px] items-center justify-center rounded-xl bg-base-200 text-sm text-base-content/55">
+      Loading emoji keyboard...
+    </div>
+  ),
+});
+
 function EmptyThread() {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center text-sm text-base-content/60">
@@ -84,16 +95,78 @@ export default function MessageThread({
   const [blockedPeerIds, setBlockedPeerIds] = useState<Set<string>>(new Set());
   const [activeActionMessageId, setActiveActionMessageId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordingStreamRef = useRef<MediaStream | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const isSelectedPeerBlocked = Boolean(selectedPeer?.id && blockedPeerIds.has(selectedPeer.id));
+
+  useEffect(() => {
+    if (!isEmojiPickerOpen) return;
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (
+        target &&
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(target) &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(target)
+      ) {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isEmojiPickerOpen]);
+
+  useEffect(() => {
+    setIsEmojiPickerOpen(false);
+  }, [selectedPeer?.id]);
 
   const copyMessage = async (message: Message) => {
     if (!message.body || typeof navigator === "undefined" || !navigator.clipboard) return;
     await navigator.clipboard.writeText(message.body);
     setActiveActionMessageId(null);
+  };
+
+  const insertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current;
+    const selectionStart = textarea?.selectionStart ?? draft.length;
+    const selectionEnd = textarea?.selectionEnd ?? draft.length;
+    const nextDraft = `${draft.slice(0, selectionStart)}${emoji}${draft.slice(selectionEnd)}`;
+    const nextCursor = selectionStart + emoji.length;
+
+    onDraftChange(nextDraft);
+    window.requestAnimationFrame(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    insertEmoji(emojiData.emoji);
+  };
+
+  const sendCurrentMessage = () => {
+    setIsEmojiPickerOpen(false);
+    onSendMessage();
   };
 
   const stopRecordingStream = () => {
@@ -111,6 +184,7 @@ export default function MessageThread({
     ) return;
 
     try {
+      setIsEmojiPickerOpen(false);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       recordedChunksRef.current = [];
@@ -452,14 +526,62 @@ export default function MessageThread({
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
-                      onSendMessage();
+                      sendCurrentMessage();
                     }
                   }}
                   rows={1}
+                  ref={textareaRef}
                   placeholder={isSelectedPeerBlocked ? "Unblock this user to send messages" : "Write a message..."}
                   disabled={isSelectedPeerBlocked}
                   className="min-h-[52px] max-h-36 flex-1 resize-none rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
+              )}
+              {!isRecording && (
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    ref={emojiButtonRef}
+                    onClick={() => setIsEmojiPickerOpen((current) => !current)}
+                    disabled={isSelectedPeerBlocked}
+                    className={`flex h-[52px] w-[52px] items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:text-base-content/35 ${
+                      isEmojiPickerOpen ? "border-primary text-primary ring-2 ring-primary/20" : ""
+                    }`}
+                    aria-label="Open emoji keyboard"
+                    aria-expanded={isEmojiPickerOpen}
+                  >
+                    <Smile size={20} />
+                  </button>
+
+                  {isEmojiPickerOpen && (
+                    <div
+                      ref={emojiPickerRef}
+                      className="absolute bottom-[calc(100%+10px)] right-0 z-30 w-[min(82vw,340px)] rounded-2xl border border-base-300 bg-base-100 p-3 shadow-2xl"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-base-content">Emoji</p>
+                        <button
+                          type="button"
+                          onClick={() => setIsEmojiPickerOpen(false)}
+                          className="rounded-full p-1.5 text-base-content/55 transition hover:bg-base-200 hover:text-base-content"
+                          aria-label="Close emoji keyboard"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                      <div className="overflow-hidden rounded-xl">
+                        <EmojiPicker
+                          width="100%"
+                          height={360}
+                          lazyLoadEmojis
+                          searchPlaceholder="Search emoji"
+                          skinTonesDisabled={false}
+                          previewConfig={{ showPreview: false }}
+                          onEmojiClick={handleEmojiClick}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
               {isRecording ? (
                 <button
@@ -474,7 +596,7 @@ export default function MessageThread({
               ) : hasDraft ? (
                 <button
                   type="button"
-                  onClick={onSendMessage}
+                  onClick={sendCurrentMessage}
                   disabled={isSending || isSelectedPeerBlocked}
                   className={`shrink-0 rounded-2xl px-4 py-3 text-sm font-medium transition sm:px-5 ${
                     !isSending

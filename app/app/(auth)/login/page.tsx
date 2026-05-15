@@ -115,6 +115,14 @@ const LoginPage = () => {
     }
   }, [mounted, isBootstrapped, isAuthenticated, router]);
 
+  if (!mounted || !isBootstrapped || isAuthenticated) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white text-slate-950">
+        <div className="h-10 w-10 animate-pulse rounded-2xl bg-slate-200" aria-hidden="true" />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-white text-slate-950 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
       <section className="relative overflow-hidden bg-[#05070d] px-5 py-8 text-white sm:px-8 lg:min-h-screen lg:px-14 lg:py-12">

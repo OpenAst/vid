@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '@/app/store/store';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/store/store';
 import Feed, { type FeedMode } from '@/app/components/video/Feed';
 import { useRouter } from 'next/navigation';
-import { setUnAuthenticated } from '@/app/store/authSlice';
 import { Clock, Plus, Sparkles, Users } from "lucide-react";
 import Header from './components/layout/Header';
 import FeedSkeleton from './components/video/FeedSkeleton';
@@ -19,7 +18,6 @@ const FEED_TABS: Array<{ mode: FeedMode; label: string; icon: React.ReactNode }>
 
 function HomePage() {
   const { isAuthenticated, isLoading, isBootstrapped, token } = useSelector((state: RootState) => state.auth);
-  const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
   const [feedMode, setFeedMode] = useState<FeedMode>("for-you");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -50,10 +48,9 @@ function HomePage() {
 
   useEffect(() => {
     if (isBootstrapped && !isLoading && !isAuthenticated) {
-      dispatch(setUnAuthenticated());
       router.replace('/login');
     }
-  }, [isBootstrapped, isLoading, isAuthenticated, dispatch, router]);
+  }, [isBootstrapped, isLoading, isAuthenticated, router]);
 
   if (!isBootstrapped || isLoading) {
     return (
