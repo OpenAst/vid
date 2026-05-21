@@ -181,12 +181,12 @@ function SearchPageContent() {
     <main className="min-h-[100dvh] bg-base-100 px-4 pb-12 pt-[calc(var(--app-header-height)+18px)] text-base-content md:pl-[124px] md:pr-8">
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6">
-          <p className="text-sm font-semibold text-primary">Search</p>
-          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Find clips and creators</h1>
+          <p className="text-xs font-bold uppercase tracking-wide text-primary">Search</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Find clips and creators</h1>
         </div>
 
         <form onSubmit={submitSearch} className="mb-4 flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-4 py-3 shadow-sm">
-          <Search size={18} className="text-base-content/45" />
+          <Search size={18} className="text-base-content/70" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -198,7 +198,7 @@ function SearchPageContent() {
             <button
               type="button"
               onClick={clearSearch}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/45 transition hover:bg-base-200 hover:text-base-content"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/70 transition hover:bg-base-200 hover:text-base-content"
               aria-label="Clear search"
             >
               <X size={16} />
@@ -237,7 +237,7 @@ function SearchPageContent() {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                activeTab === tab.id ? "bg-base-content text-base-100" : "text-base-content/60 hover:bg-base-200"
+                activeTab === tab.id ? "bg-base-content text-base-100" : "text-base-content/70 hover:bg-base-200"
               }`}
             >
               {tab.icon}
@@ -291,8 +291,8 @@ function SearchPageContent() {
                     </div>
                     <div className="p-3">
                       <p className="line-clamp-1 text-sm font-semibold">{video.title || "Untitled clip"}</p>
-                      <p className="mt-1 truncate text-xs text-base-content/55">@{video.uploader?.username || "creator"}</p>
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-base-content/45">
+                      <p className="mt-1 truncate text-xs font-medium text-base-content/70">@{video.uploader?.username || "creator"}</p>
+                      <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-base-content/70">
                         <span>{video.likes || 0} likes</span>
                         <span>{video.skill_category || "general"}</span>
                       </div>
@@ -346,7 +346,7 @@ function SearchPageContent() {
                             className="block max-w-full text-left"
                           >
                             <p className="truncate font-semibold">{name}</p>
-                            <p className="truncate text-sm text-base-content/55">@{person.username || "creator"}</p>
+                            <p className="truncate text-sm font-medium text-base-content/70">@{person.username || "creator"}</p>
                           </button>
                           {skills.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
@@ -361,7 +361,7 @@ function SearchPageContent() {
                       </div>
 
                       {person.profile?.bio && (
-                        <p className="mt-3 line-clamp-2 text-sm leading-6 text-base-content/60">{person.profile.bio}</p>
+                        <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-base-content/70">{person.profile.bio}</p>
                       )}
 
                       <div className="mt-4 flex gap-2">
@@ -371,7 +371,7 @@ function SearchPageContent() {
                           disabled={Boolean(person.is_following) || loadingFollowId === person.id}
                           className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
                             person.is_following
-                              ? "bg-base-200 text-base-content/50"
+                              ? "bg-base-200 text-base-content/65"
                               : "bg-primary text-primary-content hover:opacity-90"
                           }`}
                         >
@@ -401,7 +401,7 @@ function SearchPageContent() {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-2xl border border-base-300 bg-base-100 p-10 text-center text-sm text-base-content/60">
+    <div className="rounded-2xl border border-base-300 bg-base-100 p-10 text-center text-sm font-medium text-base-content/70">
       {text}
     </div>
   );

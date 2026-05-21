@@ -163,11 +163,11 @@ export default function SavedPage() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
               <Bookmark size={16} fill="currentColor" />
               Saved
             </p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Your saved clips</h1>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Your saved clips</h1>
           </div>
         </div>
 
@@ -237,7 +237,7 @@ export default function SavedPage() {
             <div>
               <VideoIcon className="mx-auto mb-3 text-base-content/35" size={38} />
               <p className="font-semibold">No saved clips yet</p>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-base-content/55">
+              <p className="mt-2 max-w-sm text-sm font-medium leading-6 text-base-content/70">
                 {activeCollectionId === "all"
                   ? "Save videos from the feed and they will stay here for later."
                   : "Add saved clips to this collection from the All saved view."}
@@ -274,7 +274,7 @@ export default function SavedPage() {
                   </div>
                 </button>
                 <div className="flex items-center justify-between gap-2 p-2">
-                  <span className="truncate text-xs text-base-content/50">{video.timestamp}</span>
+                  <span className="truncate text-xs text-base-content/65">{video.timestamp}</span>
                   {collections.length > 0 && (
                     <select
                       defaultValue=""
@@ -296,7 +296,7 @@ export default function SavedPage() {
                     type="button"
                     onClick={() => void removeSavedVideo(video.id)}
                     disabled={removingId === video.id}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-base-content/60 transition hover:bg-base-200 hover:text-error disabled:cursor-wait disabled:opacity-50"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-base-content/70 transition hover:bg-base-200 hover:text-error disabled:cursor-wait disabled:opacity-50"
                     aria-label={activeCollectionId === "all" ? "Remove from saved" : "Remove from collection"}
                   >
                     {activeCollectionId === "all" ? <Trash2 size={15} /> : <Plus size={15} className="rotate-45" />}

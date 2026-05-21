@@ -93,7 +93,7 @@ const ResetPasswordConfirm = () => {
             />
           </div>
 
-          <button type="submit" className='w-full p-2 rounded-lg bg-gray-400'>
+          <button type="submit" className='w-full rounded-lg bg-[rgb(68,13,156)] p-2 text-white transition hover:bg-[rgb(84,22,180)]'>
             Confirm Reset
           </button>
 
@@ -101,7 +101,7 @@ const ResetPasswordConfirm = () => {
 
           <p className='text-center mt-4'>
             Remembered your password?{' '}
-            <Link href="/login" className='text-blue-500 hover:underline'>
+            <Link href="/login" className='font-semibold text-[rgb(68,13,156)] hover:underline'>
               Login
             </Link>
           </p>

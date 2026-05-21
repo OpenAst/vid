@@ -329,12 +329,12 @@ export default function CollabsPage() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
           <div>
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
               <Handshake size={16} />
               Collab Marketplace
             </p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Find creators to build with</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-base-content/60">
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Find creators to build with</h1>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-base-content/70">
               Discover people open to collaborations, paid work, mentoring, and creative partnerships.
             </p>
           </div>
@@ -346,7 +346,7 @@ export default function CollabsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{featuredCount}</p>
-                <p className="text-sm text-base-content/55">open creators</p>
+                <p className="text-sm font-medium text-base-content/70">open creators</p>
               </div>
             </div>
           </div>
@@ -354,7 +354,7 @@ export default function CollabsPage() {
 
         <section className="mb-5 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
           <div className="flex items-center gap-3 rounded-xl border border-base-300 bg-base-100 px-3 py-2">
-            <Search size={18} className="text-base-content/45" />
+            <Search size={18} className="text-base-content/70" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -406,7 +406,7 @@ export default function CollabsPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-bold">Post a collab request</h2>
-              <p className="mt-1 text-sm leading-6 text-base-content/60">
+              <p className="mt-1 text-sm font-medium leading-6 text-base-content/70">
                 Tell creators what you need and let them reach out.
               </p>
             </div>
@@ -472,7 +472,7 @@ export default function CollabsPage() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold">Your requests</h2>
-              <p className="mt-1 text-sm text-base-content/55">Review applicants and move good matches forward.</p>
+              <p className="mt-1 text-sm font-medium text-base-content/70">Review applicants and move good matches forward.</p>
             </div>
           </div>
           {isMyRequestsLoading ? (
@@ -482,7 +482,7 @@ export default function CollabsPage() {
               ))}
             </div>
           ) : myRequests.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-8 text-center text-sm text-base-content/55">
+            <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-8 text-center text-sm font-medium text-base-content/70">
               Your posted requests and applicants will appear here.
             </div>
           ) : (
@@ -493,16 +493,16 @@ export default function CollabsPage() {
                     <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase text-primary">
                       {request.request_type}
                     </span>
-                    <span className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-bold text-base-content/60">
+                    <span className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-bold text-base-content/70">
                       {request.applications?.length || 0} applicants
                     </span>
                   </div>
                   <h3 className="font-bold">{request.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-base-content/60">{request.description}</p>
+                  <p className="mt-1 line-clamp-2 text-sm font-medium leading-6 text-base-content/70">{request.description}</p>
 
                   <div className="mt-4 space-y-3">
                     {(request.applications || []).length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-base-300 px-4 py-5 text-center text-sm text-base-content/50">
+                      <div className="rounded-xl border border-dashed border-base-300 px-4 py-5 text-center text-sm text-base-content/65">
                         No applications yet.
                       </div>
                     ) : (
@@ -521,7 +521,7 @@ export default function CollabsPage() {
                                   >
                                     {applicantName}
                                   </button>
-                                  <span className="rounded-full bg-base-100 px-2 py-1 text-[11px] font-bold capitalize text-base-content/55">
+                                  <span className="rounded-full bg-base-100 px-2 py-1 text-[11px] font-bold capitalize text-base-content/70">
                                     {application.status}
                                   </span>
                                 </div>
@@ -563,7 +563,7 @@ export default function CollabsPage() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold">Open requests</h2>
-              <p className="mt-1 text-sm text-base-content/55">Jobs, collaborations, and mentorship asks from creators.</p>
+              <p className="mt-1 text-sm font-medium text-base-content/70">Jobs, collaborations, and mentorship asks from creators.</p>
             </div>
           </div>
           {isRequestsLoading ? (
@@ -573,7 +573,7 @@ export default function CollabsPage() {
               ))}
             </div>
           ) : filteredRequests.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-10 text-center text-sm text-base-content/55">
+            <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-10 text-center text-sm font-medium text-base-content/70">
               No open requests match these filters.
             </div>
           ) : (
@@ -587,19 +587,19 @@ export default function CollabsPage() {
                         {request.request_type}
                       </span>
                       {request.budget && (
-                        <span className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-bold text-base-content/60">
+                        <span className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-bold text-base-content/70">
                           {request.budget}
                         </span>
                       )}
                     </div>
                     <h3 className="font-bold">{request.title}</h3>
                     {request.description && (
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-base-content/60">{request.description}</p>
+                      <p className="mt-2 line-clamp-2 text-sm font-medium leading-6 text-base-content/70">{request.description}</p>
                     )}
                     {request.skills && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {parseSkills(request.skills, 5).map((item) => (
-                          <span key={item} className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-semibold text-base-content/60">
+                          <span key={item} className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-semibold text-base-content/70">
                             {item}
                           </span>
                         ))}
@@ -614,7 +614,7 @@ export default function CollabsPage() {
                         <UserAvatar user={request.creator} size={34} showPresence isOnline={request.creator.profile?.availability_status === "available"} />
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-semibold">{creatorName}</span>
-                          <span className="block truncate text-xs text-base-content/50">@{request.creator.username || "creator"}</span>
+                          <span className="block truncate text-xs text-base-content/65">@{request.creator.username || "creator"}</span>
                         </span>
                       </button>
                       <button
@@ -654,7 +654,7 @@ export default function CollabsPage() {
           <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-14 text-center">
             <Handshake className="mx-auto mb-3 text-base-content/35" size={38} />
             <p className="font-semibold">No creators found</p>
-            <p className="mt-2 text-sm text-base-content/55">Try another filter or search term.</p>
+            <p className="mt-2 text-sm font-medium text-base-content/70">Try another filter or search term.</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -687,14 +687,14 @@ export default function CollabsPage() {
                         className="block max-w-full text-left"
                       >
                         <p className="truncate font-semibold">{displayName}</p>
-                        <p className="truncate text-sm text-base-content/55">@{person.username || "creator"}</p>
+                        <p className="truncate text-sm font-medium text-base-content/70">@{person.username || "creator"}</p>
                       </button>
-                      <p className="mt-1 text-xs text-base-content/45">{person.follower_count || 0} followers</p>
+                      <p className="mt-1 text-xs font-medium text-base-content/70">{person.follower_count || 0} followers</p>
                     </div>
                   </div>
 
                   {person.profile?.bio && (
-                    <p className="mt-4 line-clamp-2 min-h-[44px] text-sm leading-6 text-base-content/60">
+                    <p className="mt-4 line-clamp-2 min-h-[44px] text-sm font-medium leading-6 text-base-content/70">
                       {person.profile.bio}
                     </p>
                   )}
@@ -707,7 +707,7 @@ export default function CollabsPage() {
                       </span>
                     ))}
                     {skills.map((item) => (
-                      <span key={item} className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-semibold text-base-content/60">
+                      <span key={item} className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-semibold text-base-content/70">
                         {item}
                       </span>
                     ))}
@@ -753,7 +753,7 @@ export default function CollabsPage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-primary">Apply</p>
                 <h2 className="mt-1 text-lg font-bold">{selectedRequest.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-base-content/60">
+                <p className="mt-2 text-sm font-medium leading-6 text-base-content/70">
                   Send a short pitch so the creator can quickly understand why you are a good fit.
                 </p>
               </div>

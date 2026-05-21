@@ -1,7 +1,11 @@
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.utils import timezone
 from djoser.email import ActivationEmail
+
+from backend.tasks import send_rendered_email
 
 class CustomActivationEmail(ActivationEmail):
   def get_context_data(self):
@@ -11,4 +15,35 @@ class CustomActivationEmail(ActivationEmail):
     context["protocol"] = parsed_frontend.scheme or "https"
     context["site_name"] = settings.DJOSER.get("SITE_NAME", "OneClyq")
     return context
+
+  def send(self, to, fail_silently=False, **kwargs):
+    self.render()
+
+    from_email = kwargs.pop("from_email", settings.DEFAULT_FROM_EMAIL)
+    alternatives = list(getattr(self, "alternatives", []))
+
+    user = self.context.get("user") if hasattr(self, "context") else None
+    if user and getattr(user, "pk", None):
+      type(user).objects.filter(pk=user.pk).update(activation_email_sent_at=timezone.now())
+
+    recipients = [to] if isinstance(to, str) else list(to)
+
+    try:
+      send_rendered_email.delay(
+        self.subject,
+        self.body,
+        from_email,
+        recipients,
+        alternatives,
+      )
+    except Exception:
+      message = EmailMultiAlternatives(
+        subject=self.subject,
+        body=self.body,
+        from_email=from_email,
+        to=recipients,
+      )
+      for content, mimetype in alternatives:
+        message.attach_alternative(content, mimetype)
+      message.send(fail_silently=fail_silently)
   

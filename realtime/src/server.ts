@@ -22,6 +22,7 @@ type ClientToServerEvents = {
   "video-likes:join": () => void;
   "video-likes:like_video": (payload: { videoId: string }) => void;
   "messages:send": (payload: DirectMessageRelayPayload) => void;
+  "messages:delete": (payload: DirectMessageRelayPayload) => void;
   "messages:read": (payload: DirectMessageReadPayload) => void;
   "messages:typing": (payload: DirectMessageTypingPayload) => void;
   "presence:subscribe": (payload: { userIds: string[] }) => void;
@@ -56,6 +57,8 @@ type ServerToClientEvents = {
   }) => void;
   video_view_updated: (payload: { videoId: string; views: number }) => void;
   "messages:new": (payload: DirectMessageRelayPayload & { fromUserId: string }) => void;
+  "messages:delete": (payload: DirectMessageRelayPayload & { fromUserId: string }) => void;
+  "messages:update": (payload: DirectMessageUpdatePayload) => void;
   "messages:read": (payload: DirectMessageReadPayload & { fromUserId: string }) => void;
   "messages:typing": (payload: DirectMessageTypingPayload & { fromUserId: string }) => void;
   "presence:snapshot": (payload: { onlineUserIds: string[] }) => void;
@@ -95,6 +98,11 @@ type CallSignalPayload = {
 type DirectMessageRelayPayload = {
   conversationId: string;
   toUserId: string;
+  message: unknown;
+};
+
+type DirectMessageUpdatePayload = {
+  conversationId: string;
   message: unknown;
 };
 
@@ -310,6 +318,27 @@ async function handleHttpRequest(req: IncomingMessage, res: ServerResponse, io: 
         room: videoLikesRoom(),
         videoId: body.videoId,
         views: body.views,
+      });
+    } else if (
+      body?.type === "messages_updated" &&
+      typeof body.conversationId === "string" &&
+      isUuid(body.conversationId) &&
+      Array.isArray(body.userIds) &&
+      body.message
+    ) {
+      const userIds = body.userIds.filter((userId): userId is string => typeof userId === "string" && isUuid(userId));
+      const payload = {
+        conversationId: body.conversationId,
+        message: body.message,
+      };
+
+      userIds.forEach((userId) => {
+        io.to(userRoom(userId)).emit("messages:update", payload);
+      });
+
+      logInfo("Broadcasted message update", {
+        conversationId: body.conversationId,
+        userCount: userIds.length,
       });
     } else {
       logWarn("Internal event ignored: unsupported payload", {
@@ -683,6 +712,31 @@ function handleDirectMessageRelay(socket: RealtimeSocket, payload: DirectMessage
   });
 }
 
+function handleDirectMessageDelete(socket: RealtimeSocket, payload: DirectMessageRelayPayload) {
+  if (!isUuid(payload.conversationId)) {
+    emitError(socket, "Invalid conversation id");
+    return;
+  }
+
+  if (!validateUserId(socket, payload.toUserId)) {
+    return;
+  }
+
+  const eventPayload = {
+    ...payload,
+    fromUserId: socket.data.user.id,
+  };
+
+  socket.to(userRoom(payload.toUserId)).emit("messages:delete", eventPayload);
+  socket.to(userRoom(socket.data.user.id)).emit("messages:delete", eventPayload);
+  logInfo("Direct message delete relayed", {
+    connectionId: socket.data.connectionId,
+    fromUserId: socket.data.user.id,
+    toUserId: payload.toUserId,
+    conversationId: payload.conversationId,
+  });
+}
+
 function handleDirectMessageRead(socket: RealtimeSocket, payload: DirectMessageReadPayload) {
   if (!isUuid(payload.conversationId)) {
     emitError(socket, "Invalid conversation id");
@@ -878,6 +932,9 @@ export async function createRealtimeServer() {
 
     socket.on("messages:send", (payload) => {
       handleDirectMessageRelay(socket, payload);
+    });
+    socket.on("messages:delete", (payload) => {
+      handleDirectMessageDelete(socket, payload);
     });
     socket.on("messages:read", (payload) => {
       handleDirectMessageRead(socket, payload);

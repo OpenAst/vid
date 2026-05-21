@@ -1,7 +1,7 @@
 "use client";
 
 import UserAvatar from "@/app/components/common/UserAvatar";
-import { Phone, PhoneMissed, Search, Video, X } from "lucide-react";
+import { MessageCircle, Phone, PhoneMissed, Search, Video, X } from "lucide-react";
 import { formatStamp, getConversationPreview, getPresenceMeta } from "../_lib/messageUtils";
 import type { Conversation, UserSummary } from "../_lib/types";
 
@@ -48,34 +48,32 @@ export default function MessagesInbox({
   };
   const filteredConversations = normalizedSearch
     ? conversations.filter((conversation) => {
-        const preview = getConversationPreview(conversation, currentUserId);
-        return (
-          matchesUser(conversation.other_user) ||
-          preview.label.toLowerCase().includes(normalizedSearch) ||
-          Boolean(conversation.last_message?.audio_transcript?.toLowerCase().includes(normalizedSearch))
-        );
+        return matchesUser(conversation.other_user);
       })
     : conversations;
   const filteredPeople = normalizedSearch ? people.filter(matchesUser) : people;
 
   return (
-    <section className={`overflow-hidden rounded-2xl border border-base-300 bg-base-100 ${showThreadOnMobile ? "hidden md:block" : ""}`}>
-      <div className="space-y-3 border-b border-base-300 px-4 py-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-base-content/60">Inbox</h2>
-        <div className="flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-3 py-2 text-base-content/70 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+    <section className={`overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm ${showThreadOnMobile ? "hidden md:block" : ""}`}>
+      <div className="space-y-3 border-b border-base-300 px-4 py-4">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-base-content/75">Inbox</h2>
+          <p className="mt-1 text-xs font-medium text-base-content/70">Search people or open a recent chat.</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-3 py-2.5 text-base-content/70 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
           <Search size={16} aria-hidden="true" />
           <input
             value={conversationSearch}
             onChange={(event) => onConversationSearchChange(event.target.value)}
             type="search"
-            placeholder="Search messages"
+            placeholder="Search users"
             className="min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none placeholder:text-base-content/40"
           />
           {conversationSearch && (
             <button
               type="button"
               onClick={() => onConversationSearchChange("")}
-              className="rounded-full p-1 text-base-content/50 transition hover:bg-base-200 hover:text-base-content"
+              className="rounded-full p-1 text-base-content/65 transition hover:bg-base-200 hover:text-base-content"
               aria-label="Clear search"
             >
               <X size={14} />
@@ -97,11 +95,17 @@ export default function MessagesInbox({
             ))}
           </div>
         ) : conversations.length === 0 ? (
-          <div className="p-6 text-sm text-base-content/60">
-            No conversations yet. Start a new chat below or from someone&apos;s profile.
+          <div className="flex min-h-56 flex-col items-center justify-center px-6 py-10 text-center text-sm font-medium text-base-content/70">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <MessageCircle size={22} />
+            </div>
+            <p className="font-semibold text-base-content">No conversations yet</p>
+            <p className="mt-2 max-w-xs leading-6">
+              Search for a person below or open someone&apos;s profile to start your first chat.
+            </p>
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="p-6 text-sm text-base-content/60">No conversations found.</div>
+          <div className="p-6 text-sm font-medium text-base-content/70">No users found in your conversations.</div>
         ) : (
           filteredConversations.map((conversation) => {
             const active = conversation.id === selectedConversationId;
@@ -125,7 +129,7 @@ export default function MessagesInbox({
                       {conversation.other_user?.first_name || conversation.other_user?.username || "Unknown"}
                     </p>
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className={`text-xs ${hasUnread ? "font-semibold text-primary" : "text-base-content/50"}`}>
+                      <span className={`text-xs ${hasUnread ? "font-semibold text-primary" : "font-medium text-base-content/70"}`}>
                         {formatStamp(preview.timestamp)}
                       </span>
                       {hasUnread && (
@@ -135,7 +139,7 @@ export default function MessagesInbox({
                       )}
                     </div>
                   </div>
-                  <p className={`flex items-center gap-1.5 truncate text-sm ${preview.isMissed ? "text-rose-600" : hasUnread ? "font-semibold text-base-content" : "text-base-content/60"}`}>
+                  <p className={`flex items-center gap-1.5 truncate text-sm ${preview.isMissed ? "font-medium text-rose-600" : hasUnread ? "font-semibold text-base-content" : "font-medium text-base-content/70"}`}>
                     {preview.isCall && (
                       conversation.last_call?.call_type === "video"
                         ? <Video size={13} aria-hidden="true" />
@@ -157,7 +161,7 @@ export default function MessagesInbox({
       </div>
 
       <div className="border-t border-base-300 px-4 py-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-base-content/50">Start New Chat</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wide text-base-content/75">Start New Chat</h3>
       </div>
       <div className="max-h-[30dvh] overflow-y-auto md:max-h-[28dvh]">
         {isLoadingPeople ? (
@@ -167,9 +171,9 @@ export default function MessagesInbox({
             ))}
           </div>
         ) : people.length === 0 ? (
-          <div className="p-4 text-sm text-base-content/60">No people found yet.</div>
+          <div className="p-4 text-sm font-medium text-base-content/70">No people found yet.</div>
         ) : filteredPeople.length === 0 ? (
-          <div className="p-4 text-sm text-base-content/60">No people match that search.</div>
+          <div className="p-4 text-sm font-medium text-base-content/70">No people match that search.</div>
         ) : (
           filteredPeople.map((person) => {
             const isOnline = onlineUserIds.has(person.id);
@@ -186,7 +190,7 @@ export default function MessagesInbox({
                   <p className="truncate font-medium">
                     {person.first_name || person.username || "Unknown"}
                   </p>
-                  <p className="truncate text-sm text-base-content/60">@{person.username || "user"}</p>
+                  <p className="truncate text-sm font-medium text-base-content/70">@{person.username || "user"}</p>
                   <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${presence.className}`}>
                     <span className={`h-2 w-2 rounded-full ${presence.dotClassName}`} aria-hidden="true" />
                     {presence.label}

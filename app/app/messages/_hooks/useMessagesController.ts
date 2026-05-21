@@ -18,7 +18,9 @@ import type {
   MessageTypingPayload,
   PresenceChangedPayload,
   PresenceSnapshotPayload,
+  RealtimeMessageDeletePayload,
   RealtimeMessagePayload,
+  RealtimeMessageUpdatePayload,
   UserSummary,
 } from "../_lib/types";
 
@@ -36,6 +38,8 @@ export function useMessagesController() {
   const [people, setPeople] = useState<UserSummary[]>([]);
   const [draft, setDraft] = useState("");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<File | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [conversationSearch, setConversationSearch] = useState("");
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingPeople, setIsLoadingPeople] = useState(true);
@@ -374,15 +378,52 @@ export function useMessagesController() {
   }, [emitTypingState]);
 
   const sendMessage = useCallback(async () => {
-    if (!selectedConversationId || !hasDraft || isSending) return;
+    if (!selectedConversationId || (!hasDraft && !selectedAttachment) || isSending) return;
 
     setIsSending(true);
+    setSendError(null);
     try {
       const messageBody = draft.trim();
+      let attachmentPayload = {};
+
+      if (selectedAttachment) {
+        const fileType = selectedAttachment.type || "application/octet-stream";
+        const presignResponse = await fetch("/api/messages/attachment-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_type: fileType,
+            file_name: selectedAttachment.name,
+            file_size: selectedAttachment.size,
+          }),
+        });
+        const presignData = await presignResponse.json().catch(() => null);
+        if (!presignResponse.ok || !presignData?.upload_url || !presignData?.attachment_url) {
+          throw new Error(presignData?.detail || "Unable to prepare attachment");
+        }
+
+        const uploadResponse = await fetch(presignData.upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": fileType },
+          body: selectedAttachment,
+        });
+        if (!uploadResponse.ok) {
+          throw new Error("Unable to upload attachment");
+        }
+
+        attachmentPayload = {
+          message_type: fileType.startsWith("image/") ? "image" : "file",
+          attachment_url: presignData.attachment_url,
+          attachment_name: selectedAttachment.name,
+          attachment_type: fileType,
+          attachment_size: selectedAttachment.size,
+        };
+      }
+
       const response = await fetch(`/api/messages/conversations/${selectedConversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: messageBody, reply_to_id: replyingTo?.id || null }),
+        body: JSON.stringify({ body: messageBody, reply_to_id: replyingTo?.id || null, ...attachmentPayload }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -393,6 +434,7 @@ export function useMessagesController() {
       setMessages((current) => [...current, nextMessage]);
       syncConversationPreview(selectedConversationId, nextMessage);
       setDraft("");
+      setSelectedAttachment(null);
       setReplyingTo(null);
       emitTypingState(false);
 
@@ -405,10 +447,11 @@ export function useMessagesController() {
       }
     } catch (error) {
       console.error("Failed to send message", error);
+      setSendError(error instanceof Error ? error.message : "Unable to send message");
     } finally {
       setIsSending(false);
     }
-  }, [draft, emitTypingState, hasDraft, isSending, replyingTo?.id, selectedConversation, selectedConversationId, syncConversationPreview]);
+  }, [draft, emitTypingState, hasDraft, isSending, replyingTo?.id, selectedAttachment, selectedConversation, selectedConversationId, syncConversationPreview]);
 
   const sendVoiceNote = useCallback(async (audioBlob: Blob, durationMs: number) => {
     if (!selectedConversationId || isSending) return;
@@ -517,6 +560,146 @@ export function useMessagesController() {
     }
   }, [applyMessageReaction, selectedConversationId]);
 
+  const deleteMessageForMe = useCallback(async (message: Message) => {
+    if (!selectedConversationId) return;
+
+    const previousMessages = messages;
+    setMessages((current) => current.filter((item) => item.id !== message.id));
+
+    try {
+      const response = await fetch(`/api/messages/conversations/${selectedConversationId}/messages/${message.id}/visibility`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.detail || "Unable to delete message");
+      }
+      void loadConversations();
+    } catch (error) {
+      setMessages(previousMessages);
+      console.error("Failed to delete message for current user", error);
+      throw error;
+    }
+  }, [loadConversations, messages, selectedConversationId]);
+
+  const undoDeleteMessageForMe = useCallback(async (message: Message) => {
+    if (!selectedConversationId) return;
+
+    const response = await fetch(`/api/messages/conversations/${selectedConversationId}/messages/${message.id}/visibility`, {
+      method: "POST",
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(data?.detail || "Unable to restore message");
+    }
+
+    const restoredMessage = data as Message;
+    setMessages((current) => {
+      if (current.some((item) => item.id === restoredMessage.id)) return current;
+      return [...current, restoredMessage].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+    });
+    void loadConversations();
+  }, [loadConversations, selectedConversationId]);
+
+  const applyDeletedForEveryone = useCallback((conversationId: string, deletedMessage: Message) => {
+    setMessages((current) =>
+      current.map((message) => message.id === deletedMessage.id ? { ...message, ...deletedMessage } : message)
+    );
+
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === conversationId && conversation.last_message?.id === deletedMessage.id
+          ? { ...conversation, last_message: { ...conversation.last_message, ...deletedMessage } }
+          : conversation
+      )
+    );
+
+    setSelectedConversation((current) =>
+      current?.id === conversationId && current.last_message?.id === deletedMessage.id
+        ? { ...current, last_message: { ...current.last_message, ...deletedMessage } }
+        : current
+    );
+  }, []);
+
+  const applyMessageUpdate = useCallback((conversationId: string, updatedMessage: RealtimeMessageUpdatePayload["message"]) => {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === updatedMessage.id
+          ? { ...message, ...updatedMessage }
+          : message
+      )
+    );
+
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === conversationId && conversation.last_message?.id === updatedMessage.id
+          ? { ...conversation, last_message: { ...conversation.last_message, ...updatedMessage } }
+          : conversation
+      )
+    );
+
+    setSelectedConversation((current) =>
+      current?.id === conversationId && current.last_message?.id === updatedMessage.id
+        ? { ...current, last_message: { ...current.last_message, ...updatedMessage } }
+        : current
+    );
+  }, []);
+
+  const deleteMessageForEveryone = useCallback(async (message: Message) => {
+    if (!selectedConversationId) return;
+
+    const previousMessages = messages;
+    const previousConversation = selectedConversation;
+    const optimisticDeletedMessage: Message = {
+      ...message,
+      body: "",
+      message_type: "text",
+      audio_url: null,
+      audio_duration_ms: 0,
+      audio_transcript: "",
+      attachment_url: null,
+      attachment_name: "",
+      attachment_type: "",
+      attachment_size: 0,
+      reply_to: null,
+      reaction_counts: {},
+      my_reaction: null,
+      is_deleted_for_everyone: true,
+      deleted_for_everyone_at: new Date().toISOString(),
+    };
+
+    applyDeletedForEveryone(selectedConversationId, optimisticDeletedMessage);
+
+    try {
+      const response = await fetch(`/api/messages/conversations/${selectedConversationId}/messages/${message.id}/visibility`, {
+        method: "PATCH",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.detail || "Unable to delete message for everyone");
+      }
+
+      const deletedMessage = data as Message;
+      applyDeletedForEveryone(selectedConversationId, deletedMessage);
+
+      if (selectedConversation) {
+        socketRef.current?.emit("messages:delete", {
+          conversationId: selectedConversationId,
+          toUserId: selectedConversation.other_user.id,
+          message: deletedMessage,
+        });
+      }
+    } catch (error) {
+      setMessages(previousMessages);
+      setSelectedConversation(previousConversation);
+      void loadConversations();
+      console.error("Failed to delete message for everyone", error);
+      throw error;
+    }
+  }, [applyDeletedForEveryone, loadConversations, messages, selectedConversation, selectedConversationId]);
+
   const startChatWithUser = useCallback(async (person: UserSummary) => {
     if (user?.id && person.id === user.id) {
       setConversationError("You can't message yourself.");
@@ -534,6 +717,17 @@ export function useMessagesController() {
       setConversationError(error instanceof Error ? error.message : "Unable to start conversation");
     }
   }, [ensureConversationForPeer, loadMessages, upsertConversation, user?.id]);
+
+  const selectAttachment = useCallback((file: File) => {
+    if (file.size > 15 * 1024 * 1024) {
+      setSendError("Attachments must be 15MB or smaller.");
+      toast.error("Attachments must be 15MB or smaller.");
+      return;
+    }
+
+    setSelectedAttachment(file);
+    setSendError(null);
+  }, []);
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
@@ -599,6 +793,16 @@ export function useMessagesController() {
 
     const handleMessageRead = (payload: MessageReadPayload) => {
       applyReadReceipts(payload.conversationId, payload.messageIds, payload.readAt);
+    };
+
+    const handleMessageDeleted = (payload: RealtimeMessageDeletePayload) => {
+      if (payload.fromUserId === user?.id) return;
+      applyDeletedForEveryone(payload.conversationId, payload.message);
+      void loadConversations();
+    };
+
+    const handleMessageUpdated = (payload: RealtimeMessageUpdatePayload) => {
+      applyMessageUpdate(payload.conversationId, payload.message);
     };
 
     const handleMessageTyping = (payload: MessageTypingPayload) => {
@@ -683,6 +887,8 @@ export function useMessagesController() {
     socket.on("connect", handleConnect);
     socket.on("messages:new", handleIncomingMessage);
     socket.on("messages:read", handleMessageRead);
+    socket.on("messages:delete", handleMessageDeleted);
+    socket.on("messages:update", handleMessageUpdated);
     socket.on("messages:typing", handleMessageTyping);
     socket.on("presence:snapshot", handlePresenceSnapshot);
     socket.on("presence:changed", handlePresenceChanged);
@@ -696,6 +902,8 @@ export function useMessagesController() {
       socket.off("connect", handleConnect);
       socket.off("messages:new", handleIncomingMessage);
       socket.off("messages:read", handleMessageRead);
+      socket.off("messages:delete", handleMessageDeleted);
+      socket.off("messages:update", handleMessageUpdated);
       socket.off("messages:typing", handleMessageTyping);
       socket.off("presence:snapshot", handlePresenceSnapshot);
       socket.off("presence:changed", handlePresenceChanged);
@@ -712,7 +920,7 @@ export function useMessagesController() {
       peerTypingTimersRef.current.forEach((timer) => clearTimeout(timer));
       peerTypingTimersRef.current.clear();
     };
-  }, [applyReadReceipts, clearConversationUnread, isAuthenticated, loadCallHistory, loadConversations, markMessagesRead, token, user?.id]);
+  }, [applyDeletedForEveryone, applyMessageUpdate, applyReadReceipts, clearConversationUnread, isAuthenticated, loadCallHistory, loadConversations, markMessagesRead, token, user?.id]);
 
   useEffect(() => {
     if (!selectedPeer?.id) {
@@ -839,6 +1047,8 @@ export function useMessagesController() {
     isLoadingMessages,
     isLoadingPeople,
     isSending,
+    sendError,
+    selectedAttachment,
     messagesEndRef,
     onlineUserIds,
     people,
@@ -851,10 +1061,15 @@ export function useMessagesController() {
     timelineItems,
     user,
     closeThreadOnMobile,
+    clearAttachment: () => setSelectedAttachment(null),
     selectConversation,
+    selectAttachment,
     sendMessage,
     sendVoiceNote,
     reactToMessage,
+    deleteMessageForMe,
+    deleteMessageForEveryone,
+    undoDeleteMessageForMe,
     setConversationSearch,
     setDraft: updateDraft,
     setReplyingTo,

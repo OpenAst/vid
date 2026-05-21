@@ -10,7 +10,7 @@ services:
     build:
       context: ./backend
     restart: unless-stopped
-    environment:
+    environment: &backend-environment
       ENV: production
       DEBUG: "False"
       SECRET_KEY: ${SECRET_KEY}
@@ -20,8 +20,25 @@ services:
       API_BASE_URL: ${API_BASE_URL}
       USE_DATABASE_URL: "True"
       DATABASE_URL: ${DATABASE_URL}
+      DB_CONN_MAX_AGE: ${DB_CONN_MAX_AGE:-60}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_TASK_ALWAYS_EAGER: "False"
+      CELERY_BROKER_CONNECTION_TIMEOUT: "3"
       REALTIME_SERVER_INTERNAL_URL: http://realtime:4000
       REALTIME_INTERNAL_SECRET: ${REALTIME_INTERNAL_SECRET}
+      LOGIN_RATE_LIMIT_IP_ATTEMPTS: ${LOGIN_RATE_LIMIT_IP_ATTEMPTS:-20}
+      LOGIN_RATE_LIMIT_IDENTIFIER_ATTEMPTS: ${LOGIN_RATE_LIMIT_IDENTIFIER_ATTEMPTS:-8}
+      LOGIN_RATE_LIMIT_WINDOW_SECONDS: ${LOGIN_RATE_LIMIT_WINDOW_SECONDS:-900}
+      OAUTH_START_RATE_LIMIT_IP_ATTEMPTS: ${OAUTH_START_RATE_LIMIT_IP_ATTEMPTS:-30}
+      OAUTH_START_RATE_LIMIT_WINDOW_SECONDS: ${OAUTH_START_RATE_LIMIT_WINDOW_SECONDS:-900}
+      VOICE_TRANSCRIPTION_ENABLED: ${VOICE_TRANSCRIPTION_ENABLED:-False}
+      VOICE_TRANSCRIPTION_PROVIDER: ${VOICE_TRANSCRIPTION_PROVIDER:-openai}
+      VOICE_TRANSCRIPTION_LANGUAGE: ${VOICE_TRANSCRIPTION_LANGUAGE:-}
+      VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES: ${VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES:-26214400}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_TRANSCRIPTION_MODEL: ${OPENAI_TRANSCRIPTION_MODEL:-gpt-4o-mini-transcribe}
       SECURE_SSL_REDIRECT: "False"
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       SOCIAL_AUTH_ALLOWED_REDIRECT_URIS: ${SOCIAL_AUTH_ALLOWED_REDIRECT_URIS}
@@ -43,8 +60,20 @@ services:
       TURN_SERVER_URLS: ${TURN_SERVER_URLS:-stun:localhost:3478,turn:localhost:3478}
       TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:-local-turn-secret}
       TURN_CREDENTIAL_TTL_SECONDS: ${TURN_CREDENTIAL_TTL_SECONDS:-3600}
+    depends_on:
+      - redis
     expose:
       - "8000"
+
+  celery:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: celery -A backend worker -l info
+    environment: *backend-environment
+    depends_on:
+      - backend
+      - redis
 
   realtime:
     build:

@@ -299,8 +299,8 @@ const UploadVideo = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex h-screen items-center justify-center bg-base-100">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
       </div>
     );
   }
@@ -315,23 +315,29 @@ const UploadVideo = () => {
     formData.skill_category !== "general";
 
   return (
-    <div className="min-h-screen md:max-h-screen bg-base-200 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-base-100 shadow-xl rounded-2xl p-6 sm:p-8 border border-base-300">
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-bold text-base-content">Upload New Video</h1>
+    <main className="min-h-[100dvh] bg-base-100 px-4 pb-10 pt-[calc(var(--app-header-height)+18px)] text-base-content md:pl-[124px] md:pr-8">
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Creator studio</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Upload clip</h1>
+            <p className="mt-2 text-sm font-medium text-base-content/70">
+              Post a video, add context, and keep moving while upload runs.
+            </p>
+          </div>
             {(hasDraftContent || hasSelectedMedia) && (
               <button
                 type="button"
                 onClick={clearDraft}
-                className="btn btn-sm rounded-full border-base-300 bg-base-100 text-base-content hover:bg-base-200"
+                className="rounded-full border border-base-300 bg-base-100 px-4 py-2 text-sm font-semibold text-base-content shadow-sm transition hover:bg-base-200"
               >
                 Clear draft
               </button>
             )}
-          </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6 relative">
+        <section className="overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm">
+          <form onSubmit={handleSubmit} className="relative space-y-6 p-4 sm:p-6">
             {hasDraftContent && (
               <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-medium text-base-content">
                 Draft autosaved on this device. Selected media is kept only until you post or leave the page.
@@ -346,7 +352,7 @@ const UploadVideo = () => {
 
             {/* Title Input */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-base-content/80 mb-1">
+              <label htmlFor="title" className="mb-2 block text-sm font-bold text-base-content">
                 Video Title *
               </label>
               <input
@@ -355,13 +361,13 @@ const UploadVideo = () => {
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
+                className="w-full rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 required
                 maxLength={100}
               />
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-base-content/80 mb-1">
+              <label htmlFor="description" className="mb-2 block text-sm font-bold text-base-content">
                 Description
               </label>
               <textarea
@@ -370,13 +376,13 @@ const UploadVideo = () => {
                 rows={4}
                 value={formData.description}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
+                className="w-full rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 maxLength={500}
               />
             </div>
 
             <div>
-              <label htmlFor="skill_category" className="block text-sm font-medium text-base-content/80 mb-1">
+              <label htmlFor="skill_category" className="mb-2 block text-sm font-bold text-base-content">
                 Category
               </label>
               <select
@@ -384,7 +390,7 @@ const UploadVideo = () => {
                 name="skill_category"
                 value={formData.skill_category}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-base-100 border border-base-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-base-content"
+                className="w-full rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {uploadCategories.map((category) => (
                   <option key={category.value} value={category.value}>
@@ -395,7 +401,7 @@ const UploadVideo = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-base-content/80 mb-1">
+              <label className="mb-2 block text-sm font-bold text-base-content">
                 Video Content *
               </label>
 
@@ -428,7 +434,7 @@ const UploadVideo = () => {
                     </button>
                   </div>
 
-                  <span className="block text-center text-xs text-gray-500">
+                  <span className="block text-center text-xs font-medium text-base-content/70">
                     {videoFile ? `Selected: ${videoFile.name}` : "No file selected"}
                   </span>
                 </div>
@@ -522,7 +528,7 @@ const UploadVideo = () => {
             </div>
 
             <div>
-              <label htmlFor="music-upload" className="block text-sm font-medium text-base-content/80 mb-1">
+              <label htmlFor="music-upload" className="mb-2 block text-sm font-bold text-base-content">
                 Background Music
               </label>
               <label
@@ -563,13 +569,11 @@ const UploadVideo = () => {
               )}
             </div>
 
-            <div className="pt-4 sticky bottom-0 bg-base-100 z-10 border-t border-base-300">
+            <div className="sticky bottom-0 z-10 -mx-4 border-t border-base-300 bg-base-100/95 px-4 pb-2 pt-4 backdrop-blur sm:-mx-6 sm:px-6">
               <button
                 type="submit"
                 disabled={hasActiveUploads || isRecording || (!videoFile && !isCameraActive)}
-                className={`w-full mb-8 flex btn btn-primary justify-center py-4 
-                  px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white 
-                  hover:scale-[1.02] active:scale-[0.98] transition-all
+                className={`flex w-full justify-center rounded-xl border border-transparent bg-primary px-4 py-4 text-base font-bold text-primary-content shadow-lg transition-all hover:scale-[1.01] hover:opacity-95 active:scale-[0.99]
                 ${(hasActiveUploads || isRecording) ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {hasActiveUploads ? (
@@ -580,14 +584,14 @@ const UploadVideo = () => {
                     </svg>
                     Upload running...
                   </>
-                ) : 'Post Video'}
+                ) : 'Post clip'}
               </button>
             </div>
           </form>
           <ToastContainer position="bottom-right" autoClose={3000} />
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 

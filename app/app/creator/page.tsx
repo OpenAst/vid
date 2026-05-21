@@ -348,12 +348,12 @@ export default function CreatorHubPage() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
               <Sparkles size={16} />
               Creator Hub
             </p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Grow your creator business</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-base-content/60">
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Grow your creator business</h1>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-base-content/70">
               Track momentum, finish setup, and prepare your profile for future support and monetization.
             </p>
           </div>
@@ -387,7 +387,7 @@ export default function CreatorHubPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-bold">Creator goals</h2>
-                    <p className="mt-1 text-sm text-base-content/55">Small signals that make the account feel ready to grow.</p>
+                    <p className="mt-1 text-sm font-medium text-base-content/70">Small signals that make the account feel ready to grow.</p>
                   </div>
                   <Target className="text-primary" size={22} />
                 </div>
@@ -399,7 +399,7 @@ export default function CreatorHubPage() {
                       <div key={goal.label}>
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <span className="text-sm font-semibold">{goal.label}</span>
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-base-content/55">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium font-bold text-base-content/70">
                             {goal.done && <CheckCircle2 size={14} className="text-emerald-500" />}
                             {formatMetric(goal.value, goal.suffix)} / {formatMetric(goal.target, goal.suffix)}
                           </span>
@@ -418,7 +418,7 @@ export default function CreatorHubPage() {
                   <Lightbulb size={20} />
                 </div>
                 <h2 className="text-lg font-bold">Suggested next action</h2>
-                <p className="mt-2 text-sm leading-6 text-base-content/60">{nextAction.label}</p>
+                <p className="mt-2 text-sm font-medium leading-6 text-base-content/70">{nextAction.label}</p>
                 <button
                   type="button"
                   onClick={() => router.push(nextAction.href)}
@@ -434,7 +434,7 @@ export default function CreatorHubPage() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-lg font-bold">Availability slots</h2>
-                  <p className="mt-1 text-sm text-base-content/55">Publish times people can request for collabs, mentorship, or consults.</p>
+                  <p className="mt-1 text-sm font-medium text-base-content/70">Publish times people can request for collabs, mentorship, or consults.</p>
                 </div>
                 <CalendarDays className="text-primary" size={22} />
               </div>
@@ -482,7 +482,7 @@ export default function CreatorHubPage() {
 
               <div className="mt-5 grid gap-3 lg:grid-cols-2">
                 {bookingSlots.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-base-300 px-5 py-8 text-center text-sm text-base-content/55 lg:col-span-2">
+                  <div className="rounded-2xl border border-dashed border-base-300 px-5 py-8 text-center text-sm font-medium text-base-content/70 lg:col-span-2">
                     Add your first slot to start receiving booking requests.
                   </div>
                 ) : bookingSlots.map((slot) => (
@@ -490,21 +490,21 @@ export default function CreatorHubPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-bold">{new Date(slot.starts_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
-                        <p className="mt-1 text-sm capitalize text-base-content/55">{slot.purpose} · {slot.duration_minutes} min</p>
-                        {slot.note && <p className="mt-2 text-sm text-base-content/60">{slot.note}</p>}
+                        <p className="mt-1 text-sm capitalize text-base-content/70">{slot.purpose} · {slot.duration_minutes} min</p>
+                        {slot.note && <p className="mt-2 text-sm font-medium text-base-content/70">{slot.note}</p>}
                       </div>
-                      <span className="rounded-full bg-base-200 px-2.5 py-1 text-xs font-bold text-base-content/60">{slot.requests?.length || 0} requests</span>
+                      <span className="rounded-full bg-base-200 px-2.5 py-1 text-xs font-medium font-bold text-base-content/70">{slot.requests?.length || 0} requests</span>
                     </div>
                     <div className="mt-4 space-y-2">
                       {(slot.requests || []).length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-base-300 px-4 py-4 text-center text-sm text-base-content/45">No requests yet.</div>
+                        <div className="rounded-xl border border-dashed border-base-300 px-4 py-4 text-center text-sm font-medium text-base-content/70">No requests yet.</div>
                       ) : slot.requests?.map((request) => (
                         <div key={request.id} className="rounded-xl border border-base-300 bg-base-200/40 p-3">
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-sm font-bold">@{request.requester.username || "creator"}</p>
-                            <span className="rounded-full bg-base-100 px-2 py-1 text-[11px] font-bold capitalize text-base-content/55">{request.status}</span>
+                            <span className="rounded-full bg-base-100 px-2 py-1 text-[11px] font-bold capitalize text-base-content/70">{request.status}</span>
                           </div>
-                          {request.message && <p className="mt-1 text-sm leading-6 text-base-content/60">{request.message}</p>}
+                          {request.message && <p className="mt-1 text-sm font-medium leading-6 text-base-content/70">{request.message}</p>}
                           <div className="mt-3 flex flex-wrap gap-2">
                             {(["accepted", "declined"] as BookingRequest["status"][]).map((nextStatus) => (
                               <button
@@ -530,7 +530,7 @@ export default function CreatorHubPage() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-lg font-bold">Membership tiers</h2>
-                  <p className="mt-1 text-sm text-base-content/55">
+                  <p className="mt-1 text-sm font-medium text-base-content/70">
                     Set the public support options people will see on your profile.
                   </p>
                 </div>
@@ -550,7 +550,7 @@ export default function CreatorHubPage() {
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-bold">{tier.name}</p>
-                        <p className="text-xs text-base-content/45">{tier.enabled ? "Visible to supporters" : "Hidden for now"}</p>
+                        <p className="text-xs font-medium text-base-content/70">{tier.enabled ? "Visible to supporters" : "Hidden for now"}</p>
                       </div>
                       <label className="flex cursor-pointer items-center gap-2 text-xs font-bold">
                         <input
@@ -604,7 +604,7 @@ export default function CreatorHubPage() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold">Top clips</h2>
-                  <p className="mt-1 text-sm text-base-content/55">Your strongest videos are the best place to send new supporters.</p>
+                  <p className="mt-1 text-sm font-medium text-base-content/70">Your strongest videos are the best place to send new supporters.</p>
                 </div>
                 <button type="button" onClick={() => router.push("/analytics")} className="text-sm font-bold text-primary">
                   Analytics
@@ -612,7 +612,7 @@ export default function CreatorHubPage() {
               </div>
 
               {topVideos.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-base-300 px-6 py-10 text-center text-sm text-base-content/55">
+                <div className="rounded-2xl border border-dashed border-base-300 px-6 py-10 text-center text-sm font-medium text-base-content/70">
                   Upload your first clips and your best performers will appear here.
                 </div>
               ) : (
@@ -624,7 +624,7 @@ export default function CreatorHubPage() {
                       onClick={() => router.push(`/video/${video.id}`)}
                       className="flex w-full items-center gap-3 py-3 text-left transition hover:bg-base-200/60"
                     >
-                      <span className="w-6 shrink-0 text-sm font-bold text-base-content/45">{index + 1}</span>
+                      <span className="w-6 shrink-0 text-sm font-bold text-base-content/70">{index + 1}</span>
                       <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-xl bg-black">
                         {video.thumbnail_url ? (
                           <Image src={video.thumbnail_url} alt="" fill sizes="48px" className="object-cover" />
@@ -636,7 +636,7 @@ export default function CreatorHubPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold">{video.title || "Untitled clip"}</p>
-                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-base-content/50">
+                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-base-content/65">
                           <span>{formatMetric(video.views)} views</span>
                           <span>{formatMetric(video.likes)} likes</span>
                           <span>{formatMetric(video.saves)} saves</span>
@@ -662,7 +662,7 @@ function MetricCard({ icon: Icon, label, value }: { icon: typeof VideoIcon; labe
         <Icon size={19} />
       </div>
       <p className="truncate text-2xl font-bold capitalize">{value}</p>
-      <p className="mt-1 text-sm text-base-content/55">{label}</p>
+      <p className="mt-1 text-sm font-medium text-base-content/70">{label}</p>
     </section>
   );
 }

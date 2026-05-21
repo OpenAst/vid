@@ -27,8 +27,7 @@ const SearchBox: React.FC<SearchBoxProp> = ({ onSearch }) => {
       <input
         type='text'
         placeholder='Search videos...'
-        className='w-full px-4 py-2 pr-10 border border-gray-300 
-        rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+        className='w-full rounded-full border border-white/60 bg-base-100/75 px-4 py-2 pr-10 shadow-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-primary'
         value={query}
         onChange={handleChange}
        />

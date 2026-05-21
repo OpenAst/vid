@@ -9,7 +9,7 @@ export default function NotificationsButton() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const loadNotifications = useCallback(async () => {
-    const response = await fetch('/api/notifications', { cache: 'no-store' });
+    const response = await fetch('/api/notifications?summary=true', { cache: 'no-store' });
     const data = await response.json();
     if (!response.ok) return;
 
@@ -19,23 +19,38 @@ export default function NotificationsButton() {
   useEffect(() => {
     void loadNotifications();
 
-    const intervalId = window.setInterval(() => {
+    const handleFocus = () => {
       void loadNotifications();
-    }, 30000);
+    };
+    const handleNotificationsRead = () => {
+      setUnreadCount(0);
+      void loadNotifications();
+    };
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void loadNotifications();
+    }, 120000);
 
-    return () => window.clearInterval(intervalId);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('oneclyq:notifications-read', handleNotificationsRead);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('oneclyq:notifications-read', handleNotificationsRead);
+    };
   }, [loadNotifications]);
 
   return (
     <button
       type="button"
       onClick={() => router.push('/notifications')}
-      className="relative flex w-full items-center justify-center rounded-lg px-2 py-2 text-xs text-base-content transition-colors hover:bg-base-200"
+      className="relative flex w-full items-center justify-center rounded-xl px-2 py-2 text-xs text-base-content transition-colors hover:text-primary"
       aria-label="Open notifications"
     >
       <Bell size={18} />
       {unreadCount > 0 && (
-        <span className="absolute right-2 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
+        <span className="absolute right-2 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold leading-none text-secondary-content">
           {unreadCount > 9 ? '9+' : unreadCount}
         </span>
       )}

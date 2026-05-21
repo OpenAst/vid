@@ -174,9 +174,9 @@ export default function DiscoverPage() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-semibold text-primary">Discover</p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Find creators and clips</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-base-content/60">
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Discover</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Find creators and clips</h1>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-base-content/70">
               Search videos, people, and skill tags from one place.
             </p>
           </div>
@@ -191,7 +191,7 @@ export default function DiscoverPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  activeTab === tab.id ? "bg-base-content text-base-100" : "text-base-content/60 hover:bg-base-200"
+                  activeTab === tab.id ? "bg-base-content text-base-100" : "text-base-content/70 hover:bg-base-200"
                 }`}
               >
                 {tab.icon}
@@ -201,18 +201,22 @@ export default function DiscoverPage() {
           </div>
         </div>
 
-        <div className="mb-5 space-y-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-3 shadow-sm">
-            <Search size={18} className="text-base-content/45" />
+        <section className="mb-6 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
+          <div className="mb-3">
+            <p className="text-sm font-bold text-base-content">Search discovery</p>
+            <p className="mt-1 text-xs font-medium text-base-content/70">Filter clips and creators by topic, username, title, or skill.</p>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
+            <Search size={18} className="text-base-content/70" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search username, title, skills, or interests"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-base-content/40"
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-base-content/45"
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {categories.map((item) => (
               <button
                 key={item}
@@ -221,14 +225,14 @@ export default function DiscoverPage() {
                 className={`shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition ${
                   category === item
                     ? "border-primary bg-primary text-primary-content"
-                    : "border-base-300 bg-base-100 text-base-content/65 hover:bg-base-200"
+                    : "border-base-300 bg-base-100 text-base-content/70 hover:bg-base-200"
                 }`}
               >
                 {item}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
         {activeTab === "videos" ? (
           <section>
@@ -239,7 +243,7 @@ export default function DiscoverPage() {
                 ))}
               </div>
             ) : videos.length === 0 ? (
-              <div className="rounded-2xl border border-base-300 bg-base-100 p-10 text-center text-sm text-base-content/60">
+              <div className="rounded-2xl border border-base-300 bg-base-100 p-10 text-center text-sm font-medium text-base-content/70">
                 No videos found. Try another search or category.
               </div>
             ) : (
@@ -269,8 +273,8 @@ export default function DiscoverPage() {
                     </div>
                     <div className="p-3">
                       <p className="line-clamp-1 text-sm font-semibold">{video.title || "Untitled clip"}</p>
-                      <p className="mt-1 truncate text-xs text-base-content/55">@{video.uploader?.username || "creator"}</p>
-                      <div className="mt-2 flex items-center justify-between text-[11px] text-base-content/45">
+                      <p className="mt-1 truncate text-xs font-medium text-base-content/70">@{video.uploader?.username || "creator"}</p>
+                      <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-base-content/70">
                         <span>{video.likes || 0} likes</span>
                         <span>{video.timestamp}</span>
                       </div>
@@ -289,7 +293,7 @@ export default function DiscoverPage() {
                 ))}
               </div>
             ) : filteredPeople.length === 0 ? (
-              <div className="rounded-2xl border border-base-300 bg-base-100 p-10 text-center text-sm text-base-content/60">
+              <div className="rounded-2xl border border-base-300 bg-base-100 p-10 text-center text-sm font-medium text-base-content/70">
                 No creators found. Try another search or category.
               </div>
             ) : (
@@ -319,7 +323,7 @@ export default function DiscoverPage() {
                             className="block max-w-full text-left"
                           >
                             <p className="truncate font-semibold">{name}</p>
-                            <p className="truncate text-sm text-base-content/55">@{person.username || "creator"}</p>
+                            <p className="truncate text-sm font-medium text-base-content/70">@{person.username || "creator"}</p>
                           </button>
                           {skills.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
@@ -334,7 +338,7 @@ export default function DiscoverPage() {
                       </div>
 
                       {person.profile?.bio && (
-                        <p className="mt-3 line-clamp-2 text-sm leading-6 text-base-content/60">{person.profile.bio}</p>
+                        <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-base-content/70">{person.profile.bio}</p>
                       )}
 
                       <div className="mt-4 flex gap-2">
@@ -344,7 +348,7 @@ export default function DiscoverPage() {
                           disabled={Boolean(person.is_following) || loadingFollowId === person.id}
                           className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
                             person.is_following
-                              ? "bg-base-200 text-base-content/50"
+                              ? "bg-base-200 text-base-content/65"
                               : "bg-primary text-primary-content hover:opacity-90"
                           }`}
                         >

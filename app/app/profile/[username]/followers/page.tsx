@@ -54,7 +54,7 @@ function FollowersPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Followers</h1>
-            <p className="mt-1 text-sm text-base-content/60">People who follow @{safeUsername}</p>
+            <p className="mt-1 text-sm font-medium text-base-content/70">People who follow @{safeUsername}</p>
           </div>
           <Link href={`/profile/${safeUsername}`} className="btn btn-ghost btn-sm">
             Back to profile
@@ -88,8 +88,8 @@ function FollowersPage() {
                 />
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold text-base-content">{follower.first_name} {follower.last_name}</p>
-                  <p className="truncate text-sm text-base-content/60">@{follower.username}</p>
-                  {follower.profile?.bio && <p className="mt-2 line-clamp-2 text-sm text-base-content/70">{follower.profile.bio}</p>}
+                  <p className="truncate text-sm font-medium text-base-content/70">@{follower.username}</p>
+                  {follower.profile?.bio && <p className="mt-2 line-clamp-2 text-sm font-medium text-base-content/70">{follower.profile.bio}</p>}
                 </div>
               </Link>
             ))}

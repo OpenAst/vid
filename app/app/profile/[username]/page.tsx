@@ -257,8 +257,8 @@ function PublicProfilePage() {
                       {presenceLabel}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-base-content/60">@{userDetails.username}</p>
-                  <div className="mt-3 flex flex-wrap gap-4 text-sm text-base-content/70">
+                  <p className="mt-1 text-sm font-medium text-base-content/70">@{userDetails.username}</p>
+                  <div className="mt-3 flex flex-wrap gap-4 text-sm font-medium text-base-content/70">
                     <Link href={`/profile/${userDetails.username}/followers`} className="group inline-flex gap-1">
                       <span><strong className="text-base-content">{userDetails.followers}</strong> followers</span>
                       <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -292,8 +292,8 @@ function PublicProfilePage() {
 
               {userDetails.featuredVideoId && (
                 <div className="mt-4 rounded-3xl bg-base-200/70 border border-base-300 p-4">
-                  <p className="text-xs uppercase tracking-wide text-base-content/55">Featured clip</p>
-                  <Link href={`/video/${userDetails.featuredVideoId}`} className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-focus">
+                  <p className="text-xs font-medium uppercase tracking-wide text-base-content/70">Featured clip</p>
+                  <Link href={`/video/${userDetails.featuredVideoId}`} className="mt-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary hover:text-primary-focus">
                     <Play className="h-4 w-4" />
                     View featured video
                   </Link>
@@ -365,6 +365,27 @@ function PublicProfilePage() {
                   />
                 </div>
               )}
+              {!isAuthenticated && userDetails.id && !isOwnProfile && (
+                <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
+                  <p className="min-w-0 flex-1 text-sm font-medium text-base-content/70">
+                    Log in to follow, message, call, or support {displayName}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/login')}
+                    className="rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-content transition hover:opacity-90"
+                  >
+                    Log in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/register')}
+                    className="rounded-xl border border-base-300 px-4 py-2 text-sm font-semibold transition hover:bg-base-200"
+                  >
+                    Sign up
+                  </button>
+                </div>
+              )}
               {isBlockedBy && (
                 <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                   This creator has blocked you. Messaging and follow actions are unavailable.
@@ -382,7 +403,7 @@ function PublicProfilePage() {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold">Memberships</p>
-                    <p className="mt-1 text-xs text-base-content/55">Support options coming soon.</p>
+                    <p className="mt-1 text-xs font-medium text-base-content/70">Support options coming soon.</p>
                   </div>
                   <SupportCreatorButton creatorId={userDetails.id} creatorName={displayName} tiers={userDetails.membershipTiers} variant="primary" />
                 </div>
@@ -393,7 +414,7 @@ function PublicProfilePage() {
                         <p className="font-semibold">{tier.name}</p>
                         <p className="text-sm font-bold text-primary">{tier.price}</p>
                       </div>
-                      <p className="mt-1 text-xs leading-5 text-base-content/55">{tier.description}</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-base-content/70">{tier.description}</p>
                     </div>
                   ))}
                 </div>
@@ -408,15 +429,15 @@ function PublicProfilePage() {
                       <CalendarDays size={16} className="text-primary" />
                       Book a session
                     </p>
-                    <p className="mt-1 text-xs text-base-content/55">Request a time for collabs, mentorship, or consults.</p>
+                    <p className="mt-1 text-xs font-medium text-base-content/70">Request a time for collabs, mentorship, or consults.</p>
                   </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {bookingSlots.slice(0, 4).map((slot) => (
                     <div key={slot.id} className="rounded-xl border border-base-300 bg-base-200/50 p-3">
                       <p className="font-semibold">{new Date(slot.starts_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                      <p className="mt-1 text-xs capitalize text-base-content/55">{slot.purpose} · {slot.duration_minutes} min</p>
-                      {slot.note && <p className="mt-1 text-xs leading-5 text-base-content/55">{slot.note}</p>}
+                      <p className="mt-1 text-xs font-medium capitalize text-base-content/70">{slot.purpose} · {slot.duration_minutes} min</p>
+                      {slot.note && <p className="mt-1 text-xs font-medium leading-5 text-base-content/70">{slot.note}</p>}
                       <button
                         type="button"
                         onClick={() => slot.my_request ? router.push(`/messages?user=${userDetails.id}`) : setSelectedSlot(slot)}
@@ -444,7 +465,7 @@ function PublicProfilePage() {
                     {userDetails.bio}
                   </p>
                 ) : (
-                  <p className="text-sm text-base-content/45">This creator has not added a bio yet.</p>
+                  <p className="text-sm font-medium text-base-content/70">This creator has not added a bio yet.</p>
                 )}
                 {userDetails.skillTags.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -457,9 +478,9 @@ function PublicProfilePage() {
                 )}
               </div>
               <div className="rounded-xl bg-base-200/60 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-base-content/45">Creator signal</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-base-content/70">Creator signal</p>
                 <p className="mt-2 text-sm font-semibold">{presenceLabel}</p>
-                <p className="mt-1 text-xs leading-5 text-base-content/55">
+                <p className="mt-1 text-xs font-medium leading-5 text-base-content/70">
                   {isProfileActive
                     ? 'This is a good time to connect.'
                     : 'You can still message and they can respond later.'}
@@ -473,7 +494,7 @@ function PublicProfilePage() {
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-base-300 pb-3">
           <div>
             <h2 className="text-xl font-bold text-base-content">Clips</h2>
-            <p className="mt-1 text-sm text-base-content/55">Recent uploads from {displayName}</p>
+            <p className="mt-1 text-sm font-medium text-base-content/70">Recent uploads from {displayName}</p>
           </div>
           <VideoIcon size={22} className="text-base-content/35" />
         </div>
@@ -512,7 +533,7 @@ function PublicProfilePage() {
                 </div>
                 <div className="p-3">
                   <p className="line-clamp-1 text-sm font-semibold">{video.title || 'Untitled clip'}</p>
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-base-content/45">
+                  <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-base-content/70">
                     <span>{video.likes || 0} likes</span>
                     <span>{video.timestamp}</span>
                   </div>
@@ -526,7 +547,7 @@ function PublicProfilePage() {
               <VideoIcon size={24} />
             </div>
             <p className="font-semibold">Clips are private</p>
-            <p className="mt-2 text-sm text-base-content/55">Follow to request access to this creator's clips.</p>
+            <p className="mt-2 text-sm font-medium text-base-content/70">Follow to request access to this creator's clips.</p>
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-12 text-center">
@@ -534,7 +555,7 @@ function PublicProfilePage() {
               <VideoIcon size={24} />
             </div>
             <p className="font-semibold">No clips yet</p>
-            <p className="mt-2 text-sm text-base-content/55">When {displayName} uploads, their clips will appear here.</p>
+            <p className="mt-2 text-sm font-medium text-base-content/70">When {displayName} uploads, their clips will appear here.</p>
           </div>
         )}
       </section>
@@ -546,7 +567,7 @@ function PublicProfilePage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-primary">Booking request</p>
                 <h2 className="mt-1 text-lg font-bold">{new Date(selectedSlot.starts_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</h2>
-                <p className="mt-2 text-sm leading-6 text-base-content/60">Send a short note about what you want to discuss.</p>
+                <p className="mt-2 text-sm font-medium leading-6 text-base-content/70">Send a short note about what you want to discuss.</p>
               </div>
               <button
                 type="button"

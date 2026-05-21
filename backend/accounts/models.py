@@ -43,6 +43,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     is_deactivated = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
+    activation_email_sent_at = models.DateTimeField(null=True, blank=True)
 
     objects = UserAccountManager()
 
@@ -314,6 +315,8 @@ class DirectMessage(models.Model):
     MESSAGE_TYPES = (
         ("text", "Text"),
         ("voice", "Voice note"),
+        ("image", "Image"),
+        ("file", "File"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -331,6 +334,13 @@ class DirectMessage(models.Model):
     audio_url = models.URLField(blank=True, null=True)
     audio_duration_ms = models.PositiveIntegerField(default=0)
     audio_transcript = models.TextField(blank=True, default="")
+    attachment_url = models.URLField(blank=True, null=True)
+    attachment_name = models.CharField(max_length=255, blank=True, default="")
+    attachment_type = models.CharField(max_length=120, blank=True, default="")
+    attachment_size = models.PositiveIntegerField(default=0)
+    deleted_for = models.ManyToManyField(UserAccount, blank=True, related_name="hidden_direct_messages")
+    is_deleted_for_everyone = models.BooleanField(default=False)
+    deleted_for_everyone_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)
 
@@ -362,3 +372,18 @@ class DirectMessageReaction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} reacted {self.reaction}"
+
+
+class DirectMessageDeleteForMe(models.Model):
+    message = models.ForeignKey(DirectMessage, on_delete=models.CASCADE, related_name="delete_for_me_records")
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="direct_message_delete_for_me_records")
+    deleted_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ("message", "user")
+        indexes = [
+            models.Index(fields=["user", "deleted_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} hid message {self.message_id}"

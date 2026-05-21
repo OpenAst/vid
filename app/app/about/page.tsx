@@ -61,7 +61,7 @@ export default function AboutPage() {
         <section className="overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm">
           <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_420px]">
             <div className="p-6 sm:p-8 lg:p-10">
-              <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
                 <Sparkles size={16} />
                 About OneClyq
               </p>
@@ -119,7 +119,7 @@ export default function AboutPage() {
                   <Icon size={20} />
                 </div>
                 <h2 className="font-bold">{point.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-base-content/60">{point.text}</p>
+                <p className="mt-2 text-sm font-medium leading-6 text-base-content/70">{point.text}</p>
               </article>
             );
           })}
@@ -128,7 +128,7 @@ export default function AboutPage() {
         <section className="mt-6 rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm">
           <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
             <div>
-              <p className="text-sm font-semibold text-primary">The idea</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">The idea</p>
               <h2 className="mt-1 text-2xl font-bold">A clip should open a door.</h2>
             </div>
             <div className="space-y-4 text-sm leading-7 text-base-content/65">

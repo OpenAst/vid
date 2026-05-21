@@ -271,7 +271,7 @@ function ProfilePage() {
       />
       <div className="mt-5 text-center">
         <h1 className="text-2xl font-bold">{userDetails.first_name} {userDetails.last_name}</h1>
-        <p className="text-sm text-base-content/60">@{userDetails.username}</p>
+        <p className="text-sm font-medium text-base-content/70">@{userDetails.username}</p>
         <div className="mt-3 flex justify-center gap-5 text-sm">
           <span><strong className="text-base-content">{userDetails.followers}</strong> followers</span>
           <span><strong className="text-base-content">{userDetails.following}</strong> following</span>
@@ -417,7 +417,7 @@ function ProfilePage() {
           />
           Private account
         </label>
-        <p className="text-xs text-base-content/60 sm:col-span-2">When enabled, only approved followers can access your videos and profile details.</p>
+        <p className="text-xs font-medium text-base-content/70 sm:col-span-2">When enabled, only approved followers can access your videos and profile details.</p>
         <textarea
           name="bio"
           placeholder="Bio"
@@ -471,7 +471,7 @@ function ProfilePage() {
           </div>
         ) : (
           <div className="text-center py-10 bg-base-100 rounded-2xl border-2 border-dashed border-base-300">
-            <p className="text-base-content/50">You haven't uploaded any videos yet.</p>
+            <p className="text-base-content/65">You haven't uploaded any videos yet.</p>
             <button
               onClick={() => router.push('/upload')}
               className="mt-4 btn btn-outline btn-sm"

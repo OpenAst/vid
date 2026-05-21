@@ -35,6 +35,8 @@ export default function UserSafetyActions({
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [reason, setReason] = useState<ReportReason>("other");
   const [details, setDetails] = useState("");
+  const needsDetails = reason === "other";
+  const canSubmitReport = !needsDetails || details.trim().length >= 10;
 
   const toggleBlock = async () => {
     if (!userId || isBlockLoading) return;
@@ -67,6 +69,10 @@ export default function UserSafetyActions({
 
   const submitReport = async () => {
     if (!userId || isReportLoading) return;
+    if (!canSubmitReport) {
+      toast.error("Please add a few details for this report.");
+      return;
+    }
 
     setIsReportLoading(true);
     try {
@@ -84,7 +90,7 @@ export default function UserSafetyActions({
       setIsReportOpen(false);
       setReason("other");
       setDetails("");
-      toast.success("Report submitted. Thank you.");
+      toast.success(data?.detail || "Report submitted. Thank you.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to submit report");
     } finally {
@@ -213,7 +219,7 @@ export default function UserSafetyActions({
             </div>
 
             <label className="mt-4 block">
-              <span className="text-sm font-medium">Details</span>
+              <span className="text-sm font-medium">Details {needsDetails ? "(required)" : "(optional)"}</span>
               <textarea
                 value={details}
                 onChange={(event) => setDetails(event.target.value)}
@@ -221,6 +227,9 @@ export default function UserSafetyActions({
                 placeholder="Add context for the moderation team"
                 className="mt-2 w-full resize-none rounded-xl border border-base-300 bg-base-100 px-3 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
+              <span className="mt-1 block text-xs text-base-content/45">
+                {details.trim().length}/10 minimum for “Something else”
+              </span>
             </label>
 
             <div className="mt-5 flex justify-end gap-2">
@@ -234,7 +243,7 @@ export default function UserSafetyActions({
               <button
                 type="button"
                 onClick={() => void submitReport()}
-                disabled={isReportLoading}
+                disabled={isReportLoading || !canSubmitReport}
                 className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-content transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
               >
                 {isReportLoading ? "Submitting..." : "Submit report"}

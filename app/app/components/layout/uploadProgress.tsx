@@ -8,9 +8,9 @@ export const UploadProgress = ({ progress }: UploadProgressProps) => (
       <span>Uploading...</span>
       <span>{progress}%</span>
     </div>
-    <div className="w-full bg-gray-200 rounded-full h-2.5">
+    <div className="w-full bg-base-300 rounded-full h-2.5">
       <div
-        className="bg-blue-600 h-2.5 rounded-full"
+        className="bg-primary h-2.5 rounded-full"
         style={{ width: `${progress}%` }}
       ></div>
     </div>

@@ -7,8 +7,11 @@ import { useDispatch } from "react-redux";
 import { setUnAuthenticated } from "@/app/store/authSlice";
 import Image from 'next/image';
 
+type LogoutButtonProps = {
+  variant?: "default" | "danger";
+};
 
-export default function LogoutButton() {
+export default function LogoutButton({ variant = "default" }: LogoutButtonProps) {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -46,10 +49,14 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-sm text-base-content transition-colors hover:bg-base-200"
+      className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
+        variant === "danger"
+          ? "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+          : "text-base-content hover:bg-base-200"
+      }`}
     >
       <Image src="new_logout.svg" alt="Logout" width={16} height={16} className="dark:invert" />
-      <span className="font-medium">Logout</span>
+      <span>Logout</span>
     </button>
   )
 }

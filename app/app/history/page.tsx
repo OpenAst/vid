@@ -93,11 +93,11 @@ export default function HistoryPage() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
               <Clock size={16} />
               History
             </p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Continue watching</h1>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Continue watching</h1>
           </div>
           {items.length > 0 && (
             <button
@@ -125,7 +125,7 @@ export default function HistoryPage() {
             <div>
               <VideoIcon className="mx-auto mb-3 text-base-content/35" size={38} />
               <p className="font-semibold">No watch history yet</p>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-base-content/55">
+              <p className="mt-2 max-w-sm text-sm font-medium leading-6 text-base-content/70">
                 Videos you start watching will appear here so you can pick up where you left off.
               </p>
               <button type="button" onClick={() => router.push("/")} className="btn btn-primary btn-sm mt-5">

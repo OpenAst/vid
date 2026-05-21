@@ -22,7 +22,7 @@ export default function Header({ centerContent }: { centerContent?: React.ReactN
   };
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-20 border-b border-base-300 bg-base-100/80 px-3 pt-[var(--safe-area-top)] backdrop-blur-md sm:px-6">
+    <header className="fixed left-0 right-0 top-0 z-20 border-b border-white/50 bg-base-100/70 px-3 pt-[var(--safe-area-top)] shadow-sm shadow-primary/5 backdrop-blur-2xl sm:px-6">
       <div className="relative flex h-[var(--app-header-row-height)] items-center justify-center">
       <div className="w-8 shrink-0 sm:w-0" />
       <div className="relative flex min-w-0 flex-1 justify-center px-8 sm:px-12">
@@ -49,7 +49,7 @@ export default function Header({ centerContent }: { centerContent?: React.ReactN
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="bg-base-200 border border-base-300 rounded-full px-4 py-1 w-40 sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 text-base-content"
+              className="w-40 rounded-full border border-white/60 bg-base-100/75 px-4 py-1 text-base-content shadow-sm backdrop-blur-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary sm:w-64"
               autoFocus
             />
             <button

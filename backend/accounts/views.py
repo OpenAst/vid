@@ -6,9 +6,11 @@ from rest_framework.response import Response
 from rest_framework import status, generics, permissions
 from rest_framework.exceptions import ValidationError
 from django.db import models
-from .models import UserAccount, Profile, PushSubscription, DirectConversation, DirectMessage, DirectMessageReaction, UserFollow, Notification, UserBlock, UserReport, CollabRequest, CollabApplication, BookingSlot, BookingRequest
+from .models import UserAccount, Profile, PushSubscription, DirectConversation, DirectMessage, DirectMessageDeleteForMe, DirectMessageReaction, UserFollow, Notification, UserBlock, UserReport, CollabRequest, CollabApplication, BookingSlot, BookingRequest
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from .email import CustomActivationEmail
+from .rate_limits import check_rate_limit, get_client_ip
 from .serializers import (
     CustomTokenObtainPairSerializer, UserUpdateSerializer, ProfileSerializer, 
     UserDetailSerializer, UserPublicSerializer, DirectConversationSerializer, DirectMessageSerializer,
@@ -20,7 +22,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.http import urlsafe_base64_decode
 from django.utils import timezone
 from datetime import timedelta
-from .tokens import OneDayActivationTokenGenerator
+from .tokens import ActivationTokenGenerator
 from social_django.utils import load_backend, load_strategy
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -37,7 +39,18 @@ from django.shortcuts import get_object_or_404
 
 
 User = get_user_model()
-token_generator = OneDayActivationTokenGenerator()
+token_generator = ActivationTokenGenerator()
+
+
+def rate_limit_response(result):
+    return Response(
+        {
+            "detail": "Too many attempts. Please wait a moment before trying again.",
+            "retry_after_seconds": result.retry_after_seconds,
+        },
+        status=status.HTTP_429_TOO_MANY_REQUESTS,
+        headers={"Retry-After": str(result.retry_after_seconds)},
+    )
 
 
 class ActivateUserView(APIView):
@@ -58,12 +71,73 @@ class ActivateUserView(APIView):
 
         return Response({"detail": "Activation link expired or invalid"}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class ResendActivationEmailView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip().lower()
+        generic_response = {
+            "detail": "If this account still needs activation, we will send another activation email.",
+        }
+
+        if not email:
+            return Response({"detail": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = UserAccount.objects.get(email__iexact=email)
+        except UserAccount.DoesNotExist:
+            return Response(generic_response, status=status.HTTP_200_OK)
+
+        if user.is_active:
+            return Response(generic_response, status=status.HTTP_200_OK)
+
+        if user.activation_email_sent_at:
+            wait_until = user.activation_email_sent_at + timedelta(minutes=2)
+            if timezone.now() < wait_until:
+                return Response(
+                    {
+                        "detail": "We recently sent an activation email. Please wait a moment before requesting another one.",
+                        "retry_after_seconds": max(1, int((wait_until - timezone.now()).total_seconds())),
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+
+        CustomActivationEmail(request, {"user": user}).send([user.email])
+        return Response({"detail": "Activation email sent. Please check your inbox."}, status=status.HTTP_200_OK)
+
         
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
+        client_ip = get_client_ip(request)
+        identifier = (
+            request.data.get("email")
+            or request.data.get("username")
+            or client_ip
+        )
+        identifier = str(identifier).strip().lower()
+
+        ip_limit = check_rate_limit(
+            "login-ip",
+            client_ip,
+            settings.LOGIN_RATE_LIMIT_IP_ATTEMPTS,
+            settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+        )
+        if not ip_limit.allowed:
+            return rate_limit_response(ip_limit)
+
+        identifier_limit = check_rate_limit(
+            "login-identifier",
+            identifier,
+            settings.LOGIN_RATE_LIMIT_IDENTIFIER_ATTEMPTS,
+            settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+        )
+        if not identifier_limit.allowed:
+            return rate_limit_response(identifier_limit)
+
         try:
             user = User.objects.get(email=request.data.get('email'))
 
@@ -316,11 +390,28 @@ class UserReportAPIView(generics.GenericAPIView):
         if target_user.id == request.user.id:
             return Response({"detail": "You cannot report yourself."}, status=status.HTTP_400_BAD_REQUEST)
 
+        recent_report = UserReport.objects.filter(
+            reporter=request.user,
+            reported=target_user,
+            status="pending",
+            created_at__gte=timezone.now() - timedelta(hours=24),
+        ).first()
+        if recent_report:
+            return Response(
+                {"reported": True, "detail": "You already submitted a report for this user recently."},
+                status=status.HTTP_200_OK,
+            )
+
+        report_type = request.data.get("reason", "other")
+        details = (request.data.get("details") or "").strip()
+        if report_type == "other" and len(details) < 10:
+            return Response({"detail": "Please add a few details for this report."}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data={
             "reporter": request.user.id,
             "reported": target_user.id,
-            "report_type": request.data.get("reason", "other"),
-            "details": request.data.get("details", ""),
+            "report_type": report_type,
+            "details": details,
         })
         serializer.is_valid(raise_exception=True)
         serializer.save(reporter=request.user, reported=target_user)
@@ -369,10 +460,36 @@ class NotificationListAPIView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        if request.query_params.get("summary") == "true":
+            unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+            latest = (
+                Notification.objects.filter(recipient=request.user)
+                .order_by("-created_at")
+                .values_list("created_at", flat=True)
+                .first()
+            )
+            return Response(
+                {
+                    "unread_count": unread_count,
+                    "latest_at": latest,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        try:
+            limit = min(max(int(request.query_params.get("limit") or 30), 1), 50)
+        except (TypeError, ValueError):
+            limit = 30
+
+        only_unread = request.query_params.get("unread") == "true"
+        queryset = Notification.objects.filter(recipient=request.user)
+        if only_unread:
+            queryset = queryset.filter(is_read=False)
+
         notifications = (
-            Notification.objects.filter(recipient=request.user)
+            queryset
             .select_related("actor", "actor__profile")
-            .order_by("-created_at")[:30]
+            .order_by("-created_at")[:limit]
         )
         unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
         serializer = NotificationSerializer(notifications, many=True, context={"request": request})
@@ -385,8 +502,15 @@ class NotificationListAPIView(generics.GenericAPIView):
         )
 
     def patch(self, request, *args, **kwargs):
-        Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
-        return Response({"unread_count": 0}, status=status.HTTP_200_OK)
+        notification_ids = request.data.get("ids")
+        queryset = Notification.objects.filter(recipient=request.user, is_read=False)
+
+        if isinstance(notification_ids, list) and notification_ids:
+            queryset = queryset.filter(id__in=notification_ids)
+
+        queryset.update(is_read=True)
+        unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+        return Response({"unread_count": unread_count}, status=status.HTTP_200_OK)
 
 
 class PendingIncomingCallView(generics.GenericAPIView):
@@ -444,7 +568,7 @@ def get_direct_conversation_queryset(user):
             "messages",
             queryset=DirectMessage.objects.select_related(
                 "sender", "sender__profile", "reply_to", "reply_to__sender", "reply_to__sender__profile"
-            ).prefetch_related("reactions").order_by("-created_at"),
+            ).exclude(deleted_for=user).prefetch_related("reactions").order_by("-created_at"),
             to_attr="prefetched_messages_desc",
         )
     )
@@ -539,14 +663,14 @@ class DirectConversationMessagesAPIView(generics.GenericAPIView):
             return Response({"detail": "You cannot view this conversation."}, status=status.HTTP_403_FORBIDDEN)
 
         now = timezone.now()
-        unread_incoming = conversation.messages.filter(sender=other_user, read_at__isnull=True)
+        unread_incoming = conversation.messages.filter(sender=other_user, read_at__isnull=True).exclude(deleted_for=request.user)
         read_message_ids = [str(message_id) for message_id in unread_incoming.values_list("id", flat=True)]
         if read_message_ids:
             unread_incoming.update(read_at=now)
 
         messages = conversation.messages.select_related(
             "sender", "sender__profile", "reply_to", "reply_to__sender", "reply_to__sender__profile"
-        ).prefetch_related("reactions").order_by("created_at")
+        ).exclude(deleted_for=request.user).prefetch_related("reactions").order_by("created_at")
         serializer = DirectMessageSerializer(messages, many=True, context={"request": request})
         return Response(
             {
@@ -568,16 +692,25 @@ class DirectConversationMessagesAPIView(generics.GenericAPIView):
         message_type = request.data.get("message_type", "text")
         audio_url = (request.data.get("audio_url") or "").strip()
         audio_transcript = (request.data.get("audio_transcript") or "").strip()
+        attachment_url = (request.data.get("attachment_url") or "").strip()
+        attachment_name = (request.data.get("attachment_name") or "").strip()
+        attachment_type = (request.data.get("attachment_type") or "").strip()
         try:
             audio_duration_ms = int(request.data.get("audio_duration_ms") or 0)
         except (TypeError, ValueError):
             audio_duration_ms = 0
-        if message_type not in {"text", "voice"}:
+        try:
+            attachment_size = int(request.data.get("attachment_size") or 0)
+        except (TypeError, ValueError):
+            attachment_size = 0
+        if message_type not in {"text", "voice", "image", "file"}:
             return Response({"detail": "Invalid message type"}, status=status.HTTP_400_BAD_REQUEST)
         if message_type == "text" and not body:
             return Response({"detail": "Message body is required"}, status=status.HTTP_400_BAD_REQUEST)
         if message_type == "voice" and not audio_url:
             return Response({"detail": "Voice note audio is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if message_type in {"image", "file"} and not attachment_url:
+            return Response({"detail": "Attachment URL is required"}, status=status.HTTP_400_BAD_REQUEST)
         reply_to = None
         reply_to_id = request.data.get("reply_to_id")
         if reply_to_id:
@@ -594,7 +727,15 @@ class DirectConversationMessagesAPIView(generics.GenericAPIView):
             audio_url=audio_url or None,
             audio_duration_ms=audio_duration_ms,
             audio_transcript=audio_transcript if message_type == "voice" else "",
+            attachment_url=attachment_url or None,
+            attachment_name=attachment_name[:255],
+            attachment_type=attachment_type[:120],
+            attachment_size=max(0, attachment_size),
         )
+        if message_type == "voice" and not message.audio_transcript:
+            from backend.tasks import transcribe_voice_message
+
+            transcribe_voice_message.delay(str(message.id))
         conversation.last_message_at = message.created_at
         conversation.save(update_fields=["last_message_at", "updated_at"])
 
@@ -605,7 +746,11 @@ class DirectConversationMessagesAPIView(generics.GenericAPIView):
             actor=request.user,
             notification_type="message",
             title=f"@{display_name} sent you a message",
-            body="Voice note" if message_type == "voice" else body[:120],
+            body={
+                "voice": "Voice note",
+                "image": attachment_name or "Image",
+                "file": attachment_name or "File",
+            }.get(message_type, body[:120]),
             target_url=f"/messages?user={request.user.id}",
         )
 
@@ -627,7 +772,7 @@ class DirectConversationMessagesAPIView(generics.GenericAPIView):
             id__in=message_ids,
             sender=other_user,
             read_at__isnull=True,
-        )
+        ).exclude(deleted_for=request.user)
         read_message_ids = [str(message_id) for message_id in unread_incoming.values_list("id", flat=True)]
         if read_message_ids:
             unread_incoming.update(read_at=now)
@@ -682,6 +827,70 @@ class DirectMessageReactionAPIView(generics.GenericAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class DirectMessageVisibilityAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    undo_window = timedelta(minutes=5)
+
+    def get_message(self, request, conversation_id, message_id):
+        conversation = get_object_or_404(
+            DirectConversation.objects.select_related("user_one", "user_two"),
+            Q(user_one=request.user) | Q(user_two=request.user),
+            pk=conversation_id,
+        )
+        return get_object_or_404(
+            conversation.messages.select_related("sender", "sender__profile").prefetch_related("reactions"),
+            pk=message_id,
+        )
+
+    def delete(self, request, conversation_id, message_id, *args, **kwargs):
+        message = self.get_message(request, conversation_id, message_id)
+        message.deleted_for.add(request.user)
+        record, _ = DirectMessageDeleteForMe.objects.update_or_create(
+            message=message,
+            user=request.user,
+            defaults={"deleted_at": timezone.now()},
+        )
+        return Response(
+            {
+                "detail": "Message deleted for you.",
+                "undo_expires_at": (record.deleted_at + self.undo_window).isoformat(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def patch(self, request, conversation_id, message_id, *args, **kwargs):
+        message = self.get_message(request, conversation_id, message_id)
+        if message.sender_id != request.user.id:
+            return Response({"detail": "You can only delete your own messages for everyone."}, status=status.HTTP_403_FORBIDDEN)
+
+        if not message.is_deleted_for_everyone:
+            message.is_deleted_for_everyone = True
+            message.deleted_for_everyone_at = timezone.now()
+            message.save(update_fields=["is_deleted_for_everyone", "deleted_for_everyone_at"])
+            message.reactions.all().delete()
+
+        message = DirectMessage.objects.select_related("sender", "sender__profile").prefetch_related("reactions").get(pk=message.pk)
+        serializer = DirectMessageSerializer(message, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, conversation_id, message_id, *args, **kwargs):
+        message = self.get_message(request, conversation_id, message_id)
+        delete_record = DirectMessageDeleteForMe.objects.filter(message=message, user=request.user).first()
+        if not delete_record:
+            return Response({"detail": "This message can no longer be restored."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if timezone.now() > delete_record.deleted_at + self.undo_window:
+            return Response(
+                {"detail": "Undo is only available for 5 minutes after deleting for you."},
+                status=status.HTTP_410_GONE,
+            )
+
+        message.deleted_for.remove(request.user)
+        delete_record.delete()
+        serializer = DirectMessageSerializer(message, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserDirectoryAPIView(generics.GenericAPIView):
@@ -946,7 +1155,7 @@ def get_avatar_url(request):
         ExpiresIn=3600,
     )
 
-    if hasattr(settings, "AWS_S3_CUSTOM_DOMAIN"):
+    if settings.AWS_S3_CUSTOM_DOMAIN:
         public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
     else:
         public_url = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
@@ -992,12 +1201,62 @@ def get_voice_note_url(request):
         ExpiresIn=3600,
     )
 
-    if hasattr(settings, "AWS_S3_CUSTOM_DOMAIN"):
+    if settings.AWS_S3_CUSTOM_DOMAIN:
         public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
     else:
         public_url = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
 
     return Response({"upload_url": presigned_url, "audio_url": public_url, "file_name": key}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def get_message_attachment_url(request):
+    file_type = str(request.data.get("file_type") or "application/octet-stream")
+    file_name = str(request.data.get("file_name") or "attachment").strip()[:180] or "attachment"
+    try:
+        file_size = int(request.data.get("file_size") or 0)
+    except (TypeError, ValueError):
+        file_size = 0
+
+    if file_size > 15 * 1024 * 1024:
+        return Response({"detail": "Attachments must be 15MB or smaller."}, status=status.HTTP_400_BAD_REQUEST)
+
+    allowed_prefixes = ("image/", "application/pdf", "text/", "application/zip")
+    if not file_type.startswith(allowed_prefixes):
+        return Response({"detail": "This file type is not supported."}, status=status.HTTP_400_BAD_REQUEST)
+
+    extension = "bin"
+    if "." in file_name:
+        extension = file_name.rsplit(".", 1)[1].lower()[:12] or "bin"
+    elif "/" in file_type:
+        extension = file_type.split("/", 1)[1].split(";", 1)[0][:12] or "bin"
+
+    timestamp = int(time.time())
+    key = f"message-attachments/{request.user.id}/{timestamp}.{extension}"
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name="auto",
+    )
+    presigned_url = s3.generate_presigned_url(
+        ClientMethod="put_object",
+        Params={
+            "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+            "Key": key,
+            "ContentType": file_type,
+        },
+        ExpiresIn=3600,
+    )
+
+    if settings.AWS_S3_CUSTOM_DOMAIN:
+        public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
+    else:
+        public_url = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
+
+    return Response({"upload_url": presigned_url, "attachment_url": public_url, "file_name": key}, status=status.HTTP_200_OK)
 
 @ensure_csrf_cookie
 def csrf(request):
@@ -1007,6 +1266,15 @@ def csrf(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def google_auth_redirect(request):
+    limit = check_rate_limit(
+        "google-auth-redirect-ip",
+        get_client_ip(request),
+        settings.OAUTH_START_RATE_LIMIT_IP_ATTEMPTS,
+        settings.OAUTH_START_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if not limit.allowed:
+        return rate_limit_response(limit)
+
     redirect_uri = request.query_params.get('redirect_uri')
 
     if not redirect_uri:
@@ -1035,6 +1303,15 @@ def google_auth_redirect(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def google_auth_start(request):
+    limit = check_rate_limit(
+        "google-auth-start-ip",
+        get_client_ip(request),
+        settings.OAUTH_START_RATE_LIMIT_IP_ATTEMPTS,
+        settings.OAUTH_START_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if not limit.allowed:
+        return rate_limit_response(limit)
+
     redirect_uri = request.build_absolute_uri(reverse('google-auth-callback'))
     strategy = load_strategy(request)
     backend = load_backend(

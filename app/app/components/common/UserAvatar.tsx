@@ -25,12 +25,12 @@ type UserAvatarProps = {
 };
 
 const fallbackGradients = [
-  "from-cyan-500 via-blue-500 to-violet-500",
-  "from-emerald-500 via-teal-500 to-cyan-500",
-  "from-rose-500 via-fuchsia-500 to-indigo-500",
-  "from-amber-400 via-orange-500 to-rose-500",
-  "from-lime-500 via-emerald-500 to-sky-500",
-  "from-sky-500 via-indigo-500 to-fuchsia-500",
+  "from-[rgb(68,13,156)] via-purple-500 to-green-400",
+  "from-green-400 via-emerald-500 to-[rgb(68,13,156)]",
+  "from-purple-700 via-[rgb(68,13,156)] to-green-300",
+  "from-green-300 via-purple-400 to-purple-800",
+  "from-[rgb(68,13,156)] via-violet-500 to-emerald-400",
+  "from-emerald-400 via-green-500 to-purple-700",
 ];
 
 function getDisplayName(user?: AvatarUser | null) {

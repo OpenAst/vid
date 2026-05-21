@@ -59,6 +59,9 @@ For the backend service:
 - `WEB_PUSH_VAPID_PUBLIC_KEY=<generated VAPID public key>`
 - `WEB_PUSH_VAPID_PRIVATE_KEY=<generated VAPID private key>`
 - `WEB_PUSH_VAPID_SUBJECT=mailto:you@your-domain.com`
+- `REDIS_URL=redis://redis:6379/0`
+- `CELERY_BROKER_URL=redis://redis:6379/0`
+- `CELERY_RESULT_BACKEND=redis://redis:6379/0`
 
 For the frontend service:
 
@@ -81,6 +84,7 @@ That is optional now. If you leave it empty, the app still works as long as the 
 - Static files are served with WhiteNoise.
 - The frontend Dockerfile uses Node 20 and production builds.
 - The realtime server now uses Socket.IO and can scale with Redis.
+- Activation emails are queued through Celery, so the Celery worker service must be running for resend/register emails to leave the queue.
 
 ### If Coolify still feels messy
 
@@ -89,7 +93,55 @@ That is optional now. If you leave it empty, the app still works as long as the 
 3. Deploy the realtime service and verify it can reach `http://backend:8000`.
 4. Deploy the frontend last, with the API and site URLs already set.
 
-## Local reference
+## Local Development
+
+Use a separate local database for development. Do not point `backend/.env` at the production database unless you are intentionally debugging production data.
+
+Start local infrastructure:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+Create a local backend env file:
+
+```bash
+cp backend/.env.dev.example backend/.env
+```
+
+Then run the backend:
+
+```bash
+cd backend
+source venv/bin/activate
+python manage.py migrate
+python manage.py runserver
+```
+
+In a second backend terminal, run the worker for async email and scheduled jobs:
+
+```bash
+cd backend
+source venv/bin/activate
+celery -A backend worker -l info
+```
+
+Voice-message transcripts are optional. To enable them, set these in the backend environment and keep the Celery worker running:
+
+```bash
+VOICE_TRANSCRIPTION_ENABLED=True
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
+```
+
+The local dev defaults are:
+
+- Postgres: `localhost:5432`, database `vid_dev`
+- Redis: `localhost:6379`
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:3000`
+
+## Local Full-Stack Reference
 
 If you want to run the same stack locally with Docker, use:
 

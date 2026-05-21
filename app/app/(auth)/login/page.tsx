@@ -126,7 +126,7 @@ const LoginPage = () => {
   return (
     <main className="min-h-screen bg-white text-slate-950 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
       <section className="relative overflow-hidden bg-[#05070d] px-5 py-8 text-white sm:px-8 lg:min-h-screen lg:px-14 lg:py-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_20%,rgba(44,189,255,0.18),transparent_34%),radial-gradient(circle_at_78%_32%,rgba(199,42,255,0.22),transparent_32%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_20%,rgba(68,13,156,0.38),transparent_34%),radial-gradient(circle_at_78%_32%,rgba(0,255,64,0.16),transparent_32%)]" />
 
         <div className="relative mx-auto flex max-w-xl flex-col lg:h-full lg:max-w-none">
           <div className="flex items-center gap-3">
@@ -140,7 +140,7 @@ const LoginPage = () => {
             />
             <div>
               <p className="text-xl font-bold leading-none sm:text-2xl">OneClyq</p>
-              <p className="mt-1 text-sm font-medium text-cyan-100/80">Watch. Discover. Connect.</p>
+              <p className="mt-1 text-sm font-medium text-purple-100/80">Watch. Discover. Connect.</p>
             </div>
           </div>
 
@@ -149,7 +149,7 @@ const LoginPage = () => {
               <h1 className="text-5xl font-bold leading-tight sm:text-6xl lg:text-7xl">
                 Find
                 <span className="block">the clips</span>
-                <span className="block bg-gradient-to-r from-cyan-300 via-blue-400 to-fuchsia-400 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-green-300 via-purple-300 to-[rgb(68,13,156)] bg-clip-text text-transparent">
                   you love.
                 </span>
               </h1>
@@ -159,7 +159,7 @@ const LoginPage = () => {
             </div>
 
             <div className="relative hidden min-h-[500px] lg:block">
-              <div className="absolute left-12 top-4 h-[440px] w-[250px] overflow-hidden rounded-[2rem] border border-white/15 bg-slate-950 shadow-2xl shadow-cyan-950/40">
+              <div className="absolute left-12 top-4 h-[440px] w-[250px] overflow-hidden rounded-[2rem] border border-white/15 bg-slate-950 shadow-2xl shadow-purple-950/40">
                 <Image
                   src="/auth-hero-creators.jpg"
                   alt="People smiling together on OneClyq"
@@ -169,13 +169,13 @@ const LoginPage = () => {
                   className="object-cover object-center"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-100/80">Featured creator</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-purple-100/80">Featured creator</p>
                   <p className="mt-1 text-2xl font-bold">Real moments</p>
                   <p className="mt-1 text-sm text-white/75">Watch people share what they love.</p>
                 </div>
               </div>
 
-              <div className="absolute left-0 top-36 w-44 rounded-2xl border border-white/15 bg-white/10 p-3 shadow-xl backdrop-blur-xl">
+              <div className="absolute left-0 top-36 w-44 rounded-[1.75rem] border border-white/20 bg-white/[0.14] p-3 shadow-2xl shadow-black/35 backdrop-blur-2xl ring-1 ring-white/10">
                 <div className="flex items-center gap-2">
                   <Image
                     src="/user_icon.png"
@@ -190,13 +190,13 @@ const LoginPage = () => {
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <span className="rounded-full bg-cyan-300/20 px-2 py-1 text-[11px] font-medium text-cyan-100">dance</span>
-                  <span className="rounded-full bg-fuchsia-300/20 px-2 py-1 text-[11px] font-medium text-fuchsia-100">style</span>
+                  <span className="rounded-full bg-purple-300/20 px-2 py-1 text-[11px] font-medium text-purple-100">dance</span>
+                  <span className="rounded-full bg-green-300/20 px-2 py-1 text-[11px] font-medium text-green-100">style</span>
                 </div>
               </div>
 
-              <div className="absolute right-8 bottom-24 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-3xl shadow-xl">♥</div>
-              <div className="absolute bottom-8 left-36 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 shadow-xl backdrop-blur-xl">
+              <div className="absolute right-8 bottom-24 flex h-16 w-16 items-center justify-center rounded-full bg-green-400 text-3xl text-slate-950 shadow-xl shadow-green-950/30">♥</div>
+              <div className="absolute bottom-8 left-36 rounded-[1.5rem] border border-white/20 bg-white/[0.14] px-4 py-3 shadow-2xl shadow-black/35 backdrop-blur-2xl ring-1 ring-white/10">
                 <p className="text-sm font-semibold">12k clips shared</p>
                 <p className="mt-1 text-xs text-white/60">Find someone worth following.</p>
               </div>
@@ -205,15 +205,16 @@ const LoginPage = () => {
         </div>
       </section>
 
-      <section className="flex min-h-[58vh] items-center justify-center px-5 py-10 sm:px-8 lg:min-h-screen lg:px-12">
-        <div className="w-full max-w-md">
+      <section className="relative flex min-h-[58vh] items-center justify-center overflow-hidden bg-[linear-gradient(135deg,rgba(68,13,156,0.08),rgba(0,255,64,0.06),rgba(255,255,255,0.96))] px-5 py-10 sm:px-8 lg:min-h-screen lg:px-12">
+        <div className="absolute inset-8 rounded-[3rem] border border-white/70 bg-white/35 shadow-2xl shadow-purple-950/10 backdrop-blur-3xl" aria-hidden="true" />
+        <div className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white/70 p-5 shadow-2xl shadow-purple-950/10 backdrop-blur-2xl ring-1 ring-purple-950/5 sm:p-7">
           <div className="mb-8 lg:hidden">
-            <p className="text-sm font-medium text-blue-600">Welcome back</p>
+            <p className="text-sm font-medium text-[rgb(68,13,156)]">Welcome back</p>
             <h2 className="mt-2 text-3xl font-bold">Log in to OneClyq</h2>
           </div>
 
           <div className="hidden lg:block">
-            <p className="text-sm font-medium text-blue-600">Welcome back</p>
+            <p className="text-sm font-medium text-[rgb(68,13,156)]">Welcome back</p>
             <h2 className="mt-3 text-3xl font-bold">Log in to OneClyq</h2>
             <p className="mt-3 text-sm leading-6 text-slate-500">
               Your feed, creator circle, and conversations are waiting.
@@ -222,7 +223,7 @@ const LoginPage = () => {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <input
-              className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none transition focus:border-[rgb(68,13,156)] focus:ring-4 focus:ring-purple-100"
               type="email"
               placeholder="Email address"
               name="email"
@@ -232,7 +233,7 @@ const LoginPage = () => {
             />
 
             <input
-              className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base outline-none transition focus:border-[rgb(68,13,156)] focus:ring-4 focus:ring-purple-100"
               type="text"
               placeholder="Username"
               name="username"
@@ -243,7 +244,7 @@ const LoginPage = () => {
 
             <div className="relative">
               <input
-                className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 pr-12 text-base outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 pr-12 text-base outline-none transition focus:border-[rgb(68,13,156)] focus:ring-4 focus:ring-purple-100"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
                 name="password"
@@ -270,7 +271,7 @@ const LoginPage = () => {
 
             <button
               type="submit"
-              className={`h-14 w-full rounded-full bg-blue-600 text-base font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.99] ${isLoadingUi ? 'opacity-75' : ''}`}
+              className={`h-14 w-full rounded-full bg-[rgb(68,13,156)] text-base font-bold text-white shadow-lg shadow-purple-900/25 transition hover:bg-[rgb(84,22,180)] active:scale-[0.99] ${isLoadingUi ? 'opacity-75' : ''}`}
               disabled={isLoadingUi}
             >
               {isLoadingUi ? (
@@ -280,10 +281,10 @@ const LoginPage = () => {
               )}
             </button>
 
-            <div className="flex items-center gap-4 py-2 text-sm font-medium text-slate-400">
-              <span className="h-px flex-1 bg-slate-200" />
+            <div className="flex items-center gap-4 rounded-2xl border border-white/70 bg-white/45 px-3 py-2 text-sm font-medium text-slate-400 backdrop-blur-xl">
+              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[rgb(68,13,156)]/25 to-slate-200" />
               or
-              <span className="h-px flex-1 bg-slate-200" />
+              <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[rgb(0,255,64)]/35 to-slate-200" />
             </div>
 
             <SocialButton
@@ -304,13 +305,13 @@ const LoginPage = () => {
           <div className="mt-8 space-y-3 text-center text-sm">
             <p>
               Don&apos;t have an account?{' '}
-              <Link className="font-bold text-blue-600 hover:underline" href="/register">
+              <Link className="font-bold text-[rgb(68,13,156)] hover:underline" href="/register">
                 Sign up
               </Link>
             </p>
             <p>
               Forgot your password?{' '}
-              <Link className="font-bold text-blue-600 hover:underline" href="/password-reset">
+              <Link className="font-bold text-[rgb(68,13,156)] hover:underline" href="/password-reset">
                 Reset password
               </Link>
             </p>

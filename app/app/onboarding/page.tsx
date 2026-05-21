@@ -270,7 +270,7 @@ export default function OnboardingPage() {
       <div className="mx-auto flex min-h-[calc(100dvh-48px)] w-full max-w-4xl flex-col">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-primary">Welcome to OneClyq</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Welcome to OneClyq</p>
             <h1 className="mt-1 text-2xl font-bold">Set up your creator experience</h1>
           </div>
           <button
@@ -286,7 +286,7 @@ export default function OnboardingPage() {
         <div className="mb-6 grid grid-cols-3 gap-2">
           {steps.map((step, index) => (
             <div key={step.id} className={`rounded-full px-3 py-2 text-center text-xs font-semibold ${
-              index <= stepIndex ? "bg-primary text-primary-content" : "bg-base-200 text-base-content/55"
+              index <= stepIndex ? "bg-primary text-primary-content" : "bg-base-200 text-base-content/70"
             }`}
             >
               {step.label}
@@ -379,7 +379,7 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">Choose what you like</h2>
-                  <p className="mt-1 text-sm text-base-content/60">This helps OneClyq shape your feed and profile tags.</p>
+                  <p className="mt-1 text-sm font-medium text-base-content/70">This helps OneClyq shape your feed and profile tags.</p>
                 </div>
               </div>
 
@@ -413,12 +413,12 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold">Follow a few creators</h2>
-                  <p className="mt-1 text-sm text-base-content/60">Start with at least one person, or skip and explore freely.</p>
+                  <p className="mt-1 text-sm font-medium text-base-content/70">Start with at least one person, or skip and explore freely.</p>
                 </div>
               </div>
 
               {people.length === 0 ? (
-                <div className="rounded-2xl bg-base-200 p-8 text-center text-sm text-base-content/60">
+                <div className="rounded-2xl bg-base-200 p-8 text-center text-sm font-medium text-base-content/70">
                   No suggestions yet. You can start watching now.
                 </div>
               ) : (
@@ -431,11 +431,11 @@ export default function OnboardingPage() {
                           <UserAvatar user={person} size={44} />
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-semibold">{person.first_name || person.username || "Creator"}</p>
-                            <p className="truncate text-sm text-base-content/55">@{person.username || "creator"}</p>
+                            <p className="truncate text-sm font-medium text-base-content/70">@{person.username || "creator"}</p>
                           </div>
                         </div>
                         {person.profile?.skill_tags && (
-                          <p className="mt-3 truncate text-xs text-base-content/50">{person.profile.skill_tags}</p>
+                          <p className="mt-3 truncate text-xs text-base-content/65">{person.profile.skill_tags}</p>
                         )}
                         <button
                           type="button"

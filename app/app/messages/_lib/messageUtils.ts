@@ -56,11 +56,18 @@ export const getConversationPreview = (conversation: Conversation, currentUserId
   }
 
   if (conversation.last_message) {
+    const message = conversation.last_message;
     return {
-      label: conversation.last_message.message_type === "voice"
-        ? conversation.last_message.audio_transcript || "Voice note"
-        : conversation.last_message.body,
-      timestamp: conversation.last_message.created_at,
+      label: message.is_deleted_for_everyone
+        ? "This message was deleted"
+        : message.message_type === "voice"
+        ? message.audio_transcript || "Voice note"
+        : message.message_type === "image"
+          ? message.attachment_name || "Image"
+          : message.message_type === "file"
+            ? message.attachment_name || "File"
+            : message.body,
+      timestamp: message.created_at,
       isCall: false,
       isMissed: false,
     };

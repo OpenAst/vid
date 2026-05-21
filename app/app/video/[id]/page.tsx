@@ -310,14 +310,14 @@ export default function VideoDetailPage() {
                   {video.skill_category}
                 </span>
               )}
-              <span className="rounded-full bg-base-200 px-3 py-1 text-xs font-semibold text-base-content/60">
+              <span className="rounded-full bg-base-200 px-3 py-1 text-xs font-semibold text-base-content/70">
                 {video.timestamp}
               </span>
             </div>
 
             <h1 className="mt-3 text-2xl font-bold leading-tight sm:text-3xl">{video.title || "Untitled clip"}</h1>
             {video.description && (
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-base-content/70">{video.description}</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-6 text-base-content/70">{video.description}</p>
             )}
 
             <div className="mt-5 flex flex-wrap gap-4 text-sm text-base-content/65">
@@ -333,7 +333,7 @@ export default function VideoDetailPage() {
                 type="button"
                 onClick={() => void shareBrandedVideo()}
                 disabled={isSharing}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-content transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-content transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Share2 size={16} />
                 {isSharing ? "Preparing..." : "Share branded"}
@@ -380,9 +380,9 @@ export default function VideoDetailPage() {
                 <UserAvatar user={creator || video.uploader} size={54} showPresence isOnline={creatorAvailability === "available"} />
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{creatorName}</p>
-                  <p className="truncate text-sm text-base-content/55">@{video.uploader?.username || "creator"}</p>
+                  <p className="truncate text-sm font-medium text-base-content/70">@{video.uploader?.username || "creator"}</p>
                   {creator?.follower_count !== undefined && (
-                    <p className="mt-0.5 text-xs text-base-content/45">{creator.follower_count} followers</p>
+                    <p className="mt-0.5 text-xs font-medium text-base-content/70">{creator.follower_count} followers</p>
                   )}
                 </div>
               </button>
@@ -395,7 +395,7 @@ export default function VideoDetailPage() {
                     disabled={Boolean(creator.is_following) || isFollowLoading}
                     className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
                       creator.is_following
-                        ? "bg-base-200 text-base-content/50"
+                        ? "bg-base-200 text-base-content/65"
                         : "bg-primary text-primary-content hover:opacity-90"
                     }`}
                   >
@@ -422,7 +422,7 @@ export default function VideoDetailPage() {
             )}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-base-300 bg-base-100 p-5 text-sm text-base-content/60">
+          <div className="mt-4 rounded-2xl border border-base-300 bg-base-100 p-5 text-sm font-medium text-base-content/70">
             Comments are available in the feed view for now. Open this clip in the feed to join the conversation.
           </div>
         </section>

@@ -11,6 +11,7 @@
 
 :root{
   --purple: rgb(68, 13, 156);
+  --green: rgb(0, 255, 64);
   --orange: rgb(249 115 22);
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);

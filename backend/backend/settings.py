@@ -26,6 +26,17 @@ PRIMARY_FRONTEND_URL = config("PRIMARY_FRONTEND_URL", default="http://localhost:
 API_BASE_URL = config("API_BASE_URL", default="http://localhost:8000")
 REALTIME_SERVER_INTERNAL_URL = config("REALTIME_SERVER_INTERNAL_URL", default="http://localhost:4000")
 REALTIME_INTERNAL_SECRET = config("REALTIME_INTERNAL_SECRET", default="")
+VOICE_TRANSCRIPTION_ENABLED = config("VOICE_TRANSCRIPTION_ENABLED", default=False, cast=bool)
+VOICE_TRANSCRIPTION_PROVIDER = config("VOICE_TRANSCRIPTION_PROVIDER", default="openai")
+VOICE_TRANSCRIPTION_LANGUAGE = config("VOICE_TRANSCRIPTION_LANGUAGE", default="")
+VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES = config("VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES", default=25 * 1024 * 1024, cast=int)
+OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
+OPENAI_TRANSCRIPTION_MODEL = config("OPENAI_TRANSCRIPTION_MODEL", default="gpt-4o-mini-transcribe")
+LOGIN_RATE_LIMIT_IP_ATTEMPTS = config("LOGIN_RATE_LIMIT_IP_ATTEMPTS", default=20, cast=int)
+LOGIN_RATE_LIMIT_IDENTIFIER_ATTEMPTS = config("LOGIN_RATE_LIMIT_IDENTIFIER_ATTEMPTS", default=8, cast=int)
+LOGIN_RATE_LIMIT_WINDOW_SECONDS = config("LOGIN_RATE_LIMIT_WINDOW_SECONDS", default=900, cast=int)
+OAUTH_START_RATE_LIMIT_IP_ATTEMPTS = config("OAUTH_START_RATE_LIMIT_IP_ATTEMPTS", default=30, cast=int)
+OAUTH_START_RATE_LIMIT_WINDOW_SECONDS = config("OAUTH_START_RATE_LIMIT_WINDOW_SECONDS", default=900, cast=int)
 TURN_SERVER_URLS = csv_config("TURN_SERVER_URLS", "stun:localhost:3478,turn:localhost:3478")
 TURN_SHARED_SECRET = config("TURN_SHARED_SECRET", default="")
 TURN_CREDENTIAL_TTL_SECONDS = config("TURN_CREDENTIAL_TTL_SECONDS", default=3600, cast=int)
@@ -169,12 +180,13 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 # ----------------------------
 
 USE_DATABASE_URL = config("USE_DATABASE_URL", default=False, cast=bool)
+DB_CONN_MAX_AGE = config("DB_CONN_MAX_AGE", default=0 if ENV == "development" else 600, cast=int)
 
 if USE_DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.config(
             default=config("DATABASE_URL"),
-            conn_max_age=600,
+            conn_max_age=DB_CONN_MAX_AGE,
             ssl_require=(ENV == "production"),
         )
     }
@@ -187,6 +199,7 @@ else:
             "USER": config("DB_USER"),
             "PASSWORD": config("DB_PASSWORD"),
             "PORT": config("DB_PORT", default="5432"),
+            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
         }
     }
 
@@ -201,7 +214,27 @@ EMAIL_PORT = config("EMAIL_PORT", cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=15, cast=int)
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+
+ANYMAIL = {
+    "POSTMARK_SERVER_TOKEN": config("POSTMARK_SERVER_TOKEN", default=""),
+    "MAILGUN_API_KEY": config("MAILGUN_API_KEY", default=""),
+    "MAILGUN_SENDER_DOMAIN": config("MAILGUN_SENDER_DOMAIN", default=""),
+    "SENDGRID_API_KEY": config("SENDGRID_API_KEY", default=""),
+}
+
+
+# ----------------------------
+# Celery / Redis
+# ----------------------------
+
+REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default=REDIS_URL)
+CELERY_TASK_ALWAYS_EAGER = config("CELERY_TASK_ALWAYS_EAGER", default=False, cast=bool)
+CELERY_TASK_EAGER_PROPAGATES = config("CELERY_TASK_EAGER_PROPAGATES", default=DEBUG, cast=bool)
+CELERY_BROKER_CONNECTION_TIMEOUT = config("CELERY_BROKER_CONNECTION_TIMEOUT", default=3, cast=int)
 
 
 # ----------------------------

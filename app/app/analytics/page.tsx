@@ -101,12 +101,12 @@ export default function AnalyticsPage() {
     <main className="min-h-[100dvh] bg-base-100 px-4 pb-10 pt-[calc(var(--app-header-height)+18px)] text-base-content md:pl-[124px] md:pr-8">
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6">
-          <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
             <BarChart3 size={16} />
             Analytics
           </p>
-          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Creator analytics</h1>
-          <p className="mt-2 text-sm text-base-content/55">A quick look at what is working across your clips.</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Creator analytics</h1>
+          <p className="mt-2 text-sm font-medium text-base-content/70">A quick look at what is working across your clips.</p>
         </div>
 
         {isLoading ? (
@@ -120,7 +120,7 @@ export default function AnalyticsPage() {
             <div>
               <VideoIcon className="mx-auto mb-3 text-base-content/35" size={38} />
               <p className="font-semibold">No analytics yet</p>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-base-content/55">Upload clips and your performance signals will appear here.</p>
+              <p className="mt-2 max-w-sm text-sm font-medium leading-6 text-base-content/70">Upload clips and your performance signals will appear here.</p>
               <button type="button" onClick={() => router.push("/upload")} className="btn btn-primary btn-sm mt-5">
                 Upload a clip
               </button>
@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
                       <Icon size={19} />
                     </div>
                     <p className="text-2xl font-bold">{formatMetric(summary[card.key], suffix)}</p>
-                    <p className="mt-1 text-sm text-base-content/55">{card.label}</p>
+                    <p className="mt-1 text-sm font-medium text-base-content/70">{card.label}</p>
                   </section>
                 );
               })}
@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold">Top clips</h2>
-                  <p className="mt-1 text-sm text-base-content/55">Ranked by views, likes, and comments.</p>
+                  <p className="mt-1 text-sm font-medium text-base-content/70">Ranked by views, likes, and comments.</p>
                 </div>
                 <span className="rounded-full bg-base-200 px-3 py-1 text-sm font-semibold">
                   {formatMetric(summary.total_videos)} clips
@@ -156,7 +156,7 @@ export default function AnalyticsPage() {
               </div>
 
               {topVideos.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-base-300 px-6 py-10 text-center text-sm text-base-content/55">
+                <div className="rounded-2xl border border-dashed border-base-300 px-6 py-10 text-center text-sm font-medium text-base-content/70">
                   Your uploaded clips will appear here.
                 </div>
               ) : (
@@ -168,7 +168,7 @@ export default function AnalyticsPage() {
                       onClick={() => router.push(`/video/${video.id}`)}
                       className="flex w-full items-center gap-3 py-3 text-left transition hover:bg-base-200/60"
                     >
-                      <span className="w-6 shrink-0 text-sm font-bold text-base-content/45">{index + 1}</span>
+                      <span className="w-6 shrink-0 text-sm font-bold text-base-content/70">{index + 1}</span>
                       <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-xl bg-black">
                         {video.thumbnail_url ? (
                           <Image src={video.thumbnail_url} alt="" fill sizes="48px" className="object-cover" />
@@ -180,7 +180,7 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold">{video.title || "Untitled clip"}</p>
-                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-base-content/50">
+                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-base-content/65">
                           <span>{formatMetric(video.views)} views</span>
                           <span>{formatMetric(video.likes)} likes</span>
                           <span>{formatMetric(video.comments)} comments</span>

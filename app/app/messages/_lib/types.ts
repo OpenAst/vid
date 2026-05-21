@@ -14,10 +14,16 @@ export type Message = {
   id: string;
   body: string;
   reply_to?: MessageReply | null;
-  message_type?: "text" | "voice";
+  message_type?: "text" | "voice" | "image" | "file";
   audio_url?: string | null;
   audio_duration_ms?: number;
   audio_transcript?: string;
+  attachment_url?: string | null;
+  attachment_name?: string;
+  attachment_type?: string;
+  attachment_size?: number;
+  is_deleted_for_everyone?: boolean;
+  deleted_for_everyone_at?: string | null;
   reaction_counts?: MessageReactionCounts;
   my_reaction?: MessageReaction | null;
   created_at: string;
@@ -33,10 +39,15 @@ export type MessageReactionCounts = Partial<Record<MessageReaction, number>>;
 export type MessageReply = {
   id: string;
   body: string;
-  message_type?: "text" | "voice";
+  message_type?: "text" | "voice" | "image" | "file";
   audio_url?: string | null;
   audio_duration_ms?: number;
   audio_transcript?: string;
+  attachment_url?: string | null;
+  attachment_name?: string;
+  attachment_type?: string;
+  attachment_size?: number;
+  is_deleted_for_everyone?: boolean;
   sender: UserSummary;
 };
 
@@ -67,6 +78,18 @@ export type RealtimeMessagePayload = {
   toUserId: string;
   message: Message;
   fromUserId: string;
+};
+
+export type RealtimeMessageDeletePayload = {
+  conversationId: string;
+  toUserId: string;
+  message: Message;
+  fromUserId: string;
+};
+
+export type RealtimeMessageUpdatePayload = {
+  conversationId: string;
+  message: Partial<Message> & { id: string };
 };
 
 export type MessageReadPayload = {

@@ -1,7 +1,7 @@
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from datetime import datetime, timedelta, timezone
 
-class OneDayActivationTokenGenerator(PasswordResetTokenGenerator):
+class ActivationTokenGenerator(PasswordResetTokenGenerator):
     def _get_timestamp(self, token):
         try:
             ts_b36 = token.split("-")[0]  # first part before hyphen
@@ -28,4 +28,4 @@ class OneDayActivationTokenGenerator(PasswordResetTokenGenerator):
             return False
 
         now = datetime.now(timezone.utc)
-        return (now - token_time) <= timedelta(hours=24)
+        return (now - token_time) <= timedelta(hours=48)

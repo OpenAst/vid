@@ -69,14 +69,14 @@ const PasswordResetPage = () => {
             />
             <button
               type="submit"
-              className={`w-full p-2 rounded-lg ${isLoading ? 'bg-gray-400' : 'btn btn-primary hover:bg-purple-600'} text-white mt-2`}
+              className={`mt-2 w-full rounded-lg p-2 text-white ${isLoading ? 'bg-gray-400' : 'bg-[rgb(68,13,156)] hover:bg-[rgb(84,22,180)]'}`}
               disabled={isLoading}>
                 Reset
             </button>  
 
             <p className='text-center mt-4'>
               Remembered your Password?{' '}
-              <Link className='text-blue-500 hover:underline' href="/login">
+              <Link className='font-semibold text-[rgb(68,13,156)] hover:underline' href="/login">
                 Login
               </Link>
             </p>

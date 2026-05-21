@@ -343,8 +343,32 @@ class DirectMessageSerializer(serializers.ModelSerializer):
 
   class Meta:
     model = DirectMessage
-    fields = ["id", "sender", "reply_to", "body", "message_type", "audio_url", "audio_duration_ms", "audio_transcript", "reaction_counts", "my_reaction", "created_at", "read_at", "is_own"]
+    fields = [
+      "id", "sender", "reply_to", "body", "message_type", "audio_url", "audio_duration_ms",
+      "audio_transcript", "attachment_url", "attachment_name", "attachment_type", "attachment_size",
+      "is_deleted_for_everyone", "deleted_for_everyone_at", "reaction_counts", "my_reaction",
+      "created_at", "read_at", "is_own"
+    ]
     read_only_fields = ["id", "sender", "created_at", "read_at", "is_own"]
+
+  def to_representation(self, instance):
+    data = super().to_representation(instance)
+    if instance.is_deleted_for_everyone:
+      data.update({
+        "body": "",
+        "message_type": "text",
+        "audio_url": None,
+        "audio_duration_ms": 0,
+        "audio_transcript": "",
+        "attachment_url": None,
+        "attachment_name": "",
+        "attachment_type": "",
+        "attachment_size": 0,
+        "reply_to": None,
+        "reaction_counts": {},
+        "my_reaction": None,
+      })
+    return data
 
   def get_is_own(self, obj):
     request = self.context.get("request")
@@ -354,6 +378,22 @@ class DirectMessageSerializer(serializers.ModelSerializer):
     if not obj.reply_to:
       return None
 
+    if obj.reply_to.is_deleted_for_everyone:
+      return {
+        "id": str(obj.reply_to.id),
+        "body": "",
+        "message_type": "text",
+        "audio_url": None,
+        "audio_duration_ms": 0,
+        "audio_transcript": "",
+        "attachment_url": None,
+        "attachment_name": "",
+        "attachment_type": "",
+        "attachment_size": 0,
+        "is_deleted_for_everyone": True,
+        "sender": UserPublicSerializer(obj.reply_to.sender, context=self.context).data,
+      }
+
     return {
       "id": str(obj.reply_to.id),
       "body": obj.reply_to.body,
@@ -361,16 +401,24 @@ class DirectMessageSerializer(serializers.ModelSerializer):
       "audio_url": obj.reply_to.audio_url,
       "audio_duration_ms": obj.reply_to.audio_duration_ms,
       "audio_transcript": obj.reply_to.audio_transcript,
+      "attachment_url": obj.reply_to.attachment_url,
+      "attachment_name": obj.reply_to.attachment_name,
+      "attachment_type": obj.reply_to.attachment_type,
+      "attachment_size": obj.reply_to.attachment_size,
       "sender": UserPublicSerializer(obj.reply_to.sender, context=self.context).data,
     }
 
   def get_reaction_counts(self, obj):
+    if obj.is_deleted_for_everyone:
+      return {}
     counts = {reaction: 0 for reaction, _ in DirectMessageReaction.ALLOWED_REACTIONS}
     for reaction in obj.reactions.all():
       counts[reaction.reaction] = counts.get(reaction.reaction, 0) + 1
     return counts
 
   def get_my_reaction(self, obj):
+    if obj.is_deleted_for_everyone:
+      return None
     request = self.context.get("request")
     if not request or not request.user.is_authenticated:
       return None
@@ -401,8 +449,12 @@ class DirectConversationSerializer(serializers.ModelSerializer):
 
   def get_last_message(self, obj):
     message = getattr(obj, "_prefetched_last_message", None)
+    request = self.context.get("request")
     if message is None:
-      message = obj.messages.select_related("sender", "sender__profile").order_by("-created_at").first()
+      messages = obj.messages.select_related("sender", "sender__profile")
+      if request and request.user.is_authenticated:
+        messages = messages.exclude(deleted_for=request.user)
+      message = messages.order_by("-created_at").first()
     if not message:
       return None
     return DirectMessageSerializer(message, context=self.context).data
@@ -452,7 +504,7 @@ class DirectConversationSerializer(serializers.ModelSerializer):
     if not request or not request.user.is_authenticated:
       return 0
 
-    return obj.messages.filter(read_at__isnull=True).exclude(sender=request.user).count()
+    return obj.messages.filter(read_at__isnull=True).exclude(sender=request.user).exclude(deleted_for=request.user).count()
 
 
 class NotificationSerializer(serializers.ModelSerializer):

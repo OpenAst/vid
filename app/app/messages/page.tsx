@@ -24,12 +24,13 @@ function MessagesPageContent() {
 
   return (
     <div className="min-h-[100dvh] bg-base-100 text-base-content md:pl-[100px]">
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col px-3 pb-[calc(var(--safe-area-bottom)+12px)] pt-[calc(var(--app-header-height)+12px)] sm:px-4 md:px-6">
-        <div className={`mb-3 ${controller.showThreadOnMobile ? "hidden md:block" : ""}`}>
-          <h1 className="text-xl font-semibold sm:text-2xl">Messages</h1>
-          <p className="mt-1 text-sm text-base-content/60">Talk to people, then call straight from the chat.</p>
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col px-3 pb-[calc(var(--safe-area-bottom)+12px)] pt-[calc(var(--app-header-height)+16px)] sm:px-4 md:px-6">
+        <div className={`mb-5 ${controller.showThreadOnMobile ? "hidden md:block" : ""}`}>
+          <p className="text-xs font-bold uppercase tracking-wide text-primary">Inbox</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Messages</h1>
+          <p className="mt-2 text-sm font-medium text-base-content/70">Talk to people, then call straight from the chat.</p>
           {controller.user?.username && (
-            <p className="mt-2 text-xs font-medium text-base-content/45">
+            <p className="mt-2 text-xs font-semibold text-base-content/70">
               Signed in as @{controller.user.username}
             </p>
           )}
@@ -58,6 +59,8 @@ function MessagesPageContent() {
             isLoading={controller.isLoadingMessages || controller.isLoadingCalls}
             isPeerTyping={controller.selectedPeerTyping}
             isSending={controller.isSending}
+            sendError={controller.sendError}
+            selectedAttachment={controller.selectedAttachment}
             messagesEndRef={controller.messagesEndRef}
             replyingTo={controller.replyingTo}
             selectedPeer={controller.selectedPeer}
@@ -69,9 +72,15 @@ function MessagesPageContent() {
             onDraftChange={controller.setDraft}
             onReply={controller.setReplyingTo}
             onCancelReply={() => controller.setReplyingTo(null)}
+            onClearAttachment={controller.clearAttachment}
+            onDeleteForEveryone={(message) => controller.deleteMessageForEveryone(message)}
+            onDeleteForMe={(message) => controller.deleteMessageForMe(message)}
+            onFileSelected={controller.selectAttachment}
             onReact={(message, reaction) => void controller.reactToMessage(message, reaction)}
+            onRetrySend={() => void controller.sendMessage()}
             onSendMessage={() => void controller.sendMessage()}
             onSendVoiceNote={(audioBlob, durationMs) => void controller.sendVoiceNote(audioBlob, durationMs)}
+            onUndoDeleteForMe={(message) => controller.undoDeleteMessageForMe(message)}
           />
         </div>
       </div>

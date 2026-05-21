@@ -7,11 +7,26 @@ async function forwardNotificationsRequest(req: NextRequest, method: "GET" | "PA
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/notifications/`, {
+  const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/auth/notifications/`);
+  if (method === "GET" && req.nextUrl.searchParams.get("summary") === "true") {
+    url.searchParams.set("summary", "true");
+  }
+  if (method === "GET" && req.nextUrl.searchParams.get("unread") === "true") {
+    url.searchParams.set("unread", "true");
+  }
+  if (method === "GET" && req.nextUrl.searchParams.get("limit")) {
+    url.searchParams.set("limit", req.nextUrl.searchParams.get("limit") || "");
+  }
+
+  const body = method === "PATCH" ? await req.text() : undefined;
+
+  const response = await fetch(url.toString(), {
     method,
     headers: {
       Authorization: `JWT ${accessToken}`,
+      ...(body ? { "Content-Type": "application/json" } : {}),
     },
+    body: body || undefined,
   });
 
   const data = await response.json().catch(() => ({ detail: "Notification request failed" }));
