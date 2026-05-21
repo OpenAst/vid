@@ -336,7 +336,7 @@ const UploadVideo = () => {
             )}
         </div>
 
-        <section className="overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-[rgba(68,13,156,0.18)] bg-base-100 shadow-sm">
           <form onSubmit={handleSubmit} className="relative space-y-6 p-4 sm:p-6">
             {hasDraftContent && (
               <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-medium text-base-content">
@@ -361,7 +361,7 @@ const UploadVideo = () => {
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl border border-[rgba(68,13,156,0.22)] bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-[rgb(68,13,156)] focus:outline-none focus:ring-2 focus:ring-[rgba(68,13,156,0.18)]"
                 required
                 maxLength={100}
               />
@@ -376,7 +376,7 @@ const UploadVideo = () => {
                 rows={4}
                 value={formData.description}
                 onChange={handleInputChange}
-                className="w-full rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl border border-[rgba(68,13,156,0.22)] bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-[rgb(68,13,156)] focus:outline-none focus:ring-2 focus:ring-[rgba(68,13,156,0.18)]"
                 maxLength={500}
               />
             </div>
@@ -390,7 +390,7 @@ const UploadVideo = () => {
                 name="skill_category"
                 value={formData.skill_category}
                 onChange={handleInputChange}
-                className="w-full rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl border border-[rgba(68,13,156,0.22)] bg-base-100 px-4 py-3 text-base-content shadow-sm transition-all focus:border-[rgb(68,13,156)] focus:outline-none focus:ring-2 focus:ring-[rgba(68,13,156,0.18)]"
               >
                 {uploadCategories.map((category) => (
                   <option key={category.value} value={category.value}>
@@ -410,7 +410,7 @@ const UploadVideo = () => {
                   <div className="flex gap-4">
                     <label
                       htmlFor="video-upload"
-                      className="flex-1 cursor-pointer bg-base-200 py-3 px-4 border border-base-300 rounded-xl shadow-sm text-center text-sm font-medium text-base-content hover:bg-base-300 transition-all flex items-center justify-center gap-2"
+                      className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 px-4 py-3 text-center text-sm font-medium text-base-content shadow-sm transition-all hover:bg-base-300"
                     >
                       <Video size={20} />
                       <span>Choose Media</span>
@@ -533,7 +533,7 @@ const UploadVideo = () => {
               </label>
               <label
                 htmlFor="music-upload"
-                className="cursor-pointer bg-base-200 py-3 px-4 border border-base-300 rounded-xl shadow-sm text-center text-sm font-medium text-base-content hover:bg-base-300 transition-all flex items-center justify-center gap-2"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 px-4 py-3 text-center text-sm font-medium text-base-content shadow-sm transition-all hover:bg-base-300"
               >
                 <Music2 size={20} />
                 <span>{musicFile ? "Change Music" : "Choose Music"}</span>
@@ -547,7 +547,7 @@ const UploadVideo = () => {
                 />
               </label>
               {musicFile && (
-                <div className="mt-3 rounded-xl border border-base-300 bg-base-200 p-3">
+                <div className="mt-3 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="min-w-0 truncate text-sm text-base-content/80">{musicFile.name}</span>
                     <button

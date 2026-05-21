@@ -17,6 +17,16 @@ async function buildHeaders() {
   return headers;
 }
 
+async function readUpstreamJson(response: Response, fallbackDetail: string) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text().catch(() => "");
+    console.error("Message visibility upstream returned non-JSON:", text.slice(0, 300));
+    return { detail: fallbackDetail };
+  }
+  return response.json().catch(() => ({ detail: fallbackDetail }));
+}
+
 async function proxyVisibilityRequest(
   method: "DELETE" | "PATCH" | "POST",
   params: Promise<{ id: string; messageId: string }>
@@ -35,7 +45,7 @@ async function proxyVisibilityRequest(
       credentials: "include",
     });
 
-    const data = await response.json().catch(() => ({ detail: "Unable to update message" }));
+    const data = await readUpstreamJson(response, "Unable to update message");
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(

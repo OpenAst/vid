@@ -2,13 +2,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ApiResponse, DjoserErrorResponse, registerSuccessResponse } from "@/app/store/authSlice";
 
+const GENERIC_REGISTRATION_ERROR = "Unable to create account right now. Please try again.";
+
+function normalizeRegistrationError(data: DjoserErrorResponse | string): DjoserErrorResponse {
+  if (typeof data === "string") {
+    console.error("Registration backend returned non-JSON response:", data.slice(0, 500));
+    return { detail: GENERIC_REGISTRATION_ERROR };
+  }
+
+  const allowedKeys = ["email", "username", "password", "re_password", "non_field_errors", "detail"] as const;
+  const cleanError: Record<string, string | string[]> = {};
+
+  for (const key of allowedKeys) {
+    const value = data[key];
+    if (Array.isArray(value)) {
+      cleanError[key] = value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.slice(0, 240));
+    } else if (typeof value === "string") {
+      cleanError[key] = value.slice(0, 240);
+    }
+  }
+
+  return Object.keys(cleanError).length > 0
+    ? cleanError as DjoserErrorResponse
+    : { detail: GENERIC_REGISTRATION_ERROR };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { first_name, last_name, username, email, password, re_password } = await req.json();
 
     const body = JSON.stringify({ first_name, last_name, username, email, password, re_password });
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-    const apiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/users/`, {
+    if (!apiUrl) {
+      console.error("NEXT_PUBLIC_API_URL is not configured for registration.");
+      return NextResponse.json(
+        { success: false, error: { detail: GENERIC_REGISTRATION_ERROR } } satisfies ApiResponse,
+        { status: 500 }
+      );
+    }
+
+    const apiRes = await fetch(`${apiUrl}/auth/users/`, {
       method: "POST",
       headers: { 
         "Accept": "application/json",
@@ -35,11 +71,7 @@ export async function POST(req: NextRequest) {
     } else {
       const errorResponse: ApiResponse = {
         success: false,
-        error: typeof data === "string"
-          ? { detail: data }
-          : ("email" in data || "username" in data || "password" in data)
-            ? data as DjoserErrorResponse
-            : { detail: "Unknown error occurred" }
+        error: normalizeRegistrationError(typeof data === "string" ? data : data as DjoserErrorResponse)
       };
 
       return NextResponse.json(errorResponse, { status: apiRes.status });

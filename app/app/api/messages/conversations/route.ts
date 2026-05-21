@@ -19,6 +19,16 @@ function buildHeaders(req: NextRequest) {
   return headers;
 }
 
+async function readUpstreamJson(response: Response, fallbackDetail: string) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text().catch(() => "");
+    console.error("Messages conversations upstream returned non-JSON:", text.slice(0, 300));
+    return { detail: fallbackDetail };
+  }
+  return response.json().catch(() => ({ detail: fallbackDetail }));
+}
+
 export async function GET(req: NextRequest) {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/messages/conversations/`, {
@@ -28,10 +38,7 @@ export async function GET(req: NextRequest) {
       cache: "no-store",
     });
 
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await response.json().catch(() => ({ detail: "Unable to load conversations" }))
-      : { detail: await response.text().catch(() => "Unable to load conversations") };
+    const data = await readUpstreamJson(response, "Unable to load conversations");
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
@@ -51,10 +58,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await response.json().catch(() => ({ detail: "Unable to start conversation" }))
-      : { detail: await response.text().catch(() => "Unable to start conversation") };
+    const data = await readUpstreamJson(response, "Unable to start conversation");
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(

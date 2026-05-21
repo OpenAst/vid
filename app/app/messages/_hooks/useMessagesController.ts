@@ -24,6 +24,23 @@ import type {
   UserSummary,
 } from "../_lib/types";
 
+async function readJsonResponse(response: Response, fallbackDetail: string) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await response.text().catch(() => "");
+    console.error("Expected JSON response but received:", text.slice(0, 300));
+    return { detail: fallbackDetail };
+  }
+
+  try {
+    return await response.json();
+  } catch (error) {
+    console.error("Unable to parse JSON response", error);
+    return { detail: fallbackDetail };
+  }
+}
+
 export function useMessagesController() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -190,7 +207,7 @@ export function useMessagesController() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message_ids: messageIds }),
       });
-      const data = await response.json().catch(() => null);
+      const data = await readJsonResponse(response, "Unable to mark messages read");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to mark messages read");
       }
@@ -260,7 +277,7 @@ export function useMessagesController() {
     setConversationError(null);
     try {
       const response = await fetch("/api/messages/conversations", { cache: "no-store" });
-      const data = await response.json();
+      const data = await readJsonResponse(response, "Unable to load conversations");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to load conversations");
       }
@@ -283,7 +300,7 @@ export function useMessagesController() {
     setIsLoadingPeople(true);
     try {
       const response = await fetch("/api/messages/users", { cache: "no-store" });
-      const data = await response.json();
+      const data = await readJsonResponse(response, "Unable to load people");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to load people");
       }
@@ -299,7 +316,7 @@ export function useMessagesController() {
     setIsLoadingMessages(true);
     try {
       const response = await fetch(`/api/messages/conversations/${conversationId}/messages`, { cache: "no-store" });
-      const data = await response.json();
+      const data = await readJsonResponse(response, "Unable to load messages");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to load messages");
       }
@@ -323,7 +340,7 @@ export function useMessagesController() {
     setIsLoadingCalls(true);
     try {
       const response = await fetch(`/api/calls/history?peer_id=${nextPeerId}`, { cache: "no-store" });
-      const data = await response.json();
+      const data = await readJsonResponse(response, "Unable to load call history");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to load call history");
       }
@@ -342,7 +359,7 @@ export function useMessagesController() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ participant_id: participantId }),
     });
-    const data = await response.json();
+    const data = await readJsonResponse(response, "Unable to start conversation");
     if (!response.ok) {
       throw new Error(data?.detail || "Unable to start conversation");
     }
@@ -425,7 +442,7 @@ export function useMessagesController() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: messageBody, reply_to_id: replyingTo?.id || null, ...attachmentPayload }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response, "Unable to send message");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to send message");
       }
@@ -489,7 +506,7 @@ export function useMessagesController() {
             reply_to_id: replyingTo?.id || null,
           }),
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response, "Unable to send voice note");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to send voice note");
       }
@@ -548,7 +565,7 @@ export function useMessagesController() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reaction }),
       });
-      const data = await response.json().catch(() => null);
+      const data = await readJsonResponse(response, "Unable to update reaction");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to update reaction");
       }
@@ -570,7 +587,7 @@ export function useMessagesController() {
       const response = await fetch(`/api/messages/conversations/${selectedConversationId}/messages/${message.id}/visibility`, {
         method: "DELETE",
       });
-      const data = await response.json().catch(() => null);
+      const data = await readJsonResponse(response, "Unable to delete message");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to delete message");
       }
@@ -588,7 +605,7 @@ export function useMessagesController() {
     const response = await fetch(`/api/messages/conversations/${selectedConversationId}/messages/${message.id}/visibility`, {
       method: "POST",
     });
-    const data = await response.json().catch(() => null);
+    const data = await readJsonResponse(response, "Unable to restore message");
     if (!response.ok) {
       throw new Error(data?.detail || "Unable to restore message");
     }
@@ -676,7 +693,7 @@ export function useMessagesController() {
       const response = await fetch(`/api/messages/conversations/${selectedConversationId}/messages/${message.id}/visibility`, {
         method: "PATCH",
       });
-      const data = await response.json().catch(() => null);
+      const data = await readJsonResponse(response, "Unable to delete message for everyone");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to delete message for everyone");
       }

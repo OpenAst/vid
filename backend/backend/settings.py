@@ -216,6 +216,7 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=15, cast=int)
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+EMAIL_SYNC_FALLBACK_ENABLED = config("EMAIL_SYNC_FALLBACK_ENABLED", default=False, cast=bool)
 
 ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": config("POSTMARK_SERVER_TOKEN", default=""),

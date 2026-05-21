@@ -22,6 +22,16 @@ async function buildHeaders() {
   return headers;
 }
 
+async function readUpstreamJson(response: Response, fallbackDetail: string) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text().catch(() => "");
+    console.error("Conversation messages upstream returned non-JSON:", text.slice(0, 300));
+    return { detail: fallbackDetail };
+  }
+  return response.json().catch(() => ({ detail: fallbackDetail }));
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -38,10 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       cache: "no-store",
     });
 
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await response.json().catch(() => ({ detail: "Unable to load messages" }))
-      : { detail: await response.text().catch(() => "Unable to load messages") };
+    const data = await readUpstreamJson(response, "Unable to load messages");
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
@@ -68,10 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       body: JSON.stringify(body),
     });
 
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await response.json().catch(() => ({ detail: "Unable to send message" }))
-      : { detail: await response.text().catch(() => "Unable to send message") };
+    const data = await readUpstreamJson(response, "Unable to send message");
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
@@ -98,10 +102,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       body: JSON.stringify(body),
     });
 
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await response.json().catch(() => ({ detail: "Unable to update messages" }))
-      : { detail: await response.text().catch(() => "Unable to update messages") };
+    const data = await readUpstreamJson(response, "Unable to update messages");
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(

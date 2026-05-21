@@ -17,6 +17,16 @@ async function buildHeaders() {
   return headers;
 }
 
+async function readUpstreamJson(response: Response, fallbackDetail: string) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text().catch(() => "");
+    console.error("Message reaction upstream returned non-JSON:", text.slice(0, 300));
+    return { detail: fallbackDetail };
+  }
+  return response.json().catch(() => ({ detail: fallbackDetail }));
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; messageId: string }> }
@@ -37,7 +47,7 @@ export async function POST(
       body: JSON.stringify(body),
     });
 
-    const data = await response.json().catch(() => ({ detail: "Unable to update reaction" }));
+    const data = await readUpstreamJson(response, "Unable to update reaction");
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(

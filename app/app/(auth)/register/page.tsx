@@ -3,14 +3,54 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/app/store/store';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '@/app/store/store';
 import { register, resetError } from '@/app/store/authSlice';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast, ToastContainer } from 'react-toastify';
 import { DjoserErrorResponse } from '@/app/store/authSlice';
 
+const FALLBACK_REGISTER_ERROR = 'Unable to create account right now. Please try again.';
+
+function cleanErrorMessage(message: string) {
+  const trimmed = message.trim();
+  const looksLikeDebugDump =
+    trimmed.length > 240 ||
+    trimmed.includes('CELERY_') ||
+    trimmed.includes('CSRF_') ||
+    trimmed.includes('Traceback') ||
+    trimmed.includes('<html');
+
+  return looksLikeDebugDump ? FALLBACK_REGISTER_ERROR : trimmed;
+}
+
+function getRegisterErrorMessages(error: unknown) {
+  const isDjoserError = (err: unknown): err is DjoserErrorResponse =>
+    typeof err === 'object' && err !== null;
+
+  if (typeof error === 'string') {
+    return [cleanErrorMessage(error)];
+  }
+
+  if (!isDjoserError(error)) {
+    return ['An unexpected error occurred.'];
+  }
+
+  const messages: string[] = [];
+  for (const key of ['username', 'email', 'password', 're_password', 'non_field_errors'] as const) {
+    const value = error[key];
+    if (Array.isArray(value) && typeof value[0] === 'string') {
+      messages.push(cleanErrorMessage(value[0]));
+    }
+  }
+
+  if (typeof error.detail === 'string') {
+    messages.push(cleanErrorMessage(error.detail));
+  }
+
+  return messages.length > 0 ? messages : [FALLBACK_REGISTER_ERROR];
+}
 
 const RegisterPage = () => {
   const router = useRouter();
@@ -26,6 +66,8 @@ const RegisterPage = () => {
     confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     dispatch(resetError());
@@ -33,6 +75,7 @@ const RegisterPage = () => {
 
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCheckingEmail(true);
 
     try {
       const res = await fetch(`/api/auth/check_email/?email=${formData.email}`);
@@ -46,16 +89,18 @@ const RegisterPage = () => {
           setStep(2);
         }
       } else {
-        toast.error("Failed to validate email.")
+        toast.error(data?.detail || "Failed to validate email.")
       }
     } catch (err) {
       toast.error('Failed to validate email. Please try again later.');
       console.error('Email check error:', err);
+    } finally {
+      setIsCheckingEmail(false);
     }
 
   }
 
-  const { isLoading, isError } = useSelector((state: RootState) => state.auth);
+  const isBusy = isCheckingEmail || isSubmitting;
 
   const togglePassword = () => setShowPassword(!showPassword);
   const inputClass = "h-14 w-full rounded-2xl border border-slate-300 bg-white px-5 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[rgb(68,13,156)] focus:ring-4 focus:ring-purple-100";
@@ -74,6 +119,8 @@ const RegisterPage = () => {
       return;
     };
 
+    setIsSubmitting(true);
+
     try {
       await dispatch(
         register({
@@ -88,19 +135,9 @@ const RegisterPage = () => {
 
       router.push(`/check-email?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
-      const isDjoserError = (err: unknown): err is DjoserErrorResponse =>
-        typeof err === 'object' && err !== null;
-
-      if (isDjoserError(error)) {
-        if (error.username) toast.error(error.username[0]);
-        if (error.email) toast.error(error.email[0]);
-        if (error.password) toast.error(error.password[0]);
-        if (error.detail) toast.error(error.detail);
-      } else if (typeof error === 'string') {
-        toast.error(error);
-      } else {
-        toast.error('An unexpected error occurred.');
-      }
+      getRegisterErrorMessages(error).forEach((message) => toast.error(message));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -297,12 +334,6 @@ const RegisterPage = () => {
               </div>
             )}
 
-            {isError && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                An error occurred. Please try again.
-              </div>
-            )}
-
             <div className="flex gap-3 pt-2">
               {step === 2 && (
                 <button
@@ -316,10 +347,12 @@ const RegisterPage = () => {
               <button
                 type="submit"
                 className="h-14 flex-1 rounded-full bg-[rgb(68,13,156)] text-base font-bold text-white shadow-lg shadow-purple-900/25 transition hover:bg-[rgb(84,22,180)] active:scale-[0.99] disabled:opacity-75"
-                disabled={isLoading}
+                disabled={isBusy}
               >
-                {isLoading ? (
-                  <span className="loading loading-spinner loading-sm">Creating account</span>
+                {isBusy ? (
+                  <span className="loading loading-spinner loading-sm">
+                    {isCheckingEmail ? 'Checking email' : 'Creating account'}
+                  </span>
                 ) : step === 1 ? (
                   'Continue'
                 ) : (
