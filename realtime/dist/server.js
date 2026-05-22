@@ -5,6 +5,8 @@ import { createClient } from "redis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { runtimeConfig } from "./config.js";
 import { authenticateUser, createComment, createReply, fetchCommentHistory, toggleCommentVote, toggleVideoVote, } from "./django.js";
+const COMMENT_HISTORY_CACHE_PREFIX = "comments:history";
+let commentHistoryCache = createMemoryCommentHistoryCache(0);
 function logInfo(message, details) {
     if (details) {
         console.log(`[realtime] ${message}`, details);
@@ -28,6 +30,9 @@ function logError(message, details) {
 }
 function commentsRoom(roomId) {
     return `comments:${roomId}`;
+}
+function commentHistoryCacheKey(roomId) {
+    return `${COMMENT_HISTORY_CACHE_PREFIX}:${roomId}`;
 }
 function videoLikesRoom() {
     return "video-likes";
@@ -117,6 +122,91 @@ async function setupRedisAdapter(io) {
         return async () => { };
     }
 }
+function createMemoryCommentHistoryCache(ttlSeconds) {
+    const items = new Map();
+    return {
+        get: async (roomId) => {
+            if (ttlSeconds <= 0)
+                return null;
+            const item = items.get(roomId);
+            if (!item)
+                return null;
+            if (Date.now() >= item.expiresAt) {
+                items.delete(roomId);
+                return null;
+            }
+            return item.history;
+        },
+        set: async (roomId, history) => {
+            if (ttlSeconds <= 0)
+                return;
+            items.set(roomId, {
+                expiresAt: Date.now() + ttlSeconds * 1000,
+                history,
+            });
+        },
+        del: async (roomId) => {
+            items.delete(roomId);
+        },
+        close: async () => {
+            items.clear();
+        },
+    };
+}
+async function setupCommentHistoryCache() {
+    const ttlSeconds = runtimeConfig.commentHistoryCacheTtlSeconds;
+    const memoryCache = createMemoryCommentHistoryCache(ttlSeconds);
+    if (ttlSeconds <= 0) {
+        logInfo("Comment history cache disabled: ttl is 0");
+        return memoryCache;
+    }
+    if (!runtimeConfig.redisUrl) {
+        logInfo("Comment history cache using memory fallback: REDIS_URL is empty");
+        return memoryCache;
+    }
+    const cacheClient = createClient({ url: runtimeConfig.redisUrl });
+    cacheClient.on("error", (error) => {
+        logWarn("Comment history cache Redis error", { error: getErrorMessage(error, "Unknown Redis cache error") });
+    });
+    try {
+        await cacheClient.connect();
+        logInfo("Comment history cache connected", { ttlSeconds });
+        return {
+            get: async (roomId) => {
+                const cached = await cacheClient.get(commentHistoryCacheKey(roomId));
+                if (!cached)
+                    return null;
+                try {
+                    return JSON.parse(cached);
+                }
+                catch (error) {
+                    logWarn("Invalid cached comment history payload", {
+                        roomId,
+                        error: getErrorMessage(error, "Unable to parse cached comments"),
+                    });
+                    await cacheClient.del(commentHistoryCacheKey(roomId));
+                    return null;
+                }
+            },
+            set: async (roomId, history) => {
+                await cacheClient.setEx(commentHistoryCacheKey(roomId), ttlSeconds, JSON.stringify(history));
+            },
+            del: async (roomId) => {
+                await cacheClient.del(commentHistoryCacheKey(roomId));
+            },
+            close: async () => {
+                await Promise.resolve(cacheClient.quit());
+            },
+        };
+    }
+    catch (error) {
+        logWarn("Comment history cache using memory fallback", {
+            error: getErrorMessage(error, "Unable to connect comment cache"),
+        });
+        await Promise.resolve(cacheClient.destroy());
+        return memoryCache;
+    }
+}
 async function handleHttpRequest(req, res, io) {
     const requestUrl = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     if (req.method === "GET" && requestUrl.pathname === "/health") {
@@ -179,6 +269,32 @@ async function handleHttpRequest(req, res, io) {
                 userCount: userIds.length,
             });
         }
+        else if (body?.type === "notifications:new" &&
+            typeof body.recipientId === "string" &&
+            isUuid(body.recipientId) &&
+            body.notification &&
+            typeof body.unreadCount === "number") {
+            io.to(userRoom(body.recipientId)).emit("notifications:new", {
+                notification: body.notification,
+                unreadCount: body.unreadCount,
+            });
+            logInfo("Broadcasted notification", {
+                recipientId: body.recipientId,
+                unreadCount: body.unreadCount,
+            });
+        }
+        else if (body?.type === "notifications:read" &&
+            typeof body.recipientId === "string" &&
+            isUuid(body.recipientId) &&
+            typeof body.unreadCount === "number") {
+            io.to(userRoom(body.recipientId)).emit("notifications:read", {
+                unreadCount: body.unreadCount,
+            });
+            logInfo("Broadcasted notification read state", {
+                recipientId: body.recipientId,
+                unreadCount: body.unreadCount,
+            });
+        }
         else {
             logWarn("Internal event ignored: unsupported payload", {
                 type: body?.type,
@@ -211,12 +327,28 @@ async function handleCommentsJoin(socket, roomId) {
         room,
     });
     try {
+        const cachedHistory = await commentHistoryCache.get(roomId);
+        if (cachedHistory) {
+            logInfo("Served comment history from cache", {
+                connectionId: socket.data.connectionId,
+                userId: socket.data.user.id,
+                roomId,
+                count: cachedHistory.comments.length,
+            });
+            socket.emit("comments.history", {
+                roomId,
+                comments: cachedHistory.comments,
+            });
+            return;
+        }
         const history = await fetchCommentHistory(socket.data.token, roomId);
+        await commentHistoryCache.set(roomId, history);
         logInfo("Fetched comment history", {
             connectionId: socket.data.connectionId,
             userId: socket.data.user.id,
             roomId,
             count: history.comments.length,
+            cached: true,
         });
         socket.emit("comments.history", {
             roomId,
@@ -233,7 +365,7 @@ async function handleCommentsJoin(socket, roomId) {
         emitError(socket, getErrorMessage(error, "Unable to load comment history"));
     }
 }
-async function handleSendComment(socket, roomId, text) {
+async function handleSendComment(socket, roomId, text, clientId) {
     if (!isUuid(roomId)) {
         emitError(socket, "Invalid comment room id");
         return;
@@ -250,6 +382,7 @@ async function handleSendComment(socket, roomId, text) {
             roomId,
         });
         const response = await createComment(socket.data.token, roomId, content);
+        await commentHistoryCache.del(roomId);
         socket.to(commentsRoom(roomId)).emit("new_comment", {
             roomId,
             comment: response.comment,
@@ -257,6 +390,7 @@ async function handleSendComment(socket, roomId, text) {
         socket.emit("new_comment", {
             roomId,
             comment: response.comment,
+            ...(clientId ? { clientId } : {}),
         });
         logInfo("Comment created and broadcast", {
             connectionId: socket.data.connectionId,
@@ -296,6 +430,7 @@ async function handleSendReply(socket, roomId, parentId, text) {
             parentId,
         });
         const response = await createReply(socket.data.token, roomId, parentId, content);
+        await commentHistoryCache.del(roomId);
         socket.to(commentsRoom(roomId)).emit("new_reply", {
             roomId,
             parentId: response.parentId,
@@ -341,6 +476,7 @@ async function handleVoteComment(socket, roomId, commentId) {
             commentId,
         });
         const response = await toggleCommentVote(socket.data.token, commentId);
+        await commentHistoryCache.del(roomId);
         socket.to(commentsRoom(roomId)).emit("comment_liked", {
             roomId,
             commentId: response.commentId,
@@ -576,11 +712,13 @@ function handleDirectMessageTyping(socket, payload) {
 export async function createRealtimeServer() {
     let io;
     let cleanupRedis = async () => { };
+    let cleanupCommentHistoryCache = async () => { };
     logInfo("Starting realtime server", {
         port: runtimeConfig.port,
         corsOrigins: runtimeConfig.corsOrigins,
         djangoApiUrl: runtimeConfig.djangoApiUrl,
         redisEnabled: Boolean(runtimeConfig.redisUrl),
+        commentHistoryCacheTtlSeconds: runtimeConfig.commentHistoryCacheTtlSeconds,
     });
     const httpServer = createServer((req, res) => {
         void handleHttpRequest(req, res, io);
@@ -593,6 +731,8 @@ export async function createRealtimeServer() {
         transports: ["polling", "websocket"],
     });
     cleanupRedis = await setupRedisAdapter(io);
+    commentHistoryCache = await setupCommentHistoryCache();
+    cleanupCommentHistoryCache = commentHistoryCache.close;
     io.use(async (socket, next) => {
         try {
             const token = getAuthToken(socket);
@@ -649,13 +789,13 @@ export async function createRealtimeServer() {
             });
             await handleCommentsJoin(socket, roomId);
         });
-        socket.on("comments:send_comment", async ({ roomId, text }) => {
+        socket.on("comments:send_comment", async ({ roomId, text, clientId }) => {
             logInfo("Received comments:send_comment", {
                 connectionId: socket.data.connectionId,
                 userId: socket.data.user.id,
                 roomId,
             });
-            await handleSendComment(socket, roomId, text);
+            await handleSendComment(socket, roomId, text, clientId);
         });
         socket.on("comments:send_reply", async ({ roomId, parentId, text }) => {
             logInfo("Received comments:send_reply", {
@@ -762,6 +902,7 @@ export async function createRealtimeServer() {
                 io.close(() => resolve());
             });
             await cleanupRedis();
+            await cleanupCommentHistoryCache();
             logInfo("Realtime server stopped");
         },
     };

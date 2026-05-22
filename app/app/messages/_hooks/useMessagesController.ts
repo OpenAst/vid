@@ -59,7 +59,7 @@ export function useMessagesController() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [conversationSearch, setConversationSearch] = useState("");
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
-  const [isLoadingPeople, setIsLoadingPeople] = useState(true);
+  const [isLoadingPeople, setIsLoadingPeople] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingCalls, setIsLoadingCalls] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -296,10 +296,17 @@ export function useMessagesController() {
     }
   }, []);
 
-  const loadPeople = useCallback(async () => {
+  const loadPeople = useCallback(async (search: string) => {
+    const normalizedSearch = search.trim();
+    if (normalizedSearch.length < 2) {
+      setPeople([]);
+      setIsLoadingPeople(false);
+      return;
+    }
+
     setIsLoadingPeople(true);
     try {
-      const response = await fetch("/api/messages/users", { cache: "no-store" });
+      const response = await fetch(`/api/messages/users?search=${encodeURIComponent(normalizedSearch)}`, { cache: "no-store" });
       const data = await readJsonResponse(response, "Unable to load people");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to load people");
@@ -974,8 +981,19 @@ export function useMessagesController() {
 
     if (!isAuthenticated) return;
     void loadConversations();
-    void loadPeople();
-  }, [isAuthenticated, isBootstrapped, loadConversations, loadPeople, router]);
+  }, [isAuthenticated, isBootstrapped, loadConversations, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const timer = window.setTimeout(() => {
+      void loadPeople(conversationSearch);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [conversationSearch, isAuthenticated, loadPeople]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;

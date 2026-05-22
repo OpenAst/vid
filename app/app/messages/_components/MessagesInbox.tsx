@@ -54,11 +54,10 @@ export default function MessagesInbox({
   const filteredPeople = normalizedSearch ? people.filter(matchesUser) : people;
 
   return (
-    <section className={`overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm ${showThreadOnMobile ? "hidden md:block" : ""}`}>
-      <div className="space-y-3 border-b border-base-300 px-4 py-4">
+    <section className={`min-h-0 flex-col overflow-hidden border-base-300 bg-base-100 md:flex md:border-r ${showThreadOnMobile ? "hidden md:flex" : "flex"}`}>
+      <div className="space-y-3 border-b border-base-300 px-4 py-4 sm:px-5">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-base-content/75">Inbox</h2>
-          <p className="mt-1 text-xs font-medium text-base-content/70">Search people or open a recent chat.</p>
+          <h1 className="pl-12 text-2xl font-bold tracking-tight text-base-content md:pl-0">Messages</h1>
         </div>
         <div className="flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-3 py-2.5 text-base-content/70 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
           <Search size={16} aria-hidden="true" />
@@ -66,7 +65,7 @@ export default function MessagesInbox({
             value={conversationSearch}
             onChange={(event) => onConversationSearchChange(event.target.value)}
             type="search"
-            placeholder="Search users"
+            placeholder="Search people or open a recent chat"
             className="min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none placeholder:text-base-content/40"
           />
           {conversationSearch && (
@@ -82,7 +81,7 @@ export default function MessagesInbox({
         </div>
       </div>
 
-      <div className="max-h-[48dvh] overflow-y-auto md:max-h-[70dvh]">
+      <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
         {conversationError && (
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {conversationError}
@@ -101,7 +100,7 @@ export default function MessagesInbox({
             </div>
             <p className="font-semibold text-base-content">No conversations yet</p>
             <p className="mt-2 max-w-xs leading-6">
-              Search for a person below or open someone&apos;s profile to start your first chat.
+              Search for someone by name or username to start your first chat.
             </p>
           </div>
         ) : filteredConversations.length === 0 ? (
@@ -158,47 +157,44 @@ export default function MessagesInbox({
             );
           })
         )}
-      </div>
 
-      <div className="border-t border-base-300 px-4 py-3">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-base-content/75">Start New Chat</h3>
-      </div>
-      <div className="max-h-[30dvh] overflow-y-auto md:max-h-[28dvh]">
-        {isLoadingPeople ? (
-          <div className="space-y-3 p-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-14 animate-pulse rounded-xl bg-base-200" />
-            ))}
+        {normalizedSearch.length >= 2 && (
+          <div className="border-t border-base-300">
+            {isLoadingPeople ? (
+              <div className="space-y-3 p-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="h-14 animate-pulse rounded-xl bg-base-200" />
+                ))}
+              </div>
+            ) : filteredPeople.length === 0 ? (
+              <div className="p-4 text-sm font-medium text-base-content/70">No people match that search.</div>
+            ) : (
+              filteredPeople.map((person) => {
+                const isOnline = onlineUserIds.has(person.id);
+                const presence = getPresenceMeta(isOnline);
+                return (
+                  <button
+                    key={person.id}
+                    type="button"
+                    onClick={() => onStartChat(person)}
+                    className="flex w-full items-center gap-3 border-b border-base-200 px-4 py-3 text-left transition-colors hover:bg-base-200/40"
+                  >
+                    <UserAvatar user={person} size={40} showPresence isOnline={isOnline} />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {person.first_name || person.username || "Unknown"}
+                      </p>
+                      <p className="truncate text-sm font-medium text-base-content/70">@{person.username || "user"}</p>
+                      <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${presence.className}`}>
+                        <span className={`h-2 w-2 rounded-full ${presence.dotClassName}`} aria-hidden="true" />
+                        {presence.label}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
-        ) : people.length === 0 ? (
-          <div className="p-4 text-sm font-medium text-base-content/70">No people found yet.</div>
-        ) : filteredPeople.length === 0 ? (
-          <div className="p-4 text-sm font-medium text-base-content/70">No people match that search.</div>
-        ) : (
-          filteredPeople.map((person) => {
-            const isOnline = onlineUserIds.has(person.id);
-            const presence = getPresenceMeta(isOnline);
-            return (
-              <button
-                key={person.id}
-                type="button"
-                onClick={() => onStartChat(person)}
-                className="flex w-full items-center gap-3 border-b border-base-200 px-4 py-3 text-left transition-colors hover:bg-base-200/40"
-              >
-                <UserAvatar user={person} size={40} showPresence isOnline={isOnline} />
-                <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {person.first_name || person.username || "Unknown"}
-                  </p>
-                  <p className="truncate text-sm font-medium text-base-content/70">@{person.username || "user"}</p>
-                  <p className={`mt-0.5 flex items-center gap-1.5 text-xs ${presence.className}`}>
-                    <span className={`h-2 w-2 rounded-full ${presence.dotClassName}`} aria-hidden="true" />
-                    {presence.label}
-                  </p>
-                </div>
-              </button>
-            );
-          })
         )}
       </div>
     </section>

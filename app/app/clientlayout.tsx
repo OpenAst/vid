@@ -189,7 +189,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
             ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           `}
         >
-          <nav className="mt-12 flex flex-col items-center gap-2 p-2">
+          <nav className="mt-12 flex flex-col items-center gap-2 p-2 md:mt-0 md:pt-px">
             {primaryNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = isActivePath(item.href);

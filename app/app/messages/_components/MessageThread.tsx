@@ -366,18 +366,18 @@ export default function MessageThread({
   };
 
   return (
-    <section className={`flex min-h-[72dvh] flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm md:min-h-[70dvh] ${!showThreadOnMobile ? "hidden md:flex" : ""}`}>
+    <section className={`min-h-0 flex-col overflow-hidden bg-base-100 md:flex ${!showThreadOnMobile ? "hidden md:flex" : "flex"}`}>
       {selectedPeer ? (
         <>
           {(() => {
             const presence = getPresenceMeta(selectedPeerOnline);
             return (
-              <div className="flex items-start justify-between gap-3 border-b border-base-300 px-3 py-3 sm:px-4">
+              <div className="flex items-start justify-between gap-3 border-b border-base-300 px-3 py-3 sm:px-5">
                 <div className="flex min-w-0 items-start gap-3">
                   <button
                     type="button"
                     onClick={onBack}
-                    className="mt-0.5 rounded-full p-2 text-base-content/70 transition hover:bg-base-200 hover:text-base-content md:hidden"
+                    className="ml-12 mt-0.5 rounded-full p-2 text-base-content/70 transition hover:bg-base-200 hover:text-base-content md:ml-0 md:hidden"
                     aria-label="Back to conversations"
                   >
                     <ArrowLeft size={18} />
@@ -436,7 +436,7 @@ export default function MessageThread({
           })()}
 
           {isThreadSearchOpen && (
-            <div className="border-b border-base-300 px-3 py-2 sm:px-4">
+            <div className="border-b border-base-300 px-3 py-2 sm:px-5">
               <div className="flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-3 py-2 text-base-content/70 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                 <Search size={16} aria-hidden="true" />
                 <input
@@ -470,7 +470,7 @@ export default function MessageThread({
             </div>
           )}
 
-          <div ref={messageListRef} className="flex-1 overflow-y-auto bg-base-100 px-3 py-4 sm:px-4">
+          <div ref={messageListRef} className="thin-scrollbar flex-1 overflow-y-auto bg-base-100 px-3 py-4 sm:px-5">
             {isLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 6 }).map((_, index) => (
@@ -712,7 +712,7 @@ export default function MessageThread({
             )}
           </div>
 
-          <div className="border-t border-base-300 px-3 py-3 pb-[calc(var(--safe-area-bottom)+12px)] sm:px-4">
+          <div className="border-t border-base-300 px-3 py-3 pb-[calc(var(--safe-area-bottom)+12px)] sm:px-5">
             {replyingTo && (
               <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-base-300 bg-base-200/70 px-3 py-2 text-sm">
                 <div className="min-w-0 border-l-2 border-primary pl-2">
@@ -756,7 +756,7 @@ export default function MessageThread({
                 </button>
               </div>
             )}
-            <div className="flex items-end gap-2 sm:gap-3">
+            <div className="flex items-end gap-1.5 sm:gap-3">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -792,7 +792,7 @@ export default function MessageThread({
                   ref={textareaRef}
                   placeholder={isSelectedPeerBlocked ? "Unblock this user to send messages" : "Write a message..."}
                   disabled={isSelectedPeerBlocked}
-                    className="min-h-[52px] max-h-36 flex-1 resize-none rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm font-medium outline-none transition placeholder:text-base-content/45 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="min-h-[48px] max-h-36 min-w-0 flex-1 resize-none rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm font-medium outline-none transition placeholder:text-base-content/45 focus:border-primary focus:ring-2 focus:ring-primary/20 sm:min-h-[52px]"
                 />
               )}
               {!isRecording && (
@@ -800,10 +800,10 @@ export default function MessageThread({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isSelectedPeerBlocked || isSending}
-                  className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:text-base-content/35"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:text-base-content/35 sm:h-[52px] sm:w-[52px]"
                   aria-label="Attach file"
                 >
-                  <Paperclip size={20} />
+                  <Paperclip size={18} />
                 </button>
               )}
               {!isRecording && (
@@ -813,13 +813,13 @@ export default function MessageThread({
                     ref={emojiButtonRef}
                     onClick={() => setIsEmojiPickerOpen((current) => !current)}
                     disabled={isSelectedPeerBlocked}
-                    className={`flex h-[52px] w-[52px] items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:text-base-content/35 ${
+                    className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:text-base-content/35 sm:h-[52px] sm:w-[52px] ${
                       isEmojiPickerOpen ? "border-primary text-primary ring-2 ring-primary/20" : ""
                     }`}
                     aria-label="Open emoji keyboard"
                     aria-expanded={isEmojiPickerOpen}
                   >
-                    <Smile size={20} />
+                    <Smile size={18} />
                   </button>
 
                   {isEmojiPickerOpen && (
@@ -863,7 +863,7 @@ export default function MessageThread({
                   type="button"
                   onClick={finishVoiceRecording}
                   disabled={isSending}
-                  className="shrink-0 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-base-200 disabled:text-base-content/40 sm:px-5"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-base-200 disabled:text-base-content/40 sm:h-[52px] sm:w-auto sm:px-5"
                   aria-label="Send voice note"
                 >
                   <Square size={18} />
@@ -886,7 +886,7 @@ export default function MessageThread({
                   type="button"
                   onClick={() => void startVoiceRecording()}
                   disabled={isSending || isSelectedPeerBlocked}
-                  className="shrink-0 rounded-2xl bg-base-200 px-4 py-3 text-base-content transition hover:bg-base-300 disabled:cursor-not-allowed disabled:text-base-content/40 sm:px-5"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-base-200 text-base-content transition hover:bg-base-300 disabled:cursor-not-allowed disabled:text-base-content/40 sm:h-[52px] sm:w-auto sm:px-5"
                   aria-label="Record voice note"
                 >
                   <Mic size={18} />

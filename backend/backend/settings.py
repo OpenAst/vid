@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     "social_django",
     "rest_framework_simplejwt",
     "djoser",
-    "accounts",
+    "accounts.apps.AccountsConfig",
     "video",
 ]
 
@@ -108,6 +108,7 @@ TEMPLATES = [
 CSRF_COOKIE_HTTPONLY = True
 CSRF_USE_SESSIONS = False
 CORS_ALLOW_CREDENTIALS = True
+SESSION_ENGINE = config("SESSION_ENGINE", default="django.contrib.sessions.backends.signed_cookies")
 
 if ENV == "development":
     SESSION_COOKIE_SECURE = False

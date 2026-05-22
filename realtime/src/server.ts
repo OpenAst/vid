@@ -11,12 +11,13 @@ import {
   fetchCommentHistory,
   toggleCommentVote,
   toggleVideoVote,
+  type CommentHistoryResponse,
   type RealtimeUser,
 } from "./django.js";
 
 type ClientToServerEvents = {
   "comments:join": (payload: { roomId: string }) => void;
-  "comments:send_comment": (payload: { roomId: string; text: string }) => void;
+  "comments:send_comment": (payload: { roomId: string; text: string; clientId?: string }) => void;
   "comments:send_reply": (payload: { roomId: string; parentId: string; text: string }) => void;
   "comments:vote_comment": (payload: { roomId: string; commentId: string }) => void;
   "video-likes:join": () => void;
@@ -40,7 +41,7 @@ type ClientToServerEvents = {
 type ServerToClientEvents = {
   connected: (payload: { connectionId: string; user: RealtimeUser }) => void;
   "comments.history": (payload: { roomId: string; comments: unknown[] }) => void;
-  new_comment: (payload: { roomId: string; comment: unknown }) => void;
+  new_comment: (payload: { roomId: string; comment: unknown; clientId?: string }) => void;
   new_reply: (payload: { roomId: string; parentId: string; reply: unknown }) => void;
   comment_liked: (payload: {
     roomId: string;
@@ -72,6 +73,8 @@ type ServerToClientEvents = {
   "call:offer": (payload: CallSignalPayload & { fromUserId: string }) => void;
   "call:answer": (payload: CallSignalPayload & { fromUserId: string }) => void;
   "call:ice-candidate": (payload: CallSignalPayload & { fromUserId: string }) => void;
+  "notifications:new": (payload: NotificationRealtimePayload) => void;
+  "notifications:read": (payload: NotificationReadRealtimePayload) => void;
   "realtime:error": (payload: { message: string }) => void;
 };
 
@@ -119,6 +122,15 @@ type DirectMessageTypingPayload = {
   isTyping: boolean;
 };
 
+type NotificationRealtimePayload = {
+  notification: unknown;
+  unreadCount: number;
+};
+
+type NotificationReadRealtimePayload = {
+  unreadCount: number;
+};
+
 type InterServerEvents = Record<string, never>;
 
 type SocketData = {
@@ -129,6 +141,22 @@ type SocketData = {
 
 type RealtimeSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 type RealtimeIO = SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
+
+type CommentHistoryCache = {
+  get: (roomId: string) => Promise<CommentHistoryResponse | null>;
+  set: (roomId: string, history: CommentHistoryResponse) => Promise<void>;
+  del: (roomId: string) => Promise<void>;
+  close: () => Promise<void>;
+};
+
+type MemoryCacheItem = {
+  expiresAt: number;
+  history: CommentHistoryResponse;
+};
+
+const COMMENT_HISTORY_CACHE_PREFIX = "comments:history";
+
+let commentHistoryCache: CommentHistoryCache = createMemoryCommentHistoryCache(0);
 
 function logInfo(message: string, details?: Record<string, unknown>) {
   if (details) {
@@ -159,6 +187,10 @@ function logError(message: string, details?: Record<string, unknown>) {
 
 function commentsRoom(roomId: string) {
   return `comments:${roomId}`;
+}
+
+function commentHistoryCacheKey(roomId: string) {
+  return `${COMMENT_HISTORY_CACHE_PREFIX}:${roomId}`;
 }
 
 function videoLikesRoom() {
@@ -268,6 +300,94 @@ async function setupRedisAdapter(io: RealtimeIO): Promise<() => Promise<void>> {
   }
 }
 
+function createMemoryCommentHistoryCache(ttlSeconds: number): CommentHistoryCache {
+  const items = new Map<string, MemoryCacheItem>();
+
+  return {
+    get: async (roomId) => {
+      if (ttlSeconds <= 0) return null;
+      const item = items.get(roomId);
+      if (!item) return null;
+      if (Date.now() >= item.expiresAt) {
+        items.delete(roomId);
+        return null;
+      }
+      return item.history;
+    },
+    set: async (roomId, history) => {
+      if (ttlSeconds <= 0) return;
+      items.set(roomId, {
+        expiresAt: Date.now() + ttlSeconds * 1000,
+        history,
+      });
+    },
+    del: async (roomId) => {
+      items.delete(roomId);
+    },
+    close: async () => {
+      items.clear();
+    },
+  };
+}
+
+async function setupCommentHistoryCache(): Promise<CommentHistoryCache> {
+  const ttlSeconds = runtimeConfig.commentHistoryCacheTtlSeconds;
+  const memoryCache = createMemoryCommentHistoryCache(ttlSeconds);
+
+  if (ttlSeconds <= 0) {
+    logInfo("Comment history cache disabled: ttl is 0");
+    return memoryCache;
+  }
+
+  if (!runtimeConfig.redisUrl) {
+    logInfo("Comment history cache using memory fallback: REDIS_URL is empty");
+    return memoryCache;
+  }
+
+  const cacheClient = createClient({ url: runtimeConfig.redisUrl });
+  cacheClient.on("error", (error) => {
+    logWarn("Comment history cache Redis error", { error: getErrorMessage(error, "Unknown Redis cache error") });
+  });
+
+  try {
+    await cacheClient.connect();
+    logInfo("Comment history cache connected", { ttlSeconds });
+
+    return {
+      get: async (roomId) => {
+        const cached = await cacheClient.get(commentHistoryCacheKey(roomId));
+        if (!cached) return null;
+
+        try {
+          return JSON.parse(cached) as CommentHistoryResponse;
+        } catch (error) {
+          logWarn("Invalid cached comment history payload", {
+            roomId,
+            error: getErrorMessage(error, "Unable to parse cached comments"),
+          });
+          await cacheClient.del(commentHistoryCacheKey(roomId));
+          return null;
+        }
+      },
+      set: async (roomId, history) => {
+        await cacheClient.setEx(commentHistoryCacheKey(roomId), ttlSeconds, JSON.stringify(history));
+      },
+      del: async (roomId) => {
+        await cacheClient.del(commentHistoryCacheKey(roomId));
+      },
+      close: async () => {
+        await Promise.resolve(cacheClient.quit());
+      },
+    };
+  } catch (error) {
+    logWarn("Comment history cache using memory fallback", {
+      error: getErrorMessage(error, "Unable to connect comment cache"),
+    });
+    await Promise.resolve(cacheClient.destroy());
+    return memoryCache;
+  }
+}
+
 async function handleHttpRequest(req: IncomingMessage, res: ServerResponse, io: RealtimeIO) {
   const requestUrl = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
@@ -340,6 +460,34 @@ async function handleHttpRequest(req: IncomingMessage, res: ServerResponse, io: 
         conversationId: body.conversationId,
         userCount: userIds.length,
       });
+    } else if (
+      body?.type === "notifications:new" &&
+      typeof body.recipientId === "string" &&
+      isUuid(body.recipientId) &&
+      body.notification &&
+      typeof body.unreadCount === "number"
+    ) {
+      io.to(userRoom(body.recipientId)).emit("notifications:new", {
+        notification: body.notification,
+        unreadCount: body.unreadCount,
+      });
+      logInfo("Broadcasted notification", {
+        recipientId: body.recipientId,
+        unreadCount: body.unreadCount,
+      });
+    } else if (
+      body?.type === "notifications:read" &&
+      typeof body.recipientId === "string" &&
+      isUuid(body.recipientId) &&
+      typeof body.unreadCount === "number"
+    ) {
+      io.to(userRoom(body.recipientId)).emit("notifications:read", {
+        unreadCount: body.unreadCount,
+      });
+      logInfo("Broadcasted notification read state", {
+        recipientId: body.recipientId,
+        unreadCount: body.unreadCount,
+      });
     } else {
       logWarn("Internal event ignored: unsupported payload", {
         type: body?.type,
@@ -378,12 +526,29 @@ async function handleCommentsJoin(socket: RealtimeSocket, roomId: string) {
   });
 
   try {
+    const cachedHistory = await commentHistoryCache.get(roomId);
+    if (cachedHistory) {
+      logInfo("Served comment history from cache", {
+        connectionId: socket.data.connectionId,
+        userId: socket.data.user.id,
+        roomId,
+        count: cachedHistory.comments.length,
+      });
+      socket.emit("comments.history", {
+        roomId,
+        comments: cachedHistory.comments,
+      });
+      return;
+    }
+
     const history = await fetchCommentHistory(socket.data.token, roomId);
+    await commentHistoryCache.set(roomId, history);
     logInfo("Fetched comment history", {
       connectionId: socket.data.connectionId,
       userId: socket.data.user.id,
       roomId,
       count: history.comments.length,
+      cached: true,
     });
     socket.emit("comments.history", {
       roomId,
@@ -400,7 +565,7 @@ async function handleCommentsJoin(socket: RealtimeSocket, roomId: string) {
   }
 }
 
-async function handleSendComment(socket: RealtimeSocket, roomId: string, text: string) {
+async function handleSendComment(socket: RealtimeSocket, roomId: string, text: string, clientId?: string) {
   if (!isUuid(roomId)) {
     emitError(socket, "Invalid comment room id");
     return;
@@ -419,6 +584,7 @@ async function handleSendComment(socket: RealtimeSocket, roomId: string, text: s
       roomId,
     });
     const response = await createComment(socket.data.token, roomId, content);
+    await commentHistoryCache.del(roomId);
     socket.to(commentsRoom(roomId)).emit("new_comment", {
       roomId,
       comment: response.comment,
@@ -426,6 +592,7 @@ async function handleSendComment(socket: RealtimeSocket, roomId: string, text: s
     socket.emit("new_comment", {
       roomId,
       comment: response.comment,
+      ...(clientId ? { clientId } : {}),
     });
     logInfo("Comment created and broadcast", {
       connectionId: socket.data.connectionId,
@@ -473,6 +640,7 @@ async function handleSendReply(
       parentId,
     });
     const response = await createReply(socket.data.token, roomId, parentId, content);
+    await commentHistoryCache.del(roomId);
     socket.to(commentsRoom(roomId)).emit("new_reply", {
       roomId,
       parentId: response.parentId,
@@ -520,6 +688,7 @@ async function handleVoteComment(socket: RealtimeSocket, roomId: string, comment
       commentId,
     });
     const response = await toggleCommentVote(socket.data.token, commentId);
+    await commentHistoryCache.del(roomId);
     socket.to(commentsRoom(roomId)).emit("comment_liked", {
       roomId,
       commentId: response.commentId,
@@ -795,12 +964,14 @@ function handleDirectMessageTyping(socket: RealtimeSocket, payload: DirectMessag
 export async function createRealtimeServer() {
   let io!: RealtimeIO;
   let cleanupRedis: () => Promise<void> = async () => {};
+  let cleanupCommentHistoryCache: () => Promise<void> = async () => {};
 
   logInfo("Starting realtime server", {
     port: runtimeConfig.port,
     corsOrigins: runtimeConfig.corsOrigins,
     djangoApiUrl: runtimeConfig.djangoApiUrl,
     redisEnabled: Boolean(runtimeConfig.redisUrl),
+    commentHistoryCacheTtlSeconds: runtimeConfig.commentHistoryCacheTtlSeconds,
   });
 
   const httpServer: HttpServer = createServer((req, res) => {
@@ -816,6 +987,8 @@ export async function createRealtimeServer() {
   });
 
   cleanupRedis = await setupRedisAdapter(io);
+  commentHistoryCache = await setupCommentHistoryCache();
+  cleanupCommentHistoryCache = commentHistoryCache.close;
 
   io.use(async (socket, next) => {
     try {
@@ -879,13 +1052,13 @@ export async function createRealtimeServer() {
       await handleCommentsJoin(socket, roomId);
     });
 
-    socket.on("comments:send_comment", async ({ roomId, text }) => {
+    socket.on("comments:send_comment", async ({ roomId, text, clientId }) => {
       logInfo("Received comments:send_comment", {
         connectionId: socket.data.connectionId,
         userId: socket.data.user.id,
         roomId,
       });
-      await handleSendComment(socket, roomId, text);
+      await handleSendComment(socket, roomId, text, clientId);
     });
 
     socket.on("comments:send_reply", async ({ roomId, parentId, text }) => {
@@ -1012,6 +1185,7 @@ export async function createRealtimeServer() {
       });
 
       await cleanupRedis();
+      await cleanupCommentHistoryCache();
       logInfo("Realtime server stopped");
     },
   };

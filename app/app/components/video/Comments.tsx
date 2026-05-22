@@ -21,6 +21,8 @@ type Comment = {
   likes: number;
   created_at: string;
   is_pinned?: boolean;
+  pending?: boolean;
+  failed?: boolean;
   replies?: Comment[];
 };
 
@@ -44,7 +46,7 @@ function renderMentions(text: string) {
   });
 }
 
-const Comments = ({ jwtToken, roomId, currentUser: _currentUser, videoOwnerId }: Props) => {
+const Comments = ({ jwtToken, roomId, currentUser, videoOwnerId }: Props) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -54,6 +56,7 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser, videoOwnerId }:
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCommentInput, setShowCommentInput] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pendingCommentMapRef = useRef<Map<string, string>>(new Map());
 
   const { user } = useSelector((state: RootState) => state.auth);
   const isVideoOwner = Boolean(user?.id && videoOwnerId && user.id === videoOwnerId);
@@ -83,8 +86,20 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser, videoOwnerId }:
       setComments(payload.comments);
     };
 
-  const handleNewComment = (payload: { roomId: string; comment: Comment }) => {
-      setComments((prev) => payload.comment.is_pinned ? [payload.comment, ...prev] : [...prev, payload.comment]);
+  const handleNewComment = (payload: { roomId: string; comment: Comment; clientId?: string }) => {
+      const pendingId = payload.clientId || pendingCommentMapRef.current.get(payload.comment.content);
+      if (pendingId) {
+        pendingCommentMapRef.current.delete(payload.comment.content);
+      }
+
+      setComments((prev) => {
+        if (prev.some((comment) => comment.id === payload.comment.id)) return prev;
+        const nextComment = { ...payload.comment, pending: false, failed: false };
+        if (pendingId) {
+          return prev.map((comment) => comment.id === pendingId ? nextComment : comment);
+        }
+        return nextComment.is_pinned ? [nextComment, ...prev] : [...prev, nextComment];
+      });
       setShowCommentInput(false);
       setNewComment("");
     };
@@ -137,6 +152,18 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser, videoOwnerId }:
     socket.on("new_comment", handleNewComment);
     socket.on("comment_liked", handleCommentLiked);
     socket.on("new_reply", handleNewReply);
+    socket.on("realtime:error", (payload) => {
+      const failedPendingIds = Array.from(pendingCommentMapRef.current.values());
+      if (failedPendingIds.length > 0) {
+        setComments((prev) =>
+          prev.map((comment) =>
+            failedPendingIds.includes(comment.id) ? { ...comment, pending: false, failed: true } : comment
+          )
+        );
+        pendingCommentMapRef.current.clear();
+      }
+      console.error("Realtime comments error", payload.message);
+    });
     socket.on("connect_error", (error) => {
       console.error("Socket.IO error in comments feed", error);
     });
@@ -155,10 +182,32 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser, videoOwnerId }:
 
   const handleSendComment = () => {
     if (!newComment.trim() || !socketRef.current) return;
+    const text = newComment.trim();
+    const pendingId = `pending-${Date.now()}`;
+
+    pendingCommentMapRef.current.set(text, pendingId);
+    setComments((prev) => [
+      ...prev,
+      {
+        id: pendingId,
+        content: text,
+        user: {
+          id: currentUser.id,
+          username: currentUser.username,
+          avatar: currentUser.avatar,
+        },
+        likes: 0,
+        created_at: new Date().toISOString(),
+        pending: true,
+      },
+    ]);
+    setNewComment("");
+    setShowCommentInput(false);
 
     socketRef.current.emit("comments:send_comment", {
       roomId,
-      text: newComment,
+      text,
+      clientId: pendingId,
     });
   };
 
@@ -341,10 +390,21 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser, videoOwnerId }:
                     <div className="flex justify-between items-baseline">
                       <span className="font-bold text-sm text-base-content">@{comment.user.username}</span>
                       <div className="flex items-center gap-2">
+                        {comment.pending && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                            Sending
+                          </span>
+                        )}
+                        {comment.failed && (
+                          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-600">
+                            Failed
+                          </span>
+                        )}
                         {isVideoOwner && (
                           <button
                             type="button"
                             onClick={() => void togglePinComment(comment)}
+                            disabled={comment.pending}
                             className="rounded-full px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/10"
                           >
                             Pin
@@ -357,11 +417,11 @@ const Comments = ({ jwtToken, roomId, currentUser: _currentUser, videoOwnerId }:
                     </div>
                     <p className="text-sm my-1 text-base-content/90 leading-relaxed">{renderMentions(comment.content)}</p>
                     <div className="flex space-x-6 text-xs mt-2 font-semibold">
-                      <button onClick={() => handleLike(comment.id)} className="flex items-center space-x-1 hover:text-primary transition-colors">
+                      <button disabled={comment.pending} onClick={() => handleLike(comment.id)} className="flex items-center space-x-1 hover:text-primary disabled:opacity-45 transition-colors">
                         <Heart size={13} />
                         <span>{comment.likes}</span>
                       </button>
-                      <button onClick={() => toggleReplyForm(comment.id)} className="inline-flex items-center gap-1 text-primary hover:underline transition-all">
+                      <button disabled={comment.pending} onClick={() => toggleReplyForm(comment.id)} className="inline-flex items-center gap-1 text-primary hover:underline disabled:opacity-45 transition-all">
                         <MessageCircle size={13} />
                         {replyingTo === comment.id ? "Close" : "Reply"}
                       </button>

@@ -32,8 +32,9 @@ from django.conf import settings
 from django.http import JsonResponse
 from video.models import Call
 from video.serializers import CallSerializer
-from django.db.models import Q, Prefetch
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from .realtime import emit_notifications_read
 
 
 
@@ -510,6 +511,7 @@ class NotificationListAPIView(generics.GenericAPIView):
 
         queryset.update(is_read=True)
         unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+        emit_notifications_read(request.user.id, unread_count)
         return Response({"unread_count": unread_count}, status=status.HTTP_200_OK)
 
 
@@ -563,22 +565,41 @@ def get_direct_conversation_queryset(user):
         Q(user_one=user) | Q(user_two=user)
     ).select_related(
         "user_one", "user_one__profile", "user_two", "user_two__profile"
-    ).prefetch_related(
-        Prefetch(
-            "messages",
-            queryset=DirectMessage.objects.select_related(
-                "sender", "sender__profile", "reply_to", "reply_to__sender", "reply_to__sender__profile"
-            ).exclude(deleted_for=user).prefetch_related("reactions").order_by("-created_at"),
-            to_attr="prefetched_messages_desc",
-        )
     )
 
 
 def attach_conversation_call_previews(user, conversations):
+    conversation_ids = [conversation.id for conversation in conversations]
     peer_ids = {
         conversation.user_two_id if conversation.user_one_id == user.id else conversation.user_one_id
         for conversation in conversations
     }
+    latest_message_by_conversation = {}
+    unread_count_by_conversation = {
+        item["conversation_id"]: item["count"]
+        for item in DirectMessage.objects.filter(
+            conversation_id__in=conversation_ids,
+            read_at__isnull=True,
+        )
+        .exclude(sender=user)
+        .exclude(deleted_for=user)
+        .values("conversation_id")
+        .annotate(count=models.Count("id"))
+    }
+
+    latest_messages = (
+        DirectMessage.objects.filter(conversation_id__in=conversation_ids)
+        .exclude(deleted_for=user)
+        .select_related("sender", "sender__profile", "reply_to", "reply_to__sender", "reply_to__sender__profile")
+        .prefetch_related("reactions")
+        .order_by("conversation_id", "-created_at")
+    )
+    for message in latest_messages:
+        if message.conversation_id not in latest_message_by_conversation:
+            latest_message_by_conversation[message.conversation_id] = message
+            if len(latest_message_by_conversation) == len(conversation_ids):
+                break
+
     latest_call_by_peer = {}
     calls = Call.objects.filter(
         Q(caller=user, callee_id__in=peer_ids) | Q(caller_id__in=peer_ids, callee=user)
@@ -590,8 +611,7 @@ def attach_conversation_call_previews(user, conversations):
             latest_call_by_peer[peer_id] = call
 
     for conversation in conversations:
-        prefetched = getattr(conversation, "prefetched_messages_desc", [])
-        last_message = prefetched[0] if prefetched else None
+        last_message = latest_message_by_conversation.get(conversation.id)
         peer_id = conversation.user_two_id if conversation.user_one_id == user.id else conversation.user_one_id
         last_call = latest_call_by_peer.get(peer_id)
         activity_candidates = [conversation.last_message_at]
@@ -603,9 +623,7 @@ def attach_conversation_call_previews(user, conversations):
         conversation._prefetched_last_message = last_message
         conversation._prefetched_last_call = last_call
         conversation._last_activity_at = max(activity_candidates)
-        conversation._unread_count = sum(
-            1 for message in prefetched if message.sender_id != user.id and message.read_at is None
-        )
+        conversation._unread_count = unread_count_by_conversation.get(conversation.id, 0)
 
     return sorted(conversations, key=lambda conversation: conversation._last_activity_at, reverse=True)
 
@@ -668,10 +686,16 @@ class DirectConversationMessagesAPIView(generics.GenericAPIView):
         if read_message_ids:
             unread_incoming.update(read_at=now)
 
-        messages = conversation.messages.select_related(
-            "sender", "sender__profile", "reply_to", "reply_to__sender", "reply_to__sender__profile"
-        ).exclude(deleted_for=request.user).prefetch_related("reactions").order_by("created_at")
-        serializer = DirectMessageSerializer(messages, many=True, context={"request": request})
+        latest_messages = list(
+            conversation.messages.select_related(
+                "sender", "sender__profile", "reply_to", "reply_to__sender", "reply_to__sender__profile"
+            )
+            .exclude(deleted_for=request.user)
+            .prefetch_related("reactions")
+            .order_by("-created_at")[:50]
+        )
+        latest_messages.reverse()
+        serializer = DirectMessageSerializer(latest_messages, many=True, context={"request": request})
         return Response(
             {
                 "conversation": DirectConversationSerializer(conversation, context={"request": request}).data,
@@ -897,13 +921,23 @@ class UserDirectoryAPIView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        search = (request.query_params.get("search") or "").strip()
+        if len(search) < 2:
+            return Response({"results": []}, status=status.HTTP_200_OK)
+
         users = (
             UserAccount.objects.filter(is_active=True)
             .exclude(pk=request.user.id)
             .exclude(pk__in=UserBlock.objects.filter(blocker=request.user).values_list("blocked_id", flat=True))
             .exclude(pk__in=UserBlock.objects.filter(blocked=request.user).values_list("blocker_id", flat=True))
+            .filter(
+                Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(username__icontains=search)
+                | Q(profile__skill_tags__icontains=search)
+            )
             .select_related("profile")
-            .order_by("first_name", "username")
+            .order_by("first_name", "username")[:12]
         )
         serializer = UserPublicSerializer(users, many=True, context={"request": request})
         return Response({"results": serializer.data}, status=status.HTTP_200_OK)

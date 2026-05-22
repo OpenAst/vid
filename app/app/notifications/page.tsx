@@ -24,6 +24,8 @@ type AppNotification = {
   actor?: NotificationActor | null;
 };
 
+type NotificationRealtimeEvent = CustomEvent<AppNotification | null | undefined>;
+
 function formatNotificationDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -48,7 +50,8 @@ export default function NotificationsPage() {
       const query = new URLSearchParams({ limit: "50" });
       if (filter === "unread") query.set("unread", "true");
       const response = await fetch(`/api/notifications?${query.toString()}`, { cache: "no-store" });
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
       if (!response.ok) return;
 
       setNotifications(Array.isArray(data.results) ? data.results : []);
@@ -61,6 +64,28 @@ export default function NotificationsPage() {
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
+
+  useEffect(() => {
+    const handleRealtimeNotification = (event: Event) => {
+      const notification = (event as NotificationRealtimeEvent).detail;
+      if (!notification?.id) {
+        void loadNotifications();
+        return;
+      }
+
+      setUnreadCount((current) => current + (notification.is_read ? 0 : 1));
+      setNotifications((current) => {
+        if (current.some((item) => item.id === notification.id)) return current;
+        if (filter === "unread" && notification.is_read) return current;
+        return [notification, ...current].slice(0, 50);
+      });
+    };
+
+    window.addEventListener("oneclyq:notification-new", handleRealtimeNotification);
+    return () => {
+      window.removeEventListener("oneclyq:notification-new", handleRealtimeNotification);
+    };
+  }, [filter, loadNotifications]);
 
   const markAllRead = async () => {
     setUnreadCount(0);

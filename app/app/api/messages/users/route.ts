@@ -26,7 +26,13 @@ async function readUpstreamJson(response: Response, fallbackDetail: string) {
 
 export async function GET(req: NextRequest) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/messages/users/`, {
+    const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/auth/messages/users/`);
+    const search = req.nextUrl.searchParams.get("search")?.trim();
+    if (search) {
+      url.searchParams.set("search", search);
+    }
+
+    const response = await fetch(url.toString(), {
       method: "GET",
       headers: buildHeaders(req),
       credentials: "include",

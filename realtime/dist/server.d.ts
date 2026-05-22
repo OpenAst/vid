@@ -8,6 +8,7 @@ type ClientToServerEvents = {
     "comments:send_comment": (payload: {
         roomId: string;
         text: string;
+        clientId?: string;
     }) => void;
     "comments:send_reply": (payload: {
         roomId: string;
@@ -53,6 +54,7 @@ type ServerToClientEvents = {
     new_comment: (payload: {
         roomId: string;
         comment: unknown;
+        clientId?: string;
     }) => void;
     new_reply: (payload: {
         roomId: string;
@@ -124,6 +126,8 @@ type ServerToClientEvents = {
     "call:ice-candidate": (payload: CallSignalPayload & {
         fromUserId: string;
     }) => void;
+    "notifications:new": (payload: NotificationRealtimePayload) => void;
+    "notifications:read": (payload: NotificationReadRealtimePayload) => void;
     "realtime:error": (payload: {
         message: string;
     }) => void;
@@ -163,6 +167,13 @@ type DirectMessageTypingPayload = {
     conversationId: string;
     toUserId: string;
     isTyping: boolean;
+};
+type NotificationRealtimePayload = {
+    notification: unknown;
+    unreadCount: number;
+};
+type NotificationReadRealtimePayload = {
+    unreadCount: number;
 };
 type InterServerEvents = Record<string, never>;
 type SocketData = {

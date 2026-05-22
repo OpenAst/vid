@@ -346,6 +346,11 @@ class DirectMessage(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["conversation", "-created_at"], name="dm_conv_created_desc_idx"),
+            models.Index(fields=["conversation", "read_at"], name="dm_conv_read_idx"),
+            models.Index(fields=["sender", "read_at"], name="dm_sender_read_idx"),
+        ]
 
     def __str__(self):
         return f"Message from {self.sender.username}"

@@ -2,6 +2,7 @@ export type RuntimeConfig = {
     port: number;
     djangoApiUrl: string;
     redisUrl: string;
+    commentHistoryCacheTtlSeconds: number;
     realtimeInternalSecret: string;
     corsOrigins: string[];
 };

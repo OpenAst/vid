@@ -36,10 +36,10 @@ export default function CallButton({ peer, type, availabilityStatus = "available
       disabled={isDisabled}
       onClick={() => startCall(peer, type)}
       title={title}
-      className="btn btn-sm btn-outline gap-2"
+      className="btn btn-sm btn-outline gap-2 px-3 sm:px-4"
     >
       <Icon size={16} />
-      {type === "video" ? "Video" : "Audio"}
+      <span className="hidden sm:inline">{type === "video" ? "Video" : "Audio"}</span>
     </button>
   );
 }

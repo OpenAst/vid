@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Flag, MoreVertical, Shield, ShieldOff, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 type ReportReason = "spam" | "harassment" | "inappropriate" | "other";
@@ -35,8 +35,35 @@ export default function UserSafetyActions({
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [reason, setReason] = useState<ReportReason>("other");
   const [details, setDetails] = useState("");
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const needsDetails = reason === "other";
   const canSubmitReport = !needsDetails || details.trim().length >= 10;
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleDocumentPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (target && menuRef.current?.contains(target)) return;
+      setIsMenuOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentPointerDown);
+    document.addEventListener("touchstart", handleDocumentPointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentPointerDown);
+      document.removeEventListener("touchstart", handleDocumentPointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMenuOpen]);
 
   const toggleBlock = async () => {
     if (!userId || isBlockLoading) return;
@@ -99,7 +126,7 @@ export default function UserSafetyActions({
   };
 
   return (
-    <div className="relative inline-flex">
+    <div ref={menuRef} className="relative inline-flex">
       <button
         type="button"
         onClick={() => setIsMenuOpen((current) => !current)}
