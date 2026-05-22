@@ -5,6 +5,12 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -61,7 +67,8 @@ services:
       TURN_SHARED_SECRET: ${TURN_SHARED_SECRET:-local-turn-secret}
       TURN_CREDENTIAL_TTL_SECONDS: ${TURN_CREDENTIAL_TTL_SECONDS:-3600}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     expose:
       - "8000"
 
@@ -72,8 +79,10 @@ services:
     command: celery -A backend worker -l info
     environment: *backend-environment
     depends_on:
-      - backend
-      - redis
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   realtime:
     build:
@@ -86,8 +95,10 @@ services:
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS}
       REDIS_URL: redis://redis:6379/0
     depends_on:
-      - backend
-      - redis
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
     expose:
       - "4000"
 
