@@ -573,8 +573,8 @@ const UploadVideo = () => {
               <button
                 type="submit"
                 disabled={hasActiveUploads || isRecording || (!videoFile && !isCameraActive)}
-                className={`flex w-full justify-center rounded-xl border border-transparent bg-primary px-4 py-4 text-base font-bold text-primary-content shadow-lg transition-all hover:scale-[1.01] hover:opacity-95 active:scale-[0.99]
-                ${(hasActiveUploads || isRecording) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`flex w-full items-center justify-center rounded-xl border border-transparent bg-[rgb(68,13,156)] px-4 py-4 text-base font-bold text-white shadow-lg transition-all hover:scale-[1.01] hover:bg-[rgb(57,10,132)] active:scale-[0.99]
+                ${(hasActiveUploads || isRecording || (!videoFile && !isCameraActive)) ? 'cursor-not-allowed bg-[rgb(68,13,156)]/60 text-white/95 hover:scale-100 hover:bg-[rgb(68,13,156)]/60' : ''}`}
               >
                 {hasActiveUploads ? (
                   <>
