@@ -204,17 +204,72 @@ class VideoListView(generics.ListAPIView):
       queryset = queryset.filter(uploader_id__in=followed_user_ids)
 
     if feed == "for-you" or not feed:
+      followed_user_ids = []
+      category_interest_values = []
+
+      if self.request.user.is_authenticated:
+        followed_user_ids = list(
+          UserFollow.objects.filter(follower=self.request.user).values_list("following_id", flat=True)
+        )
+        category_interest_values = list(
+          Video.objects.filter(
+            Q(saved_by__user=self.request.user)
+            | Q(votes__user=self.request.user, votes__value=1)
+            | Q(watch_progress__user=self.request.user, watch_progress__completed=True)
+          )
+          .exclude(skill_category="")
+          .values("skill_category")
+          .annotate(signal_count=Count("id"))
+          .order_by("-signal_count")
+          .values_list("skill_category", flat=True)[:5]
+        )
+
       queryset = queryset.annotate(
         like_count=Count("votes", filter=Q(votes__value=1), distinct=True),
         comment_count_value=Count("comments", distinct=True),
+        save_count=Count("saved_by", distinct=True),
+        completion_count=Count("watch_progress", filter=Q(watch_progress__completed=True), distinct=True),
+        viewer_completed_count=Count(
+          "watch_progress",
+          filter=Q(watch_progress__user=self.request.user, watch_progress__completed=True)
+          if self.request.user.is_authenticated else Q(pk__isnull=True),
+          distinct=True,
+        ),
+        viewer_disliked_count=Count(
+          "votes",
+          filter=Q(votes__user=self.request.user, votes__value=-1)
+          if self.request.user.is_authenticated else Q(pk__isnull=True),
+          distinct=True,
+        ),
         freshness_boost=Case(
           When(created_at__gte=timezone.now() - timedelta(days=2), then=Value(30)),
           When(created_at__gte=timezone.now() - timedelta(days=7), then=Value(15)),
           default=Value(0),
           output_field=IntegerField(),
         ),
+        followed_boost=Case(
+          When(uploader_id__in=followed_user_ids, then=Value(18)),
+          default=Value(0),
+          output_field=IntegerField(),
+        ),
+        category_match_boost=Case(
+          When(skill_category__in=category_interest_values, then=Value(16)),
+          default=Value(0),
+          output_field=IntegerField(),
+        ),
       ).annotate(
-        feed_score=(F("like_count") * 8) + (F("comment_count_value") * 5) + F("views") + F("freshness_boost")
+        feed_score=(
+          (F("like_count") * 8)
+          + (F("comment_count_value") * 6)
+          + (F("save_count") * 10)
+          + (F("completion_count") * 12)
+          + F("views")
+          + F("freshness_boost")
+          + F("followed_boost")
+          + F("category_match_boost")
+          - (F("viewer_completed_count") * 30)
+          - (F("viewer_disliked_count") * 80)
+        )
       ).order_by("-feed_score", "-created_at")
     else:
       queryset = queryset.order_by("-created_at")

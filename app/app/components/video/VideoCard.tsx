@@ -10,6 +10,7 @@ interface VideoCardProps {
   id: string;
   file_url: string;
   thumbnail_url: string | null;
+  isActive: boolean;
   resumeAt?: number;
   isCommentsOpen: boolean;
   onCloseComments: () => void;
@@ -30,6 +31,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
       id,
       file_url,
       thumbnail_url,
+      isActive,
       resumeAt = 0,
       isCommentsOpen,
       onLike,
@@ -304,6 +306,26 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
     }, [id, file_url]);
 
     useEffect(() => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (!isActive) {
+        video.pause();
+        video.muted = true;
+        return;
+      }
+
+      video.muted = isMuted;
+      if (!isUserPaused) {
+        void video.play().catch((error) => {
+          if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
+            console.error("Failed to start active video playback:", error);
+          }
+        });
+      }
+    }, [isActive, isMuted, isUserPaused, id, file_url]);
+
+    useEffect(() => {
       if (overlayIcon) {
         const timer = setTimeout(() => setOverlayIcon(null), 800);
         return () => clearTimeout(timer);
@@ -333,7 +355,6 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
           className={`relative w-full h-full bg-black rounded-2xl ${isPortrait ? "object-cover" : "object-contain"
             }`}
           playsInline
-          autoPlay
           loop
           preload="auto"
           muted={isMuted}

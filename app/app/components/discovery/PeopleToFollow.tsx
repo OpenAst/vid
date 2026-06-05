@@ -32,14 +32,27 @@ export default function PeopleToFollow() {
   const router = useRouter();
   const [people, setPeople] = useState<DiscoverUser[]>([]);
   const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
+  const [isLoadingPeople, setIsLoadingPeople] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   const loadPeople = useCallback(async () => {
-    const response = await fetch("/api/messages/users", { cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok) return;
+    setIsLoadingPeople(true);
+    setLoadError(null);
+    try {
+      const response = await fetch("/api/messages/users", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.detail || data?.error || "Unable to load people");
+      }
 
-    setPeople((Array.isArray(data.results) ? data.results : []).slice(0, 8));
+      setPeople((Array.isArray(data.results) ? data.results : []).slice(0, 8));
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Unable to load people");
+      setPeople([]);
+    } finally {
+      setIsLoadingPeople(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -73,10 +86,6 @@ export default function PeopleToFollow() {
       setLoadingUserId(null);
     }
   };
-
-  if (people.length === 0) {
-    return null;
-  }
 
   const renderPerson = (person: DiscoverUser) => {
     const name = person.first_name || person.username || "Creator";
@@ -118,17 +127,53 @@ export default function PeopleToFollow() {
     );
   };
 
+  const renderPanelBody = () => {
+    if (isLoadingPeople) {
+      return (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-3 rounded-2xl p-2">
+              <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-base-300" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-3 w-28 animate-pulse rounded-full bg-base-300" />
+                <div className="h-2.5 w-20 animate-pulse rounded-full bg-base-300/80" />
+              </div>
+              <div className="h-7 w-16 animate-pulse rounded-full bg-base-300" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (people.length > 0) {
+      return <div className="space-y-2">{people.map(renderPerson)}</div>;
+    }
+
+    return (
+      <div className="rounded-2xl border border-base-300 bg-base-100/70 p-4 text-sm text-base-content/65">
+        <p className="font-semibold text-base-content">
+          {loadError ? "Suggestions unavailable" : "No suggestions right now"}
+        </p>
+        <p className="mt-1 text-xs leading-5">
+          {loadError || "Explore creators to find more people to follow."}
+        </p>
+      </div>
+    );
+  };
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsMobileSheetOpen(true)}
-        className="fixed right-3 top-[calc(var(--app-header-height)+12px)] z-30 flex items-center gap-2 rounded-full border border-white/60 bg-base-100/90 px-3 py-2 text-xs font-bold text-primary shadow-lg shadow-primary/10 backdrop-blur-xl transition hover:-translate-y-0.5 xl:hidden"
-      >
-        <UserPlus size={15} />
-        <span>People</span>
-        <span className="h-2 w-2 rounded-full bg-secondary" />
-      </button>
+      {(people.length > 0 || isLoadingPeople) && (
+        <button
+          type="button"
+          onClick={() => setIsMobileSheetOpen(true)}
+          className="fixed right-3 top-[calc(var(--app-header-height)+12px)] z-30 flex items-center gap-2 rounded-full border border-white/60 bg-base-100/90 px-3 py-2 text-xs font-bold text-primary shadow-lg shadow-primary/10 backdrop-blur-xl transition hover:-translate-y-0.5 xl:hidden"
+        >
+          <UserPlus size={15} />
+          <span>People</span>
+          <span className="h-2 w-2 rounded-full bg-secondary" />
+        </button>
+      )}
 
       {isMobileSheetOpen && (
         <>
@@ -154,7 +199,9 @@ export default function PeopleToFollow() {
               </button>
             </div>
 
-            <div className="max-h-[38dvh] space-y-1 overflow-y-auto pr-1">{people.slice(0, 5).map(renderPerson)}</div>
+            <div className="max-h-[38dvh] overflow-y-auto pr-1">
+              {isLoadingPeople ? renderPanelBody() : people.slice(0, 5).map(renderPerson)}
+            </div>
 
             <button
               type="button"
@@ -182,7 +229,7 @@ export default function PeopleToFollow() {
           </button>
         </div>
 
-        <div className="space-y-2">{people.map(renderPerson)}</div>
+        {renderPanelBody()}
       </section>
     </>
   );

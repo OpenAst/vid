@@ -45,6 +45,7 @@ const Feed = ({
   const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const next = useSelector((state: RootState) => state.video.next);
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
   const videoCount = Array.isArray(videos) ? videos.length : 0;
@@ -255,7 +256,9 @@ const Feed = ({
   }, [dispatch, feedMode, isLoading, loadingMore, next, page, search, selectedCategory]);
 
   const syncPlaybackForIndex = useCallback((targetIndex: number) => {
-    currentIndexRef.current = targetIndex;
+    const nextIndex = Math.max(0, Math.min(targetIndex, videoRefs.current.length - 1));
+    currentIndexRef.current = nextIndex;
+    setActiveIndex(nextIndex);
 
     videoRefs.current.forEach((card, idx) => {
       const video = card?.video;
@@ -267,7 +270,7 @@ const Feed = ({
         return;
       }
 
-      if (idx === targetIndex) {
+      if (idx === nextIndex) {
         video.muted = card.isMuted;
         if (!card.isUserPaused) {
           void video.play().catch((error) => {
@@ -283,6 +286,14 @@ const Feed = ({
       }
     });
   }, [isCalling]);
+
+  useEffect(() => {
+    videoRefs.current = videoRefs.current.slice(0, videoCount);
+    wrapperRefs.current = wrapperRefs.current.slice(0, videoCount);
+    if (currentIndexRef.current >= videoCount) {
+      syncPlaybackForIndex(Math.max(0, videoCount - 1));
+    }
+  }, [syncPlaybackForIndex, videoCount]);
 
   useEffect(() => {
     if (!Array.isArray(videos) || videos.length === 0) return;
@@ -386,6 +397,7 @@ const Feed = ({
                 id={video.id}
                 file_url={video.file_url || ""}
                 thumbnail_url={video.thumbnail_url || null}
+                isActive={idx === activeIndex}
                 resumeAt={video.watch_progress?.completed ? 0 : video.watch_progress?.progress_seconds || 0}
                 isCommentsOpen={openCommentsFor === video.id}
                 onCloseComments={() => setOpenCommentsFor(null)}

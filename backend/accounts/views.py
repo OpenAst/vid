@@ -32,7 +32,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from video.models import Call
 from video.serializers import CallSerializer
-from django.db.models import Q
+from django.db.models import Case, Count, F, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
 from .realtime import emit_notifications_read
 
@@ -922,23 +922,60 @@ class UserDirectoryAPIView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         search = (request.query_params.get("search") or "").strip()
-        if len(search) < 2:
-            return Response({"results": []}, status=status.HTTP_200_OK)
+        blocked_user_ids = UserBlock.objects.filter(blocker=request.user).values_list("blocked_id", flat=True)
+        blocked_by_ids = UserBlock.objects.filter(blocked=request.user).values_list("blocker_id", flat=True)
+        followed_user_ids = UserFollow.objects.filter(follower=request.user).values_list("following_id", flat=True)
+        follower_user_ids = UserFollow.objects.filter(following=request.user).values_list("follower_id", flat=True)
 
         users = (
             UserAccount.objects.filter(is_active=True)
             .exclude(pk=request.user.id)
-            .exclude(pk__in=UserBlock.objects.filter(blocker=request.user).values_list("blocked_id", flat=True))
-            .exclude(pk__in=UserBlock.objects.filter(blocked=request.user).values_list("blocker_id", flat=True))
-            .filter(
+            .exclude(pk__in=blocked_user_ids)
+            .exclude(pk__in=blocked_by_ids)
+            .select_related("profile")
+        )
+
+        if len(search) >= 2:
+            users = users.filter(
                 Q(first_name__icontains=search)
                 | Q(last_name__icontains=search)
                 | Q(username__icontains=search)
                 | Q(profile__skill_tags__icontains=search)
             )
-            .select_related("profile")
-            .order_by("first_name", "username")[:12]
-        )
+            users = users.order_by("first_name", "username")[:12]
+        else:
+            users = (
+                users.annotate(
+                    follower_count_value=Count("follower_relationships", distinct=True),
+                    followed_boost=Case(
+                        When(pk__in=followed_user_ids, then=Value(50)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    ),
+                    follows_me_boost=Case(
+                        When(pk__in=follower_user_ids, then=Value(35)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    ),
+                    available_boost=Case(
+                        When(profile__availability_status="available", then=Value(10)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    ),
+                    creator_signal=Count("videos", distinct=True),
+                )
+                .annotate(
+                    message_score=(
+                        F("followed_boost")
+                        + F("follows_me_boost")
+                        + F("available_boost")
+                        + F("follower_count_value")
+                        + (F("creator_signal") * 2)
+                    )
+                )
+                .order_by("-message_score", "first_name", "username")[:12]
+            )
+
         serializer = UserPublicSerializer(users, many=True, context={"request": request})
         return Response({"results": serializer.data}, status=status.HTTP_200_OK)
 

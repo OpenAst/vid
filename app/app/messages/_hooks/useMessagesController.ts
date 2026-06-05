@@ -72,6 +72,7 @@ export function useMessagesController() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const preventAutoSelectRef = useRef(false);
   const socketRef = useRef<RealtimeSocket | null>(null);
+  const conversationsRef = useRef<Conversation[]>([]);
   const selectedConversationIdRef = useRef<string | null>(null);
   const selectedPeerIdRef = useRef<string | null>(null);
   const subscribedPresenceIdsRef = useRef<string[]>([]);
@@ -84,6 +85,10 @@ export function useMessagesController() {
   const showThreadOnMobile = Boolean(selectedConversationId);
   const hasDraft = draft.trim().length > 0;
   const timelineItems = useMemo(() => buildTimelineItems(messages, callHistory), [callHistory, messages]);
+
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   const applyReadReceipts = useCallback((conversationId: string, messageIds: string[], readAt: string, clearUnread = false) => {
     const messageIdSet = new Set(messageIds);
@@ -272,8 +277,10 @@ export function useMessagesController() {
     });
   }, []);
 
-  const loadConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
+  const loadConversations = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) {
+      setIsLoadingConversations(true);
+    }
     setConversationError(null);
     try {
       const response = await fetch("/api/messages/conversations", { cache: "no-store" });
@@ -292,21 +299,21 @@ export function useMessagesController() {
       console.error("Failed to load conversations", error);
       setConversationError(error instanceof Error ? error.message : "Unable to load conversations");
     } finally {
-      setIsLoadingConversations(false);
+      if (!silent) {
+        setIsLoadingConversations(false);
+      }
     }
   }, []);
 
   const loadPeople = useCallback(async (search: string) => {
     const normalizedSearch = search.trim();
-    if (normalizedSearch.length < 2) {
-      setPeople([]);
-      setIsLoadingPeople(false);
-      return;
-    }
-
     setIsLoadingPeople(true);
     try {
-      const response = await fetch(`/api/messages/users?search=${encodeURIComponent(normalizedSearch)}`, { cache: "no-store" });
+      const endpoint =
+        normalizedSearch.length >= 2
+          ? `/api/messages/users?search=${encodeURIComponent(normalizedSearch)}`
+          : "/api/messages/users";
+      const response = await fetch(endpoint, { cache: "no-store" });
       const data = await readJsonResponse(response, "Unable to load people");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to load people");
@@ -772,10 +779,46 @@ export function useMessagesController() {
         ...payload.message,
         is_own: payload.fromUserId === user?.id,
       };
+      const isSelectedConversation = payload.conversationId === selectedConversationIdRef.current;
+      const existingConversation = conversationsRef.current.find((conversation) => conversation.id === payload.conversationId);
 
-      void loadConversations();
+      if (existingConversation) {
+        setConversations((current) => {
+          const conversation = current.find((item) => item.id === payload.conversationId);
+          if (!conversation) return current;
 
-      if (payload.conversationId === selectedConversationIdRef.current) {
+          const updatedConversation: Conversation = {
+            ...conversation,
+            last_message: incomingMessage,
+            last_activity_at: incomingMessage.created_at,
+            last_message_at: incomingMessage.created_at,
+            unread_count:
+              isSelectedConversation || incomingMessage.is_own
+                ? 0
+                : (conversation.unread_count || 0) + 1,
+          };
+
+          return [
+            updatedConversation,
+            ...current.filter((item) => item.id !== payload.conversationId),
+          ];
+        });
+
+        setSelectedConversation((current) => {
+          if (!current || current.id !== payload.conversationId) return current;
+          return {
+            ...current,
+            last_message: incomingMessage,
+            last_activity_at: incomingMessage.created_at,
+            last_message_at: incomingMessage.created_at,
+            unread_count: isSelectedConversation ? 0 : current.unread_count,
+          };
+        });
+      } else {
+        void loadConversations({ silent: true });
+      }
+
+      if (isSelectedConversation) {
         clearConversationUnread(payload.conversationId);
         setTypingConversationIds((current) => {
           if (!current.has(payload.conversationId)) return current;
@@ -794,24 +837,6 @@ export function useMessagesController() {
         if (!incomingMessage.is_own && !incomingMessage.read_at) {
           void markMessagesRead(payload.conversationId, payload.fromUserId, [incomingMessage.id]);
         }
-      } else if (!incomingMessage.is_own) {
-        setConversations((current) => {
-          const existingConversation = current.find((conversation) => conversation.id === payload.conversationId);
-          if (!existingConversation) return current;
-
-          const updatedConversation: Conversation = {
-            ...existingConversation,
-            last_message: incomingMessage,
-            last_activity_at: incomingMessage.created_at,
-            last_message_at: incomingMessage.created_at,
-            unread_count: (existingConversation.unread_count || 0) + 1,
-          };
-
-          return [
-            updatedConversation,
-            ...current.filter((conversation) => conversation.id !== payload.conversationId),
-          ];
-        });
       }
     };
 
@@ -822,7 +847,7 @@ export function useMessagesController() {
     const handleMessageDeleted = (payload: RealtimeMessageDeletePayload) => {
       if (payload.fromUserId === user?.id) return;
       applyDeletedForEveryone(payload.conversationId, payload.message);
-      void loadConversations();
+      void loadConversations({ silent: true });
     };
 
     const handleMessageUpdated = (payload: RealtimeMessageUpdatePayload) => {
@@ -892,7 +917,7 @@ export function useMessagesController() {
     };
 
     const handleCallEvent = (payload: CallEventPayload) => {
-      void loadConversations();
+      void loadConversations({ silent: true });
 
       const activePeerId = selectedPeerIdRef.current;
       const eventPeerId = payload.actor?.id || payload.peerId;

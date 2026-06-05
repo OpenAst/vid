@@ -52,6 +52,7 @@ export default function MessagesInbox({
       })
     : conversations;
   const filteredPeople = normalizedSearch ? people.filter(matchesUser) : people;
+  const showPeopleResults = normalizedSearch.length >= 2 || (!normalizedSearch && conversations.length === 0);
 
   return (
     <section className={`min-h-0 flex-col overflow-hidden border-base-300 bg-base-100 md:flex md:border-r ${showThreadOnMobile ? "hidden md:flex" : "flex"}`}>
@@ -158,8 +159,13 @@ export default function MessagesInbox({
           })
         )}
 
-        {normalizedSearch.length >= 2 && (
+        {showPeopleResults && (
           <div className="border-t border-base-300">
+            <div className="px-4 pb-1 pt-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-base-content/45">
+                {normalizedSearch ? "People" : "People to message"}
+              </p>
+            </div>
             {isLoadingPeople ? (
               <div className="space-y-3 p-4">
                 {Array.from({ length: 3 }).map((_, index) => (
@@ -167,7 +173,9 @@ export default function MessagesInbox({
                 ))}
               </div>
             ) : filteredPeople.length === 0 ? (
-              <div className="p-4 text-sm font-medium text-base-content/70">No people match that search.</div>
+              <div className="p-4 text-sm font-medium text-base-content/70">
+                {normalizedSearch ? "No people match that search." : "No people suggestions yet."}
+              </div>
             ) : (
               filteredPeople.map((person) => {
                 const isOnline = onlineUserIds.has(person.id);
