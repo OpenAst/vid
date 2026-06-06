@@ -46,7 +46,16 @@ export default function PeopleToFollow() {
         throw new Error(data?.detail || data?.error || "Unable to load people");
       }
 
-      setPeople((Array.isArray(data.results) ? data.results : []).slice(0, 8));
+      let nextPeople = Array.isArray(data.results) ? data.results : [];
+      if (nextPeople.length === 0) {
+        const fallbackResponse = await fetch("/api/messages/users?search=cr", { cache: "no-store" });
+        const fallbackData = await fallbackResponse.json();
+        if (fallbackResponse.ok) {
+          nextPeople = Array.isArray(fallbackData.results) ? fallbackData.results : [];
+        }
+      }
+
+      setPeople(nextPeople.slice(0, 8));
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to load people");
       setPeople([]);
@@ -171,7 +180,7 @@ export default function PeopleToFollow() {
         >
           <UserPlus size={15} />
           <span>People</span>
-          <span className="h-2 w-2 rounded-full bg-secondary" />
+          <span className="h-2 w-2 rounded-full bg-primary" />
         </button>
       )}
 

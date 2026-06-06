@@ -208,7 +208,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
                   <Icon size={20} />
                   <span className="hidden md:block text-xs mt-1">{item.label}</span>
                   {isActive && (
-                    <span className="mt-1 h-1 w-5 rounded-full bg-secondary" aria-hidden="true" />
+                    <span className="mt-1 h-1 w-5 rounded-full bg-primary" aria-hidden="true" />
                   )}
                 </Link>
               );
@@ -255,7 +255,7 @@ export default function ClientProvider({ children }: { children: React.ReactNode
                         <Icon size={18} />
                         {item.label}
                         {isActive && (
-                          <span className="ml-auto h-2 w-2 rounded-full bg-secondary" aria-hidden="true" />
+                          <span className="ml-auto h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
                         )}
                       </Link>
                     );

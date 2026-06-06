@@ -14,6 +14,17 @@ export const metadata: Metadata = {
   description: "OneClyq is a short video microblogging platform. Share moments, discover creators, and connect with the world.",
   keywords: ["oneclyq", "video", "microblogging", "short videos", "social media"],
   metadataBase: metadataBaseUrl,
+  manifest: "/manifest.webmanifest",
+  applicationName: "OneClyq",
+  appleWebApp: {
+    capable: true,
+    title: "OneClyq",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: "/oneclyq.png",
+    apple: "/oneclyq.png",
+  },
   alternates: {
     canonical: siteUrl,
   },
