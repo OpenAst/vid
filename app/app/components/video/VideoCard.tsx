@@ -315,7 +315,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
         return;
       }
 
-      video.muted = isMuted;
+      video.muted = false;
       if (!isUserPaused) {
         void video.play().catch((error) => {
           if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
@@ -323,7 +323,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
           }
         });
       }
-    }, [isActive, isMuted, isUserPaused, id, file_url]);
+    }, [isActive, isUserPaused, id, file_url]);
 
     useEffect(() => {
       if (overlayIcon) {

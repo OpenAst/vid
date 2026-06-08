@@ -40,7 +40,7 @@ export default function PeopleToFollow() {
     setIsLoadingPeople(true);
     setLoadError(null);
     try {
-      const response = await fetch("/api/auth/messages/users?random=1", { cache: "no-store" });
+      const response = await fetch("/api/messages/users?random=1", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.detail || data?.error || "Unable to load people");
@@ -48,7 +48,7 @@ export default function PeopleToFollow() {
 
       let nextPeople = Array.isArray(data.results) ? data.results : [];
       if (nextPeople.length === 0) {
-        const fallbackResponse = await fetch("/api/auth/messages/users?random=1", { cache: "no-store" });
+        const fallbackResponse = await fetch("/api/messages/users?random=1", { cache: "no-store" });
         const fallbackData = await fallbackResponse.json();
         if (fallbackResponse.ok) {
           nextPeople = Array.isArray(fallbackData.results) ? fallbackData.results : [];

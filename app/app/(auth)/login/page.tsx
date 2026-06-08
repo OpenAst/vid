@@ -110,15 +110,25 @@ const LoginPage = () => {
   }, []);
 
   useEffect(() => {
-    if (mounted && isBootstrapped && isAuthenticated) {
+    if (mounted && isAuthenticated) {
       router.replace('/');
     }
-  }, [mounted, isBootstrapped, isAuthenticated, router]);
+  }, [mounted, isAuthenticated, router]);
 
-  if (!mounted || !isBootstrapped || isAuthenticated) {
+  if (!mounted || isAuthenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white text-slate-950">
-        <div className="h-10 w-10 animate-pulse rounded-2xl bg-slate-200" aria-hidden="true" />
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
+          <Image
+            src="/oneclyq.png"
+            alt="OneClyq"
+            width={64}
+            height={64}
+            priority
+            className="h-16 w-16 rounded-2xl"
+          />
+          <p className="text-sm font-medium text-slate-700">Loading OneClyq…</p>
+        </div>
       </main>
     );
   }
