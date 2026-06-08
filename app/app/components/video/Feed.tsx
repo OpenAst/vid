@@ -361,7 +361,7 @@ const Feed = ({
   const showInitialSkeleton = isLoading && (!Array.isArray(videos) || videos.length === 0);
 
   return (
-    <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-base-100">
+    <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-black sm:bg-base-100">
       {showInitialSkeleton && <FeedSkeleton count={2} />}
 
       {!showInitialSkeleton && Array.isArray(videos) && videos.length === 0 && (
@@ -387,9 +387,9 @@ const Feed = ({
             ref={(el) => {
               wrapperRefs.current[idx] = el;
             }}
-            className="relative mb-2 flex h-[calc(var(--feed-shell-height)-8px)] w-full snap-start items-center justify-center px-2 sm:px-0"
+            className="relative flex h-[var(--feed-shell-height)] w-full snap-start snap-always items-center justify-center overflow-hidden px-0 sm:mb-2 sm:h-[calc(var(--feed-shell-height)-8px)]"
           >
-            <div className="relative flex h-full w-full max-w-[47vh] items-start justify-center overflow-hidden rounded-[22px] bg-black shadow-xl sm:w-[47vh] sm:rounded-2xl">
+            <div className="relative flex h-full w-full max-w-none items-start justify-center overflow-hidden bg-black shadow-xl sm:w-[47vh] sm:max-w-[47vh] sm:rounded-2xl">
               <VideoCard
                 ref={(el) => {
                   videoRefs.current[idx] = el;

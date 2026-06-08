@@ -41,7 +41,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
     ref
   ) => {
     const [isPortrait, setIsPortrait] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
     const [isUserPaused, setIsUserPaused] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -338,7 +338,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
           height: isCommentsOpen ? "70%" : "100%"
         }}
         transition={{ duration: 0.3 }}
-        className="relative h-full w-full mx-auto rounded-2xl aspect-[9/16] overflow-hidden shadow-sm flex items-center justify-center"
+        className="relative mx-auto flex h-full w-full items-center justify-center overflow-hidden shadow-sm sm:aspect-[9/16] sm:rounded-2xl"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -352,7 +352,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
           drag={zoomScale > 1}
           dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
           dragElastic={0.5}
-          className={`relative w-full h-full bg-black rounded-2xl ${isPortrait ? "object-cover" : "object-contain"
+          className={`relative h-full w-full bg-black sm:rounded-2xl ${isPortrait ? "object-cover" : "object-contain"
             }`}
           playsInline
           loop
@@ -374,7 +374,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="absolute inset-0 z-10 pointer-events-none overflow-hidden rounded-2xl bg-neutral-950"
+              className="absolute inset-0 z-10 pointer-events-none overflow-hidden bg-neutral-950 sm:rounded-2xl"
             >
               {thumbnail_url ? (
                 <div

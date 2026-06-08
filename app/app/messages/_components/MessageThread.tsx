@@ -54,6 +54,32 @@ function getReplyLabel(message: Message | MessageReply) {
   return message.body || "Message";
 }
 
+function getSupportedVoiceMimeType() {
+  if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) {
+    return undefined;
+  }
+
+  const preferredTypes = [
+    "audio/mp4;codecs=mp4a.40.2",
+    "audio/mp4",
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+  ];
+
+  return preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
+}
+
+function getAudioSourceType(audioUrl: string) {
+  const lowerUrl = audioUrl.split("?")[0].toLowerCase();
+  if (lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".m4a")) return "audio/mp4";
+  if (lowerUrl.endsWith(".mp3")) return "audio/mpeg";
+  if (lowerUrl.endsWith(".ogg") || lowerUrl.endsWith(".oga")) return "audio/ogg";
+  if (lowerUrl.endsWith(".wav")) return "audio/wav";
+  if (lowerUrl.endsWith(".webm")) return "audio/webm";
+  return undefined;
+}
+
 const reactionOptions: Array<{ key: MessageReaction; label: string }> = [
   { key: "heart", label: "♥" },
   { key: "laugh", label: "😂" },
@@ -232,8 +258,9 @@ export default function MessageThread({
     setActiveActionMessageId(null);
     try {
       await onDeleteForMe(message);
+      toast.dismiss("message-delete-for-me");
       toast.custom((toastInstance) => (
-        <div className="flex max-w-sm items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm text-base-content shadow-xl">
+        <div className="flex w-[min(380px,calc(100vw-24px))] items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-sm text-base-content shadow-xl">
           <div className="min-w-0 flex-1">
             <p className="font-semibold">Message deleted for you</p>
             <p className="mt-0.5 text-xs text-base-content/55">The other person may still see it. Undo is available for 5 minutes.</p>
@@ -253,7 +280,7 @@ export default function MessageThread({
             Undo
           </button>
         </div>
-      ), { duration: 5 * 60 * 1000 });
+      ), { id: "message-delete-for-me", duration: 6500 });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to delete message");
     }
@@ -309,7 +336,8 @@ export default function MessageThread({
     try {
       setIsEmojiPickerOpen(false);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mimeType = getSupportedVoiceMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       recordedChunksRef.current = [];
       recordingStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
@@ -335,7 +363,7 @@ export default function MessageThread({
     const startedAt = recordingStartedAt || Date.now();
 
     recorder.onstop = () => {
-      const type = recorder.mimeType || "audio/webm";
+      const type = recorder.mimeType || getSupportedVoiceMimeType() || "audio/webm";
       const audioBlob = new Blob(recordedChunksRef.current, { type });
       stopRecordingStream();
       setIsRecording(false);
@@ -574,7 +602,9 @@ export default function MessageThread({
                                 {formatDuration(message.audio_duration_ms)}
                               </span>
                             </div>
-                            <audio src={message.audio_url} controls preload="metadata" className="h-9 w-full max-w-full" />
+                            <audio controls preload="metadata" className="h-9 w-full max-w-full">
+                              <source src={message.audio_url} type={getAudioSourceType(message.audio_url)} />
+                            </audio>
                             {message.audio_transcript && (
                               <details className={`mt-2 rounded-lg px-2 py-1 text-xs ${
                                 message.is_own

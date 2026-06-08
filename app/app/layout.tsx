@@ -60,7 +60,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Fonts />
           <ClientProvider>
             {children}
-            <Toaster position="top-center" reverseOrder={false} />
+            <Toaster
+              position="top-center"
+              reverseOrder={false}
+              gutter={8}
+              containerStyle={{
+                top: "calc(var(--safe-area-top) + 12px)",
+                left: 12,
+                right: 12,
+              }}
+              toastOptions={{
+                duration: 3500,
+                style: {
+                  maxWidth: "min(420px, calc(100vw - 24px))",
+                },
+              }}
+            />
           </ClientProvider>
         </Providers>
       </body>
