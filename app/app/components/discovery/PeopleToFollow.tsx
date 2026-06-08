@@ -40,7 +40,7 @@ export default function PeopleToFollow() {
     setIsLoadingPeople(true);
     setLoadError(null);
     try {
-      const response = await fetch("/api/messages/users", { cache: "no-store" });
+      const response = await fetch("/api/auth/messages/users?random=1", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.detail || data?.error || "Unable to load people");
@@ -48,14 +48,14 @@ export default function PeopleToFollow() {
 
       let nextPeople = Array.isArray(data.results) ? data.results : [];
       if (nextPeople.length === 0) {
-        const fallbackResponse = await fetch("/api/messages/users?search=cr", { cache: "no-store" });
+        const fallbackResponse = await fetch("/api/auth/messages/users?random=1", { cache: "no-store" });
         const fallbackData = await fallbackResponse.json();
         if (fallbackResponse.ok) {
           nextPeople = Array.isArray(fallbackData.results) ? fallbackData.results : [];
         }
       }
 
-      setPeople(nextPeople.slice(0, 8));
+      setPeople(nextPeople.slice(0, 10));
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to load people");
       setPeople([]);
@@ -209,7 +209,7 @@ export default function PeopleToFollow() {
             </div>
 
             <div className="max-h-[38dvh] overflow-y-auto pr-1">
-              {isLoadingPeople ? renderPanelBody() : people.slice(0, 5).map(renderPerson)}
+              {isLoadingPeople ? renderPanelBody() : people.slice(0, 8).map(renderPerson)}
             </div>
 
             <button

@@ -922,6 +922,7 @@ class UserDirectoryAPIView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         search = (request.query_params.get("search") or "").strip()
+        is_random = request.query_params.get("random") == "1"
         blocked_user_ids = UserBlock.objects.filter(blocker=request.user).values_list("blocked_id", flat=True)
         blocked_by_ids = UserBlock.objects.filter(blocked=request.user).values_list("blocker_id", flat=True)
         followed_user_ids = UserFollow.objects.filter(follower=request.user).values_list("following_id", flat=True)
@@ -943,6 +944,8 @@ class UserDirectoryAPIView(generics.GenericAPIView):
                 | Q(profile__skill_tags__icontains=search)
             )
             users = users.order_by("first_name", "username")[:12]
+        elif is_random:
+            users = users.order_by("?")[:10]
         else:
             users = (
                 users.annotate(
