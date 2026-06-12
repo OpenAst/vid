@@ -49,9 +49,21 @@ function formatDuration(durationMs?: number) {
 
 function getReplyLabel(message: Message | MessageReply) {
   if (message.message_type === "voice") return message.audio_transcript || "Voice note";
-  if (message.message_type === "image") return message.attachment_name || "Image";
+  if (message.message_type === "image") return message.attachment_name || "Photo";
   if (message.message_type === "file") return message.attachment_name || "File";
   return message.body || "Message";
+}
+
+function formatFileSize(bytes?: number) {
+  if (bytes == null || Number.isNaN(bytes)) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value.toFixed(value < 10 && index > 0 ? 1 : 0)} ${units[index]}`;
 }
 
 function getSupportedVoiceMimeType() {
@@ -623,21 +635,30 @@ export default function MessageThread({
                               alt={message.attachment_name || "Attached image"}
                               className="max-h-72 w-full rounded-lg object-cover"
                             />
-                            {message.body && <p className="mt-2 whitespace-pre-wrap break-words leading-5">{message.body}</p>}
+                            {(message.body || message.attachment_name) && (
+                              <p className="mt-2 whitespace-pre-wrap break-words leading-5 text-sm text-base-content/80">
+                                {message.body || message.attachment_name || "Photo"}
+                              </p>
+                            )}
                           </div>
                         ) : !isDeletedForEveryone && message.message_type === "file" && message.attachment_url ? (
-                          <a
-                            href={message.attachment_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={`flex w-[min(72vw,320px)] items-center gap-3 rounded-lg border px-3 py-2 ${
-                              message.is_own ? "border-white/20 bg-white/10 text-white" : "border-base-300 bg-base-100 text-base-content"
-                            }`}
-                          >
-                            <FileText size={20} aria-hidden="true" />
-                            <span className="min-w-0 flex-1 truncate font-medium">{message.attachment_name || "Attachment"}</span>
-                            <Download size={16} aria-hidden="true" />
-                          </a>
+                          <div className="w-[min(72vw,320px)]">
+                            <a
+                              href={message.attachment_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 ${
+                                message.is_own ? "border-white/20 bg-white/10 text-white" : "border-base-300 bg-base-100 text-base-content"
+                              }`}
+                            >
+                              <FileText size={20} aria-hidden="true" />
+                              <span className="min-w-0 flex-1 truncate font-medium">{message.attachment_name || "Attachment"}</span>
+                              <Download size={16} aria-hidden="true" />
+                            </a>
+                            {message.attachment_size ? (
+                              <p className="mt-1 truncate text-xs text-base-content/60">{formatFileSize(message.attachment_size)}</p>
+                            ) : null}
+                          </div>
                         ) : !isDeletedForEveryone ? (
                           <p className="whitespace-pre-wrap break-words leading-5">{message.body}</p>
                         ) : null}
@@ -767,14 +788,25 @@ export default function MessageThread({
               </div>
             )}
             {selectedAttachment && (
-              <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-base-300 bg-base-200/70 px-3 py-2 text-sm">
-                <div className="flex min-w-0 items-center gap-2">
+              <div className="mb-2 rounded-xl border border-base-300 bg-base-200/70 px-3 py-2 text-sm">
+                <div className="flex items-start gap-2">
                   {selectedAttachment.type.startsWith("image/") ? <ImageIcon size={16} /> : <FileText size={16} />}
-                  <span className="truncate font-medium">{selectedAttachment.name}</span>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {selectedAttachment.type.startsWith("image/") ? "Ready to send image" : "Ready to send file"}
+                    </p>
+                    <p className="truncate text-xs text-base-content/60">{selectedAttachment.name}</p>
+                  </div>
                 </div>
-                <button type="button" onClick={onClearAttachment} className="rounded-full p-1.5 text-base-content/60 transition hover:bg-base-300 hover:text-base-content" aria-label="Remove attachment">
-                  <X size={15} />
-                </button>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="text-xs text-base-content/60">
+                    {selectedAttachment.type.startsWith("image/") ? "Photo attachment" : "File attachment"}
+                    {selectedAttachment.size ? ` · ${formatFileSize(selectedAttachment.size)}` : ""}
+                  </p>
+                  <button type="button" onClick={onClearAttachment} className="rounded-full p-1.5 text-base-content/60 transition hover:bg-base-300 hover:text-base-content" aria-label="Remove attachment">
+                    <X size={15} />
+                  </button>
+                </div>
               </div>
             )}
             {sendError && (
@@ -909,7 +941,11 @@ export default function MessageThread({
                       : "bg-base-200 text-base-content/40 disabled:cursor-not-allowed"
                   }`}
                 >
-                  Send
+                  {selectedAttachment
+                    ? selectedAttachment.type.startsWith("image/")
+                      ? "Send image"
+                      : "Send file"
+                    : "Send"}
                 </button>
               ) : (
                 <button

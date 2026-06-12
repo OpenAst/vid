@@ -3,7 +3,7 @@
 import CallButton from "@/app/components/calls/CallButton";
 import UserAvatar from "@/app/components/common/UserAvatar";
 import { RootState } from "@/app/store/store";
-import { Briefcase, Check, Handshake, MessageCircle, Plus, Search, Send, Sparkles, UserRoundCheck, Users, X } from "lucide-react";
+import { Briefcase, Check, Handshake, MessageCircle, Plus, Search, Send, Sparkles, UserPlus, UserRoundCheck, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -17,6 +17,7 @@ type MarketplaceUser = {
   first_name?: string;
   last_name?: string;
   follower_count?: number;
+  is_following?: boolean;
   profile?: {
     avatar?: string | null;
     bio?: string | null;
@@ -107,6 +108,7 @@ export default function CollabsPage() {
   const [isPosting, setIsPosting] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null);
+  const [loadingFollowId, setLoadingFollowId] = useState<string | null>(null);
   const [showRequestForm, setShowRequestForm] = useState(false);
 
   useEffect(() => {
@@ -137,6 +139,31 @@ export default function CollabsPage() {
   useEffect(() => {
     void loadPeople();
   }, [loadPeople]);
+
+  const followCreator = async (person: MarketplaceUser) => {
+    if (person.is_following || loadingFollowId) return;
+
+    setLoadingFollowId(person.id);
+    setPeople((current) =>
+      current.map((item) => (item.id === person.id ? { ...item, is_following: true } : item))
+    );
+
+    try {
+      const response = await fetch(`/api/auth/follow/${person.id}`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.detail || data?.error || "Unable to follow");
+      }
+      toast.success("Following");
+    } catch (error) {
+      setPeople((current) =>
+        current.map((item) => (item.id === person.id ? { ...item, is_following: false } : item))
+      );
+      toast.error(error instanceof Error ? error.message : "Unable to follow");
+    } finally {
+      setLoadingFollowId(null);
+    }
+  };
 
   const loadRequests = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -721,6 +748,19 @@ export default function CollabsPage() {
                     >
                       <MessageCircle size={16} />
                       Message
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void followCreator(person)}
+                      disabled={Boolean(person.is_following) || loadingFollowId === person.id}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition ${
+                        person.is_following
+                          ? "border border-base-300 bg-base-200 text-base-content/65"
+                          : "bg-primary text-primary-content hover:opacity-90"
+                      } ${loadingFollowId === person.id ? "opacity-60 cursor-wait" : ""}`}
+                    >
+                      {person.is_following ? <Check size={16} /> : <UserPlus size={16} />}
+                      {loadingFollowId === person.id ? "..." : person.is_following ? "Following" : "Follow"}
                     </button>
                     <button
                       type="button"

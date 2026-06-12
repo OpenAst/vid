@@ -369,11 +369,12 @@ function SearchPageContent() {
                           type="button"
                           onClick={() => void followPerson(person)}
                           disabled={Boolean(person.is_following) || loadingFollowId === person.id}
+                          aria-label={`${person.is_following ? "Following" : "Follow"} ${name}`}
                           className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
                             person.is_following
-                              ? "bg-base-200 text-base-content/65"
-                              : "bg-primary text-primary-content hover:opacity-90"
-                          }`}
+                              ? "bg-base-200 text-base-content/70 ring-1 ring-base-300"
+                              : "bg-primary text-primary-content hover:bg-primary/90"
+                          } ${loadingFollowId === person.id ? "opacity-60 cursor-wait" : ""}`}
                         >
                           {person.is_following ? <Check size={15} /> : <UserPlus size={15} />}
                           {loadingFollowId === person.id ? "..." : person.is_following ? "Following" : "Follow"}

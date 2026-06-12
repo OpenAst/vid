@@ -26,7 +26,7 @@
   :root {
     --app-header-row-height: 44px;
     --feed-bottom-offset: calc(var(--safe-area-bottom) + 28px);
-    --feed-floating-offset: calc(var(--safe-area-bottom) + 132px);
+    --feed-floating-offset: calc(var(--safe-area-bottom) + 4px);
   }
 }
 

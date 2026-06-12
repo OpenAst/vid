@@ -9,8 +9,27 @@ import { useMessagesController } from "./_hooks/useMessagesController";
 
 function MessagesLoading() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-base-100">
-      <div className="h-10 w-10 animate-pulse rounded-2xl bg-base-300" aria-hidden="true" />
+    <div className="min-h-[100dvh] overflow-hidden bg-base-100">
+      <div className="grid h-[100dvh] min-h-[100dvh] gap-4 bg-base-100 p-4 md:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="space-y-4 rounded-3xl border border-base-200 bg-base-100 p-4">
+          <div className="h-12 w-3/4 animate-pulse rounded-2xl bg-base-200" />
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-3 rounded-3xl bg-base-200 p-3 animate-pulse">
+              <div className="h-12 w-12 rounded-full bg-base-300" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-1/2 rounded-full bg-base-300" />
+                <div className="h-3 w-3/4 rounded-full bg-base-300" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-4 rounded-3xl border border-base-200 bg-base-100 p-4">
+          <div className="h-10 w-2/3 animate-pulse rounded-2xl bg-base-200" />
+          <div className="flex-1 animate-pulse rounded-[2rem] bg-base-200" />
+          <div className="h-14 animate-pulse rounded-2xl bg-base-200" />
+        </div>
+      </div>
     </div>
   );
 }
