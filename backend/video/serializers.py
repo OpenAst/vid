@@ -26,6 +26,7 @@ class VideoSerializer(serializers.ModelSerializer):
   timestamp = serializers.SerializerMethodField()
   likes = serializers.SerializerMethodField(read_only=True)
   dislikes = serializers.SerializerMethodField()
+  comments_count = serializers.SerializerMethodField()
   user_vote = serializers.SerializerMethodField()
   thumbnail_url = serializers.SerializerMethodField()
   is_saved = serializers.SerializerMethodField()
@@ -36,7 +37,7 @@ class VideoSerializer(serializers.ModelSerializer):
     fields = [
       'id', 'title', 'description', 'skill_category', 'thumbnail_url',
        'timestamp', 'file_url', 'music_url', 'processing_status', 'uploader',
-       "likes", "dislikes", "user_vote", "is_saved", "watch_progress", "views", "created_at"
+       "likes", "dislikes", "comments_count", "user_vote", "is_saved", "watch_progress", "views", "created_at"
     ]
     read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at', 'processing_status', 'is_saved', 'watch_progress']
   
@@ -59,6 +60,12 @@ class VideoSerializer(serializers.ModelSerializer):
 
   def get_dislikes(self, obj):
     return obj.votes.filter(value=-1).count()
+
+  def get_comments_count(self, obj):
+    annotated_count = getattr(obj, "comment_count_value", None)
+    if annotated_count is not None:
+      return annotated_count
+    return obj.comments.count()
   
   def get_timestamp(self, obj):
     return obj.created_at.strftime('%b %d, %Y')

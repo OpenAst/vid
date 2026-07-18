@@ -307,13 +307,15 @@ export function useMessagesController() {
 
   const loadPeople = useCallback(async (search: string) => {
     const normalizedSearch = search.trim();
+    if (normalizedSearch.length < 2) {
+      setPeople([]);
+      setIsLoadingPeople(false);
+      return;
+    }
+
     setIsLoadingPeople(true);
     try {
-      const endpoint =
-        normalizedSearch.length >= 2
-          ? `/api/messages/users?search=${encodeURIComponent(normalizedSearch)}`
-          : "/api/messages/users";
-      const response = await fetch(endpoint, { cache: "no-store" });
+      const response = await fetch(`/api/messages/users?search=${encodeURIComponent(normalizedSearch)}`, { cache: "no-store" });
       const data = await readJsonResponse(response, "Unable to load people");
       if (!response.ok) {
         throw new Error(data?.detail || "Unable to load people");
@@ -781,6 +783,7 @@ export function useMessagesController() {
       };
       const isSelectedConversation = payload.conversationId === selectedConversationIdRef.current;
       const existingConversation = conversationsRef.current.find((conversation) => conversation.id === payload.conversationId);
+
 
       if (existingConversation) {
         setConversations((current) => {

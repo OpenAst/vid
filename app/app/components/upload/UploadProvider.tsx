@@ -6,6 +6,8 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import toast from "react-hot-toast";
 
 const CHUNK_SIZE = 10 * 1024 * 1024;
+const COMPLETE_UPLOAD_DISMISS_DELAY_MS = 1500;
+const FAILED_UPLOAD_DISMISS_DELAY_MS = 3000;
 
 type UploadStatus = "uploading" | "processing" | "complete" | "failed";
 
@@ -33,6 +35,42 @@ type UploadedFile = {
   objectKey: string;
   publicUrl: string;
 };
+
+function normalizeUrl(value?: string | null) {
+  if (!value) return "";
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+async function findSavedVideoId(title: string, fileUrl: string) {
+  const params = new URLSearchParams({
+    page: "1",
+    limit: "10",
+    search: title,
+    feed: "latest",
+  });
+
+  const response = await fetch(`/api/video/fetch?${params.toString()}`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) return undefined;
+
+  const data = await response.json().catch(() => null);
+  const expectedFileUrl = normalizeUrl(fileUrl);
+  const videos = Array.isArray(data?.results) ? data.results : [];
+  const matchedVideo = videos.find((video: { id?: unknown; title?: unknown; file_url?: unknown }) => (
+    typeof video.id === "string"
+    && video.title === title
+    && normalizeUrl(typeof video.file_url === "string" ? video.file_url : "") === expectedFileUrl
+  ));
+
+  return typeof matchedVideo?.id === "string" ? matchedVideo.id : undefined;
+}
 
 type UploadContextValue = {
   jobs: UploadJob[];
@@ -178,7 +216,22 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
         const metaData = await metaRes.json().catch(() => null);
         if (!metaRes.ok) {
-          throw new Error(metaData?.error || "Failed to save video details");
+          const savedVideoId = await findSavedVideoId(input.title, uploadedVideo.publicUrl).catch(() => undefined);
+          if (!savedVideoId) {
+            throw new Error(metaData?.error || "Failed to save video details");
+          }
+
+          updateJob(jobId, {
+            status: "complete",
+            progress: 100,
+            videoId: savedVideoId,
+            completedAt: Date.now(),
+          });
+          toast.success("Video uploaded");
+          window.setTimeout(() => {
+            setJobs((current) => current.filter((job) => job.id !== jobId || job.status !== "complete"));
+          }, COMPLETE_UPLOAD_DISMISS_DELAY_MS);
+          return;
         }
 
         updateJob(jobId, {
@@ -188,10 +241,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           completedAt: Date.now(),
         });
         toast.success("Video uploaded");
+        window.setTimeout(() => {
+          setJobs((current) => current.filter((job) => job.id !== jobId || job.status !== "complete"));
+        }, COMPLETE_UPLOAD_DISMISS_DELAY_MS);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Upload failed";
         updateJob(jobId, { status: "failed", error: message });
         toast.error(message);
+        window.setTimeout(() => {
+          setJobs((current) => current.filter((job) => job.id !== jobId || job.status !== "failed"));
+        }, FAILED_UPLOAD_DISMISS_DELAY_MS);
       }
     })();
   }, [updateJob]);

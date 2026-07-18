@@ -233,7 +233,6 @@ const UploadVideo = () => {
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
-      event.returnValue = "";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -557,7 +556,7 @@ const UploadVideo = () => {
                         setMusicPreviewUrl(null);
                       }}
                       className="p-1.5 rounded-full bg-base-300 text-base-content hover:bg-red-500 hover:text-white transition-colors"
-                      aria-label="Remove background music"
+                      aria-label="Remove background music"  
                     >
                       <X size={16} />
                     </button>

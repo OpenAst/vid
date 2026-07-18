@@ -8,7 +8,7 @@ This repo contains three deployable services:
 
 ## Coolify Deployment
 
-The repository now includes [`docker-compose.coolify.yml`](./docker-compose.coolify.yml) and production-ready Dockerfiles for each service.
+The repository now includes [`docker-compose.coolify.yml`](./docker-compose.coolify.yml), production-ready Dockerfiles, and a GitHub Actions workflow that builds images before Coolify deploys them.
 The root [`.env.example`](./.env.example) has a deployment checklist of the variables Coolify needs.
 
 ### Recommended layout
@@ -22,11 +22,15 @@ The root [`.env.example`](./.env.example) has a deployment checklist of the vari
 
 ### What to set in Coolify
 
-Set the backend service to use the `backend/Dockerfile`, the frontend service to use `app/Dockerfile`, and the realtime service to use `realtime/Dockerfile`.
+Use the Docker Compose deployment with [`docker-compose.coolify.yml`](./docker-compose.coolify.yml).
+Coolify should pull the prebuilt images from GitHub Container Registry instead of building from the repository.
 Use these container ports in Coolify: backend `8000`, frontend `3000`, realtime `4000`.
 
 Use these values as the baseline:
 
+- `IMAGE_REGISTRY=ghcr.io`
+- `IMAGE_NAMESPACE=<your-github-owner>/<your-repo>`
+- `IMAGE_TAG=latest`
 - `SECRET_KEY`
 - `ALLOWED_HOSTS`
 - `FRONTEND_ORIGINS`
@@ -44,6 +48,28 @@ Use these values as the baseline:
 - `SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET`
 - `EMAIL_*`
 - `AWS_*`
+
+### GitHub CI image builds
+
+The workflow in [`.github/workflows/docker-images.yml`](./.github/workflows/docker-images.yml) builds and pushes these images on pushes to `main` or `master`:
+
+- `ghcr.io/<owner>/<repo>/backend:latest`
+- `ghcr.io/<owner>/<repo>/frontend:latest`
+- `ghcr.io/<owner>/<repo>/realtime:latest`
+
+It also tags each image with the short commit SHA, so you can pin Coolify to a specific release by setting `IMAGE_TAG=<short-commit-sha>`.
+
+For the frontend image, set these GitHub repository variables under `Settings -> Secrets and variables -> Actions -> Variables` before the first production build:
+
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_WS_URL`
+- `NEXT_PUBLIC_REALTIME_URL`
+- `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_MEDIA_HOST`
+- `NEXT_PUBLIC_MEDIA_URL`
+- `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`
+
+If your repository is private, make sure Coolify can pull from GHCR. The usual options are to make the package public, or add GHCR credentials in Coolify using a GitHub token with package read access.
 
 For the backend service:
 
@@ -71,6 +97,8 @@ For the frontend service:
 - `NEXT_PUBLIC_SITE_URL=https://www.your-domain.com`
 - `NEXT_PUBLIC_MEDIA_HOST=media.your-domain.com` or `NEXT_PUBLIC_MEDIA_URL=https://media.your-domain.com`
 - `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=<same public VAPID key as backend>`
+
+These frontend values are baked into the image during CI. Keep the same values in Coolify for server-side Next.js route handlers, but rebuild the frontend image whenever a `NEXT_PUBLIC_*` value changes.
 
 If you use a cookie domain, set it to the parent domain, for example:
 
@@ -143,10 +171,10 @@ The local dev defaults are:
 
 ## Local Full-Stack Reference
 
-If you want to run the same stack locally with Docker, use:
+The Coolify compose file expects prebuilt images. For local infrastructure only, use:
 
 ```bash
-docker compose -f docker-compose.coolify.yml up --build
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 For local live-call testing, use browser-facing TURN URLs:

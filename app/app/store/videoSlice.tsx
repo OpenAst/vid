@@ -15,6 +15,7 @@ export interface Video {
   timestamp: string;
   likes: number;
   dislikes: number;
+  comments_count?: number;
   user_vote: number;
   is_saved?: boolean;
   watch_progress?: {
@@ -42,8 +43,33 @@ interface VideoState {
   next: string,
   count: string,
   cacheQuery: string;
+  activeRequestId: string | null;
   errorMessage: string | null;
 };
+
+const getStableShuffleScore = (value: string) => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+};
+
+const shuffleVideos = (videos: Video[], seed?: string) => {
+  if (!seed || videos.length < 2) return videos;
+
+  return [...videos].sort((first, second) => (
+    getStableShuffleScore(`${seed}:${first.id}`) - getStableShuffleScore(`${seed}:${second.id}`)
+  ));
+};
+
+const getCacheQuery = (arg: { search: string; feed?: string; category?: string; cacheScope?: string }) => [
+  arg.search,
+  arg.feed || "for-you",
+  arg.category || "",
+  arg.cacheScope || "",
+].join("|");
 
 const initialState: VideoState = {
   videos: null,
@@ -53,13 +79,14 @@ const initialState: VideoState = {
   next: "",
   count: "",
   cacheQuery: "",
+  activeRequestId: null,
   errorMessage: null,
 };
 
 export const fetchVideos = createAsyncThunk(
   "videos/fetchVideos",
   async (
-    { page, limit, search, append, background, feed, category }: { page: number; limit: number; search: string; append: boolean; background?: boolean; feed?: string; category?: string },
+    { page, limit, search, append, background, feed, category }: { page: number; limit: number; search: string; append: boolean; background?: boolean; feed?: string; category?: string; shuffleSeed?: string; cacheScope?: string },
     { rejectWithValue }
   ) => {
     try {
@@ -173,30 +200,56 @@ const videoSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchVideos.pending, (state, action) => {
-        if (action.meta.arg.background) {
+        const requestCacheQuery = getCacheQuery(action.meta.arg);
+        if (!action.meta.arg.append) {
+          state.activeRequestId = action.meta.requestId;
+        }
+        if (action.meta.arg.background || action.meta.arg.append) {
           state.isRefreshing = true;
         } else {
           state.isLoading = true;
+          if (state.cacheQuery !== requestCacheQuery) {
+            state.videos = null;
+            state.next = "";
+            state.cacheQuery = requestCacheQuery;
+          }
         }
         state.isError = false;
         state.errorMessage = null;
       })
       .addCase(fetchVideos.fulfilled, (state, action) => {
+        const requestCacheQuery = getCacheQuery(action.meta.arg);
+        if (action.meta.arg.append) {
+          if (state.cacheQuery !== requestCacheQuery) return;
+        } else if (state.activeRequestId !== action.meta.requestId) {
+          return;
+        }
+
         state.isLoading = false;
         state.isRefreshing = false;
-        const newVideos = action.payload.results;
+        if (!action.meta.arg.append) {
+          state.activeRequestId = null;
+        }
+        const newVideos = shuffleVideos(action.payload.results || [], action.meta.arg.shuffleSeed);
         if (action.meta.arg.append && state.videos) {
           state.videos = [...state.videos, ...newVideos];
         } else {
           state.videos = newVideos;
         }
         state.next = action.payload.next;
-        state.cacheQuery = [action.meta.arg.search, action.meta.arg.feed || "for-you", action.meta.arg.category || ""].join("|");
+        state.cacheQuery = requestCacheQuery;
         saveToCache(state);
       })
       .addCase(fetchVideos.rejected, (state, action) => {
+        if (action.meta.arg.append) {
+          state.isRefreshing = false;
+          return;
+        }
+        if (state.activeRequestId !== action.meta.requestId) return;
+
         state.isLoading = false;
         state.isRefreshing = false;
+        state.activeRequestId = null;
         if (!action.meta.arg.background) {
           state.isError = true;
           state.errorMessage = action.payload as string;

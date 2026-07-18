@@ -50,10 +50,14 @@ const Feed = ({
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
   const videoCount = Array.isArray(videos) ? videos.length : 0;
   const { isCalling } = useCall();
-  const cacheKey = [search || "", feedMode, selectedCategory].join("|");
+  const viewerCacheScope = user?.id || "guest";
+  const forYouShuffleSeedRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const forYouShuffleSeed = feedMode === "for-you" ? `${viewerCacheScope}:${forYouShuffleSeedRef.current}` : undefined;
+  const cacheKey = [search || "", feedMode, selectedCategory, viewerCacheScope].join("|");
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const feedScrollRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<RealtimeSocket | null>(null);
   const currentIndexRef = useRef(0);
   const rafPlaybackRef = useRef<number | null>(null);
@@ -215,6 +219,16 @@ const Feed = ({
   }, [bookmarkedVideoIds, dispatch, router, user]);
 
   useEffect(() => {
+    currentIndexRef.current = 0;
+    setActiveIndex(0);
+    setOpenCommentsFor(null);
+    setLoadingMore(false);
+    videoRefs.current = [];
+    wrapperRefs.current = [];
+    feedScrollRef.current?.scrollTo({ top: 0 });
+  }, [cacheKey]);
+
+  useEffect(() => {
     setPage(1);
     const currentSearch = search || "";
     const hasCachedVideos = Array.isArray(videos) && videos.length > 0;
@@ -229,6 +243,8 @@ const Feed = ({
           search: currentSearch,
           feed: apiFeed,
           category: selectedCategory,
+          shuffleSeed: forYouShuffleSeed,
+          cacheScope: viewerCacheScope,
           append: false,
           background: canRefreshInBackground,
         })
@@ -236,7 +252,7 @@ const Feed = ({
     }, 0);
 
     return () => window.clearTimeout(id);
-  }, [dispatch, search, cacheKey, cacheQuery, feedMode, selectedCategory]);
+  }, [dispatch, search, cacheKey, feedMode, forYouShuffleSeed, selectedCategory, viewerCacheScope]);
 
   const fetchMoreVideos = useCallback(() => {
     if (next && !isLoading && !loadingMore) {
@@ -249,11 +265,13 @@ const Feed = ({
         search: search || "",
         feed: feedMode === "following" ? "following" : feedMode === "latest" ? "latest" : "for-you",
         category: selectedCategory,
+        shuffleSeed: forYouShuffleSeed,
+        cacheScope: viewerCacheScope,
         append: true,
       }))
         .finally(() => setLoadingMore(false));
     }
-  }, [dispatch, feedMode, isLoading, loadingMore, next, page, search, selectedCategory]);
+  }, [dispatch, feedMode, forYouShuffleSeed, isLoading, loadingMore, next, page, search, selectedCategory, viewerCacheScope]);
 
   const syncPlaybackForIndex = useCallback((targetIndex: number) => {
     const nextIndex = Math.max(0, Math.min(targetIndex, videoRefs.current.length - 1));
@@ -361,7 +379,10 @@ const Feed = ({
   const showInitialSkeleton = isLoading && (!Array.isArray(videos) || videos.length === 0);
 
   return (
-    <div className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-black sm:bg-base-100">
+    <div
+      ref={feedScrollRef}
+      className="h-full w-full items-center justify-center overflow-y-scroll overflow-x-hidden snap-y snap-mandatory no-scrollbar bg-black sm:bg-base-100"
+    >
       {showInitialSkeleton && <FeedSkeleton count={2} />}
 
       {!showInitialSkeleton && Array.isArray(videos) && videos.length === 0 && (
@@ -465,7 +486,9 @@ const Feed = ({
                   <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
                     <MessageCircle className="w-5 h-5 text-white" fill="currentColor" />
                   </div>
-                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">Chat</span>
+                  <span className="text-[10px] mt-1 text-white font-medium drop-shadow-md">
+                    {video.comments_count || 0}
+                  </span>
                 </button>
 
                 <button

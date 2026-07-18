@@ -127,11 +127,11 @@ export default function PeopleToFollow() {
           onClick={() => void followUser(person)}
           disabled={Boolean(person.is_following) || loadingUserId === person.id}
           aria-label={`${person.is_following ? "Following" : "Follow"} ${name}`}
-          className={`shrink-0 min-w-[80px] rounded-full px-3 py-1.5 text-xs font-semibold transition text-center ${
+          className={`shrink-0 min-w-[88px] rounded-full border px-3 py-1.5 text-center text-xs font-semibold shadow-sm transition ${
             person.is_following
-              ? "bg-base-200 text-base-content/70 ring-1 ring-base-300"
-              : "bg-primary text-primary-content hover:bg-primary/90"
-          } ${loadingUserId === person.id ? "opacity-60 cursor-wait" : ""}`}
+              ? "border-primary/35 bg-primary/10 text-primary"
+              : "border-primary bg-primary text-white hover:bg-primary/90"
+          } ${loadingUserId === person.id ? "cursor-wait opacity-80" : ""}`}
         >
           {loadingUserId === person.id ? "..." : person.is_following ? "Following" : "Follow"}
         </button>
