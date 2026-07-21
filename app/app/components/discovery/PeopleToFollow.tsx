@@ -129,8 +129,8 @@ export default function PeopleToFollow() {
           aria-label={`${person.is_following ? "Following" : "Follow"} ${name}`}
           className={`shrink-0 min-w-[88px] rounded-full border px-3 py-1.5 text-center text-xs font-semibold shadow-sm transition ${
             person.is_following
-              ? "border-primary/35 bg-primary/10 text-primary"
-              : "border-primary bg-primary text-white hover:bg-primary/90"
+              ? "border-[#d9cdf1] bg-[#f2eefb] text-[#3f2b63]"
+              : "border-[#440d9c] bg-[#440d9c] text-white hover:border-[#35107a] hover:bg-[#35107a]"
           } ${loadingUserId === person.id ? "cursor-wait opacity-80" : ""}`}
         >
           {loadingUserId === person.id ? "..." : person.is_following ? "Following" : "Follow"}

@@ -48,12 +48,14 @@ const Feed = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const next = useSelector((state: RootState) => state.video.next);
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
-  const videoCount = Array.isArray(videos) ? videos.length : 0;
   const { isCalling } = useCall();
   const viewerCacheScope = user?.id || "guest";
   const forYouShuffleSeedRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const forYouShuffleSeed = feedMode === "for-you" ? `${viewerCacheScope}:${forYouShuffleSeedRef.current}` : undefined;
   const cacheKey = [search || "", feedMode, selectedCategory, viewerCacheScope].join("|");
+  const isActiveFeedLoaded = cacheQuery === cacheKey;
+  const visibleVideos = isActiveFeedLoaded && Array.isArray(videos) ? videos : null;
+  const videoCount = Array.isArray(visibleVideos) ? visibleVideos.length : 0;
 
   const videoRefs = useRef<(VideoCardHandle | null)[]>([]);
   const wrapperRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -115,9 +117,9 @@ const Feed = ({
   }, [token, dispatch, user?.id]);
 
   useEffect(() => {
-    if (!Array.isArray(videos)) return;
-    setBookmarkedVideoIds(new Set(videos.filter((video) => video.is_saved).map((video) => video.id)));
-  }, [videos]);
+    if (!Array.isArray(visibleVideos)) return;
+    setBookmarkedVideoIds(new Set(visibleVideos.filter((video) => video.is_saved).map((video) => video.id)));
+  }, [visibleVideos]);
 
   const handleLikeVideo = useCallback((video: Video) => {
     if (!user || !socketRef.current) return;
@@ -231,8 +233,6 @@ const Feed = ({
   useEffect(() => {
     setPage(1);
     const currentSearch = search || "";
-    const hasCachedVideos = Array.isArray(videos) && videos.length > 0;
-    const canRefreshInBackground = hasCachedVideos && cacheQuery === cacheKey;
     const apiFeed = feedMode === "following" ? "following" : feedMode === "latest" ? "latest" : "for-you";
 
     const id = window.setTimeout(() => {
@@ -246,7 +246,7 @@ const Feed = ({
           shuffleSeed: forYouShuffleSeed,
           cacheScope: viewerCacheScope,
           append: false,
-          background: canRefreshInBackground,
+          background: false,
         })
       );
     }, 0);
@@ -314,7 +314,7 @@ const Feed = ({
   }, [syncPlaybackForIndex, videoCount]);
 
   useEffect(() => {
-    if (!Array.isArray(videos) || videos.length === 0) return;
+    if (!Array.isArray(visibleVideos) || visibleVideos.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -351,7 +351,7 @@ const Feed = ({
       { threshold: 0.1 }
     );
 
-    const lastEl = wrapperRefs.current[videos.length - 1];
+    const lastEl = wrapperRefs.current[visibleVideos.length - 1];
     if (lastEl) {
       lastElementObserver.observe(lastEl);
     }
@@ -364,7 +364,7 @@ const Feed = ({
       observer.disconnect();
       lastElementObserver.disconnect();
     };
-  }, [fetchMoreVideos, loadingMore, next, search, syncPlaybackForIndex, videos]);
+  }, [fetchMoreVideos, loadingMore, next, search, syncPlaybackForIndex, visibleVideos]);
 
   useEffect(() => {
     syncPlaybackForIndex(currentIndexRef.current);
@@ -376,7 +376,7 @@ const Feed = ({
     }
   }, [isError, router]);
 
-  const showInitialSkeleton = isLoading && (!Array.isArray(videos) || videos.length === 0);
+  const showInitialSkeleton = !Array.isArray(visibleVideos) || (isLoading && visibleVideos.length === 0);
 
   return (
     <div
@@ -385,7 +385,7 @@ const Feed = ({
     >
       {showInitialSkeleton && <FeedSkeleton count={2} />}
 
-      {!showInitialSkeleton && Array.isArray(videos) && videos.length === 0 && (
+      {!showInitialSkeleton && Array.isArray(visibleVideos) && visibleVideos.length === 0 && (
         <div className="flex h-[calc(var(--feed-shell-height)-96px)] snap-start items-center justify-center px-6 text-center">
           <div>
             <p className="text-lg font-semibold text-base-content">
@@ -400,8 +400,8 @@ const Feed = ({
         </div>
       )}
 
-      {Array.isArray(videos) &&
-        videos.map((video, idx) => (
+      {Array.isArray(visibleVideos) &&
+        visibleVideos.map((video, idx) => (
           <div
             key={video.id}
             data-index={String(idx)}
