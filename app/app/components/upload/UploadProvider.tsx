@@ -23,8 +23,11 @@ type UploadJob = {
   input: StartUploadInput;
 };
 
+type UploadMediaType = "video" | "image";
+
 type StartUploadInput = {
-  videoFile: File;
+  mediaFile: File;
+  mediaType: UploadMediaType;
   musicFile?: File | null;
   title: string;
   description: string;
@@ -186,11 +189,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           startedAt: Date.now(),
         });
 
-        const uploadedVideo = await uploadFile(input.videoFile, (progress) => {
+        const uploadedMedia = await uploadFile(input.mediaFile, (progress) => {
           updateJob(jobId, { progress });
         });
 
-        const uploadedMusic = input.musicFile
+        const uploadedMusic = input.mediaType === "video" && input.musicFile
           ? await uploadFile(input.musicFile, (progress) => {
               updateJob(jobId, { progress: Math.min(96, 90 + Math.round(progress / 10)) });
             })
@@ -206,17 +209,18 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             title: input.title,
             description: input.description || "",
             skill_category: input.skillCategory || "general",
-            file_url: uploadedVideo.publicUrl,
+            media_type: input.mediaType,
+            file_url: uploadedMedia.publicUrl,
             music_url: uploadedMusic?.publicUrl || null,
-            file_key: uploadedVideo.objectKey,
-            file_size: input.videoFile.size,
-            file_type: input.videoFile.type,
+            file_key: uploadedMedia.objectKey,
+            file_size: input.mediaFile.size,
+            file_type: input.mediaFile.type,
           }),
         });
 
         const metaData = await metaRes.json().catch(() => null);
         if (!metaRes.ok) {
-          const savedVideoId = await findSavedVideoId(input.title, uploadedVideo.publicUrl).catch(() => undefined);
+            const savedVideoId = await findSavedVideoId(input.title, uploadedMedia.publicUrl).catch(() => undefined);
           if (!savedVideoId) {
             throw new Error(metaData?.error || "Failed to save video details");
           }
@@ -227,7 +231,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             videoId: savedVideoId,
             completedAt: Date.now(),
           });
-          toast.success("Video uploaded");
+          toast.success(input.mediaType === "image" ? "Photo uploaded" : "Video uploaded");
           window.setTimeout(() => {
             setJobs((current) => current.filter((job) => job.id !== jobId || job.status !== "complete"));
           }, COMPLETE_UPLOAD_DISMISS_DELAY_MS);
@@ -240,7 +244,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           videoId: typeof metaData?.id === "string" ? metaData.id : undefined,
           completedAt: Date.now(),
         });
-        toast.success("Video uploaded");
+        toast.success(input.mediaType === "image" ? "Photo uploaded" : "Video uploaded");
         window.setTimeout(() => {
           setJobs((current) => current.filter((job) => job.id !== jobId || job.status !== "complete"));
         }, COMPLETE_UPLOAD_DISMISS_DELAY_MS);

@@ -502,13 +502,16 @@ export default function CallProvider({ children }: { children: React.ReactNode }
   }, [isAuthenticated, token]);
 
   useEffect(() => {
-    if (incomingCall && !activeCall) {
+    const shouldRing = (incomingCall && !activeCall)
+      || (activeCall?.role === "caller" && activeCall.status === "ringing");
+
+    if (shouldRing) {
       startRingtone();
       return;
     }
 
     stopRingtone();
-  }, [activeCall, incomingCall, startRingtone, stopRingtone]);
+  }, [activeCall?.role, activeCall?.status, incomingCall, startRingtone, stopRingtone]);
 
   const localHasVideo = Boolean(localStream?.getVideoTracks().some((track) => track.readyState === "live"));
   const remoteHasVideo = Boolean(remoteStream?.getVideoTracks().some((track) => track.readyState === "live"));

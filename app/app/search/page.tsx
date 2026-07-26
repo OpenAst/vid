@@ -2,7 +2,7 @@
 
 import UserAvatar from "@/app/components/common/UserAvatar";
 import type { Video } from "@/app/store/videoSlice";
-import { Check, MessageCircle, Play, Search, UserPlus, Users, VideoIcon, X } from "lucide-react";
+import { Check, ImageIcon, MessageCircle, Play, Search, UserPlus, Users, VideoIcon, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -182,7 +182,7 @@ function SearchPageContent() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-wide text-primary">Search</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Find clips and creators</h1>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Find posts and creators</h1>
         </div>
 
         <form onSubmit={submitSearch} className="mb-4 flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-4 py-3 shadow-sm">
@@ -229,7 +229,7 @@ function SearchPageContent() {
         <div className="mb-6 flex rounded-full border border-base-300 bg-base-100 p-1 shadow-sm">
           {[
             { id: "top" as const, label: "Top", icon: <Search size={15} /> },
-            { id: "videos" as const, label: "Videos", icon: <VideoIcon size={15} /> },
+            { id: "videos" as const, label: "Posts", icon: <VideoIcon size={15} /> },
             { id: "people" as const, label: "Creators", icon: <Users size={15} /> },
           ].map((tab) => (
             <button
@@ -249,7 +249,7 @@ function SearchPageContent() {
         {(activeTab === "top" || activeTab === "videos") && (
           <section className="mb-9">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Videos</h2>
+              <h2 className="text-lg font-bold">Posts</h2>
               {activeTab === "top" && videos.length > visibleVideos.length && (
                 <button type="button" onClick={() => setActiveTab("videos")} className="text-sm font-bold text-primary">
                   See all
@@ -263,7 +263,7 @@ function SearchPageContent() {
                 ))}
               </div>
             ) : visibleVideos.length === 0 ? (
-              <EmptyState text={hasQuery ? "No videos found for this search." : "No videos found yet."} />
+              <EmptyState text={hasQuery ? "No posts found for this search." : "No posts found yet."} />
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {visibleVideos.map((video) => (
@@ -274,9 +274,9 @@ function SearchPageContent() {
                     className="group overflow-hidden rounded-2xl border border-base-300 bg-base-100 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="relative aspect-[9/16] bg-base-200">
-                      {video.thumbnail_url ? (
+                      {video.media_type === "image" || video.thumbnail_url ? (
                         <Image
-                          src={video.thumbnail_url}
+                          src={video.media_type === "image" ? video.file_url : video.thumbnail_url || video.file_url}
                           alt={video.title}
                           fill
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
@@ -286,7 +286,7 @@ function SearchPageContent() {
                         <video src={video.file_url} className="h-full w-full object-cover" muted preload="metadata" />
                       )}
                       <span className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur">
-                        <Play size={15} fill="currentColor" />
+                        {video.media_type === "image" ? <ImageIcon size={15} /> : <Play size={15} fill="currentColor" />}
                       </span>
                     </div>
                     <div className="p-3">

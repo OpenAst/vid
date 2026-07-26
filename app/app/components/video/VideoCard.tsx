@@ -9,6 +9,7 @@ import Image from "next/image";
 interface VideoCardProps {
   id: string;
   file_url: string;
+  mediaType?: "video" | "image";
   thumbnail_url: string | null;
   isActive: boolean;
   resumeAt?: number;
@@ -30,6 +31,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
     {
       id,
       file_url,
+      mediaType = "video",
       thumbnail_url,
       isActive,
       resumeAt = 0,
@@ -49,6 +51,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
     const [isMediaReady, setIsMediaReady] = useState(false);
     const [hasMediaError, setHasMediaError] = useState(false);
     const [overlayIcon, setOverlayIcon] = useState<"play" | "pause" | "mute" | "unmute" | null>(null);
+    const isImagePost = mediaType === "image";
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const onViewRecordedRef = useRef(onViewRecorded);
@@ -259,6 +262,21 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
       };
     }, [id, isUserPaused]);
 
+    useEffect(() => {
+      if (!isImagePost || !isActive || hasViewedOnce.current) return;
+
+      viewTimerRef.current = setTimeout(() => {
+        void recordView();
+      }, 1200);
+
+      return () => {
+        if (viewTimerRef.current) {
+          clearTimeout(viewTimerRef.current);
+          viewTimerRef.current = null;
+        }
+      };
+    }, [id, isActive, isImagePost]);
+
     const [zoomScale, setZoomScale] = useState(1);
     const initialDistance = useRef<number | null>(null);
 
@@ -307,7 +325,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
 
     useEffect(() => {
       const video = videoRef.current;
-      if (!video) return;
+      if (!video || isImagePost) return;
 
       if (!isActive) {
         video.pause();
@@ -323,7 +341,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
           }
         });
       }
-    }, [isActive, isUserPaused, id, file_url]);
+    }, [isActive, isUserPaused, id, file_url, isImagePost]);
 
     useEffect(() => {
       if (overlayIcon) {
@@ -331,6 +349,60 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
         return () => clearTimeout(timer);
       }
     }, [overlayIcon]);
+
+    if (isImagePost) {
+      return (
+        <motion.div
+          animate={{
+            height: isCommentsOpen ? "70%" : "100%"
+          }}
+          transition={{ duration: 0.3 }}
+          className="relative mx-auto flex h-full w-full items-center justify-center overflow-hidden bg-black shadow-sm sm:aspect-[9/16] sm:rounded-2xl"
+          onDoubleClick={handleLike}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <motion.div
+            animate={{ scale: zoomScale }}
+            drag={zoomScale > 1}
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={0.5}
+            className="relative h-full w-full"
+          >
+            <Image
+              src={file_url}
+              alt=""
+              fill
+              sizes="(min-width: 640px) 47vh, 100vw"
+              priority={isActive}
+              className="object-contain"
+              onLoad={markMediaReady}
+              onError={handleMediaError}
+            />
+          </motion.div>
+          <AnimatePresence>
+            {(!isMediaReady || hasMediaError) && (
+              <motion.div
+                key="image-readiness"
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="absolute inset-0 z-10 pointer-events-none overflow-hidden bg-neutral-950 sm:rounded-2xl"
+              >
+                <div className="absolute inset-0 animate-pulse bg-neutral-900" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="rounded-full border border-white/10 bg-black/40 px-4 py-2 text-xs font-semibold text-white/70">
+                    {hasMediaError ? "Image unavailable" : "Loading photo..."}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      );
+    }
 
     return (
       <motion.div

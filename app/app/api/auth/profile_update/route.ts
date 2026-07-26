@@ -32,6 +32,7 @@ export async function PATCH(req: NextRequest) {
       skipped_profile_setup,
       skipped_interests,
       skipped_follow_suggestions,
+      membership_tiers,
     } = await req.json();
 
     const apiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/users/profile/update/`, {
@@ -61,6 +62,7 @@ export async function PATCH(req: NextRequest) {
           skipped_profile_setup,
           skipped_interests,
           skipped_follow_suggestions,
+          membership_tiers,
         }),
     });
 

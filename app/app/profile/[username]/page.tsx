@@ -14,7 +14,7 @@ import UserSafetyActions from '@/app/components/safety/UserSafetyActions';
 import type { MembershipTier } from '@/app/store/authSlice';
 import VideoGridSkeleton from '@/app/components/video/VideoGridSkeleton';
 import toast from 'react-hot-toast';
-import { CalendarDays, Check, MessageCircle, Play, UserPlus, VideoIcon, ExternalLink, X } from 'lucide-react';
+import { Briefcase, CalendarDays, Check, ImageIcon, MessageCircle, Play, UserPlus, VideoIcon, ExternalLink, X } from 'lucide-react';
 
 
 function PublicProfilePage() {
@@ -228,6 +228,8 @@ function PublicProfilePage() {
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
     : 'bg-rose-50 text-rose-700 border-rose-200';
   const displayName = `${userDetails.firstName} ${userDetails.lastName}`.trim() || userDetails.username || 'Creator';
+  const hasOpportunityMode = Boolean(userDetails.openToCollab || userDetails.openToHire || userDetails.openToMentor);
+  const primaryOpportunityMode = userDetails.openToHire ? 'hire' : userDetails.openToMentor ? 'mentor' : 'collab';
 
   return (
     <main className="min-h-[100dvh] bg-base-100 px-4 pb-10 pt-[calc(var(--app-header-height)+18px)] text-base-content md:pl-[124px] md:pr-8">
@@ -267,7 +269,7 @@ function PublicProfilePage() {
                       <span><strong className="text-base-content">{userDetails.following}</strong> following</span>
                       <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </Link>
-                    <span><strong className="text-base-content">{videos.length}</strong> clips</span>
+                    <span><strong className="text-base-content">{videos.length}</strong> posts</span>
                   </div>
                 </div>
               </div>
@@ -330,6 +332,17 @@ function PublicProfilePage() {
                     <MessageCircle size={16} />
                     Message
                   </button>
+                  {hasOpportunityMode && (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/collabs?creator=${encodeURIComponent(userDetails.username)}&mode=${primaryOpportunityMode}`)}
+                      disabled={isBlocked || isBlockedBy}
+                      className={`inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-content transition hover:opacity-90 ${isBlocked || isBlockedBy ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Briefcase size={16} />
+                      Work with me
+                    </button>
+                  )}
                   <SupportCreatorButton creatorId={userDetails.id} creatorName={displayName} tiers={userDetails.membershipTiers} />
                   <CallButton
                     peer={{
@@ -458,7 +471,7 @@ function PublicProfilePage() {
                 {userDetails.isPrivate && !userDetails.isFollowing && !isOwnProfile ? (
                   <div className="rounded-2xl border border-base-300 bg-base-200/60 p-5 text-sm text-base-content/75">
                     <p className="font-semibold text-base-content">Private account</p>
-                    <p className="mt-2">This creator has chosen to keep their profile private. Follow to request access to their clips and details.</p>
+                    <p className="mt-2">This creator has chosen to keep their profile private. Follow to request access to their posts and details.</p>
                   </div>
                 ) : userDetails.bio ? (
                   <p className="max-w-3xl whitespace-pre-wrap text-sm leading-6 text-base-content/75">
@@ -493,7 +506,7 @@ function PublicProfilePage() {
       <section className="mt-8 w-full">
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-base-300 pb-3">
           <div>
-            <h2 className="text-xl font-bold text-base-content">Clips</h2>
+            <h2 className="text-xl font-bold text-base-content">Posts</h2>
             <p className="mt-1 text-sm font-medium text-base-content/70">Recent uploads from {displayName}</p>
           </div>
           <VideoIcon size={22} className="text-base-content/35" />
@@ -510,9 +523,9 @@ function PublicProfilePage() {
                 onClick={() => router.push(`/video/${video.id}`)}
               >
                 <div className="relative aspect-[9/16] bg-base-200">
-                  {video.thumbnail_url ? (
+                  {video.media_type === "image" || video.thumbnail_url ? (
                     <Image
-                      src={video.thumbnail_url}
+                      src={video.media_type === "image" ? video.file_url : video.thumbnail_url || video.file_url}
                       alt={video.title}
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
@@ -528,7 +541,7 @@ function PublicProfilePage() {
                     />
                   )}
                   <span className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur">
-                    <Play size={15} fill="currentColor" />
+                    {video.media_type === "image" ? <ImageIcon size={15} /> : <Play size={15} fill="currentColor" />}
                   </span>
                 </div>
                 <div className="p-3">
@@ -546,16 +559,16 @@ function PublicProfilePage() {
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-base-200 text-base-content">
               <VideoIcon size={24} />
             </div>
-            <p className="font-semibold">Clips are private</p>
-            <p className="mt-2 text-sm font-medium text-base-content/70">Follow to request access to this creator's clips.</p>
+            <p className="font-semibold">Posts are private</p>
+            <p className="mt-2 text-sm font-medium text-base-content/70">Follow to request access to this creator's posts.</p>
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-base-300 bg-base-100 px-6 py-12 text-center">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
               <VideoIcon size={24} />
             </div>
-            <p className="font-semibold">No clips yet</p>
-            <p className="mt-2 text-sm font-medium text-base-content/70">When {displayName} uploads, their clips will appear here.</p>
+            <p className="font-semibold">No posts yet</p>
+            <p className="mt-2 text-sm font-medium text-base-content/70">When {displayName} uploads, their posts will appear here.</p>
           </div>
         )}
       </section>

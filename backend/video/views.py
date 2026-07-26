@@ -105,12 +105,27 @@ class VideoUploadView(generics.CreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            media_type = request.data.get("media_type") or "video"
+            file_type = request.data.get("file_type") or ""
+
+            if media_type not in {"video", "image"}:
+                return Response({"error": "Invalid media type"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if media_type == "image":
+                if file_type and not str(file_type).startswith("image/"):
+                    return Response({"error": "Image posts require an image file"}, status=status.HTTP_400_BAD_REQUEST)
+                if request.data.get("music_url"):
+                    return Response({"error": "Background music is only available for videos"}, status=status.HTTP_400_BAD_REQUEST)
+            elif file_type and not str(file_type).startswith("video/"):
+                return Response({"error": "Video posts require a video file"}, status=status.HTTP_400_BAD_REQUEST)
+
             data = {
                 "title": request.data.get("title"),
                 "description": request.data.get("description", ""),
                 "skill_category": request.data.get("skill_category") or "general",
+                "media_type": media_type,
                 "file_url": request.data.get("file_url"),
-                "music_url": request.data.get("music_url"),
+                "music_url": request.data.get("music_url") if media_type == "video" else None,
             }
             
             serializer = self.get_serializer(data=data)
@@ -122,13 +137,18 @@ class VideoUploadView(generics.CreateAPIView):
             self.perform_create(serializer)
             video_instance = serializer.instance
             
-            # Trigger thumbnail extraction in the background
-            threading.Thread(
-                target=extract_and_upload_thumbnail, 
-                args=(video_instance.file_url, video_instance)
-            ).start()
+            if video_instance.media_type == "image":
+                video_instance.thumbnail = video_instance.file_url
+                video_instance.processing_status = "ready"
+                video_instance.save(update_fields=["thumbnail", "processing_status"])
+            else:
+                # Trigger thumbnail extraction in the background
+                threading.Thread(
+                    target=extract_and_upload_thumbnail,
+                    args=(video_instance.file_url, video_instance)
+                ).start()
 
-            if video_instance.music_url:
+            if video_instance.media_type == "video" and video_instance.music_url:
                 video_instance.processing_status = "processing"
                 video_instance.save(update_fields=["processing_status"])
                 threading.Thread(

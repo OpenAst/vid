@@ -434,9 +434,9 @@ function ProfilePage() {
         Update Profile
       </button>
 
-      {/* Videos Section */}
+      {/* Posts Section */}
       <div className="w-full max-w-4xl mt-12 px-4 mb-10">
-        <h2 className="text-2xl font-bold mb-6 text-base-content border-b border-base-300 pb-2">My Videos</h2>
+        <h2 className="text-2xl font-bold mb-6 text-base-content border-b border-base-300 pb-2">My Posts</h2>
         {isVideosLoading ? (
           <VideoGridSkeleton count={10} />
         ) : videos.length > 0 ? (
@@ -447,9 +447,9 @@ function ProfilePage() {
                 className="group relative aspect-[9/16] bg-base-300 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all shadow-md max-h-[60vh]"
                 onClick={() => router.push(`/?videoId=${video.id}`)}
               >
-                {video.thumbnail_url ? (
+                {video.media_type === "image" || video.thumbnail_url ? (
                   <Image
-                    src={video.thumbnail_url}
+                    src={video.media_type === "image" ? video.file_url : video.thumbnail_url || video.file_url}
                     alt={video.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform"

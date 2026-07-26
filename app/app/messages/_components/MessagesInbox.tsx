@@ -83,7 +83,7 @@ export default function MessagesInbox({
       </div>
 
       <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
-        {conversationError && (
+        {conversationError && conversations.length === 0 && (
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {conversationError}
           </div>

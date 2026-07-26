@@ -3,7 +3,7 @@
 import UserAvatar from "@/app/components/common/UserAvatar";
 import { RootState } from "@/app/store/store";
 import type { Video } from "@/app/store/videoSlice";
-import { Check, MessageCircle, Play, Search, UserPlus, Users, VideoIcon } from "lucide-react";
+import { Check, ImageIcon, MessageCircle, Play, Search, UserPlus, Users, VideoIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -175,7 +175,7 @@ export default function DiscoverPage() {
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Discover</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">Find creators and clips</h1>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Find creators and posts</h1>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-base-content/70">
               Search videos, people, and skill tags from one place.
             </p>
@@ -183,7 +183,7 @@ export default function DiscoverPage() {
 
           <div className="flex rounded-full border border-base-300 bg-base-100 p-1 shadow-sm">
             {[
-              { id: "videos" as const, label: "Videos", icon: <VideoIcon size={15} /> },
+              { id: "videos" as const, label: "Posts", icon: <VideoIcon size={15} /> },
               { id: "people" as const, label: "People", icon: <Users size={15} /> },
             ].map((tab) => (
               <button
@@ -204,7 +204,7 @@ export default function DiscoverPage() {
         <section className="mb-6 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
           <div className="mb-3">
             <p className="text-sm font-bold text-base-content">Search discovery</p>
-            <p className="mt-1 text-xs font-medium text-base-content/70">Filter clips and creators by topic, username, title, or skill.</p>
+            <p className="mt-1 text-xs font-medium text-base-content/70">Filter posts and creators by topic, username, title, or skill.</p>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-base-300 bg-base-100 px-4 py-3">
             <Search size={18} className="text-base-content/70" />
@@ -244,7 +244,7 @@ export default function DiscoverPage() {
               </div>
             ) : videos.length === 0 ? (
               <div className="rounded-2xl border border-base-300 bg-base-100 p-10 text-center text-sm font-medium text-base-content/70">
-                No videos found. Try another search or category.
+                No posts found. Try another search or category.
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -256,9 +256,9 @@ export default function DiscoverPage() {
                     className="group overflow-hidden rounded-2xl border border-base-300 bg-base-100 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="relative aspect-[9/16] bg-base-200">
-                      {video.thumbnail_url ? (
+                      {video.media_type === "image" || video.thumbnail_url ? (
                         <Image
-                          src={video.thumbnail_url}
+                          src={video.media_type === "image" ? video.file_url : video.thumbnail_url || video.file_url}
                           alt={video.title}
                           fill
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
@@ -268,7 +268,7 @@ export default function DiscoverPage() {
                         <video src={video.file_url} className="h-full w-full object-cover" muted preload="metadata" />
                       )}
                       <span className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur">
-                        <Play size={15} fill="currentColor" />
+                        {video.media_type === "image" ? <ImageIcon size={15} /> : <Play size={15} fill="currentColor" />}
                       </span>
                     </div>
                     <div className="p-3">

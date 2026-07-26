@@ -7,16 +7,20 @@ import type { MembershipTier } from "@/app/store/authSlice";
 import {
   ArrowRight,
   BarChart3,
+  Briefcase,
   CheckCircle2,
   Flame,
+  Handshake,
   Heart,
   Lightbulb,
   CalendarDays,
+  MessageCircle,
   Play,
   Save,
   Sparkles,
   Target,
   UploadCloud,
+  UserRoundCheck,
   Users,
   VideoIcon,
 } from "lucide-react";
@@ -90,7 +94,7 @@ const defaultMembershipTiers: MembershipTier[] = [
     name: "VIP",
     price: "$9/mo",
     description: "For close supporters and early access.",
-    perks: ["Early clip previews", "Priority replies", "Behind-the-scenes notes"],
+    perks: ["Early post previews", "Priority replies", "Behind-the-scenes notes"],
     enabled: false,
   },
 ];
@@ -154,6 +158,15 @@ export default function CreatorHubPage() {
     purpose: "collab" as BookingSlot["purpose"],
     note: "",
   });
+  const [opportunityForm, setOpportunityForm] = useState({
+    open_to_collab: false,
+    open_to_hire: false,
+    open_to_mentor: false,
+    availability_status: "available",
+    skill_tags: "",
+    bio: "",
+  });
+  const [isSavingOpportunity, setIsSavingOpportunity] = useState(false);
   const [isSavingTiers, setIsSavingTiers] = useState(false);
   const [isSavingSlot, setIsSavingSlot] = useState(false);
   const [updatingBookingId, setUpdatingBookingId] = useState<string | null>(null);
@@ -207,19 +220,46 @@ export default function CreatorHubPage() {
     }
   }, [user?.profile?.membership_tiers]);
 
+  useEffect(() => {
+    const profile = user?.profile;
+    if (!profile) return;
+    setOpportunityForm({
+      open_to_collab: Boolean(profile.open_to_collab),
+      open_to_hire: Boolean(profile.open_to_hire),
+      open_to_mentor: Boolean(profile.open_to_mentor),
+      availability_status: profile.availability_status || "available",
+      skill_tags: profile.skill_tags || "",
+      bio: profile.bio || "",
+    });
+  }, [user?.profile]);
+
   const profileCompletion = useMemo(() => getProfileCompletion(user), [user]);
   const summary = analytics?.summary;
   const uploadStreak = useMemo(() => getUploadStreak(recentVideos), [recentVideos]);
   const bestCategory = useMemo(() => getBestCategory(recentVideos), [recentVideos]);
   const topVideos = analytics?.top_videos || [];
+  const opportunityModes = [
+    opportunityForm.open_to_collab ? "Collab" : "",
+    opportunityForm.open_to_hire ? "Hire" : "",
+    opportunityForm.open_to_mentor ? "Mentor" : "",
+  ].filter(Boolean);
+  const opportunityScore = [
+    opportunityModes.length > 0,
+    opportunityForm.availability_status === "available",
+    opportunityForm.skill_tags.trim().length > 0,
+    opportunityForm.bio.trim().length > 0,
+    bookingSlots.length > 0,
+  ].filter(Boolean).length;
 
   const nextAction = profileCompletion.percent < 100
     ? { label: profileCompletion.missingItems[0]?.label || "Complete your profile", href: "/profile" }
-    : Number(summary?.total_videos || 0) < 3
-      ? { label: "Upload 3 clips to train your audience", href: "/upload" }
-      : Number(summary?.followers || 0) < 100
-        ? { label: "Share your best clip to reach 100 followers", href: topVideos[0]?.id ? `/video/${topVideos[0].id}` : "/discover" }
-        : { label: "Review analytics and double down", href: "/analytics" };
+    : opportunityModes.length === 0
+      ? { label: "Turn on at least one opportunity mode", href: "/creator#opportunity-kit" }
+      : Number(summary?.total_videos || 0) < 3
+        ? { label: "Upload 3 posts to train your audience", href: "/upload" }
+        : Number(summary?.followers || 0) < 100
+          ? { label: "Share your best post to reach 100 followers", href: topVideos[0]?.id ? `/video/${topVideos[0].id}` : "/discover" }
+          : { label: "Review analytics and double down", href: "/analytics" };
 
   const goals = [
     {
@@ -237,13 +277,34 @@ export default function CreatorHubPage() {
       done: Number(summary?.followers || 0) >= 100,
     },
     {
-      label: "Upload 3 clips this week",
+      label: "Upload 3 posts this week",
       value: Math.min(recentVideos.length, 3),
       target: 3,
       suffix: "",
       done: recentVideos.length >= 3,
     },
   ];
+
+  const saveOpportunityKit = async () => {
+    setIsSavingOpportunity(true);
+    try {
+      const response = await fetch("/api/auth/profile_update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(opportunityForm),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.detail || data?.error || "Unable to save opportunity kit");
+      }
+      await dispatch(fetchUser()).unwrap();
+      toast.success("Opportunity kit saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save opportunity kit");
+    } finally {
+      setIsSavingOpportunity(false);
+    }
+  };
 
   const updateMembershipTier = (tierId: string, updates: Partial<MembershipTier>) => {
     setMembershipTiers((current) =>
@@ -354,13 +415,19 @@ export default function CreatorHubPage() {
             </p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight">Grow your creator business</h1>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-base-content/70">
-              Track momentum, finish setup, and prepare your profile for future support and monetization.
+              Track momentum, publish opportunity signals, and turn posts into collaborations, paid work, and mentor calls.
             </p>
           </div>
-          <button type="button" onClick={() => router.push("/upload")} className="btn btn-primary rounded-xl">
-            <UploadCloud size={17} />
-            Upload clip
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => router.push("/collabs")} className="btn rounded-xl">
+              <Handshake size={17} />
+              Marketplace
+            </button>
+            <button type="button" onClick={() => router.push("/upload")} className="btn btn-primary rounded-xl">
+              <UploadCloud size={17} />
+              Upload post
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -372,7 +439,7 @@ export default function CreatorHubPage() {
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard icon={VideoIcon} label="Clips" value={formatMetric(summary?.total_videos)} />
+              <MetricCard icon={VideoIcon} label="Posts" value={formatMetric(summary?.total_videos)} />
               <MetricCard icon={Play} label="Views" value={formatMetric(summary?.total_views)} />
               <MetricCard icon={Heart} label="Likes" value={formatMetric(summary?.total_likes)} />
               <MetricCard icon={Users} label="Followers" value={formatMetric(summary?.followers)} />
@@ -429,6 +496,127 @@ export default function CreatorHubPage() {
                 </button>
               </section>
             </div>
+
+            <section id="opportunity-kit" className="mt-6 rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Opportunity kit</h2>
+                  <p className="mt-1 text-sm font-medium leading-6 text-base-content/70">
+                    These signals power your public profile and marketplace visibility.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
+                  {opportunityScore}/5 ready
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {[
+                      { key: "open_to_collab" as const, label: "Collab", icon: Handshake, helper: "Projects, remixes, shoots" },
+                      { key: "open_to_hire" as const, label: "Hire", icon: Briefcase, helper: "Paid briefs and gigs" },
+                      { key: "open_to_mentor" as const, label: "Mentor", icon: UserRoundCheck, helper: "Advice and skill calls" },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      const active = Boolean(opportunityForm[item.key]);
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => setOpportunityForm((current) => ({ ...current, [item.key]: !current[item.key] }))}
+                          className={`rounded-2xl border p-4 text-left transition ${
+                            active
+                              ? "border-primary bg-primary text-primary-content shadow-sm"
+                              : "border-base-300 bg-base-100 hover:bg-base-200"
+                          }`}
+                        >
+                          <Icon size={20} />
+                          <p className="mt-3 font-bold">{item.label}</p>
+                          <p className={`mt-1 text-xs font-medium leading-5 ${active ? "text-primary-content/80" : "text-base-content/60"}`}>
+                            {item.helper}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[190px_minmax(0,1fr)]">
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-bold">Availability</span>
+                      <select
+                        value={opportunityForm.availability_status}
+                        onChange={(event) => setOpportunityForm((current) => ({ ...current, availability_status: event.target.value }))}
+                        className="w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm outline-none focus:border-primary"
+                      >
+                        <option value="available">Available now</option>
+                        <option value="busy">Busy</option>
+                        <option value="offline">Offline</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-bold">Skills</span>
+                      <input
+                        value={opportunityForm.skill_tags}
+                        onChange={(event) => setOpportunityForm((current) => ({ ...current, skill_tags: event.target.value }))}
+                        placeholder="editing, comedy, food, fitness"
+                        className="w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm outline-none focus:border-primary"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-bold">Creator pitch</span>
+                    <textarea
+                      value={opportunityForm.bio}
+                      onChange={(event) => setOpportunityForm((current) => ({ ...current, bio: event.target.value }))}
+                      rows={3}
+                      placeholder="Tell people what you create, what you are best at, and what kinds of opportunities you want."
+                      className="w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm outline-none focus:border-primary"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => void saveOpportunityKit()}
+                    disabled={isSavingOpportunity}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-content transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <Save size={16} />
+                    {isSavingOpportunity ? "Saving..." : "Save opportunity kit"}
+                  </button>
+                </div>
+
+                <aside className="rounded-2xl border border-base-300 bg-base-200/50 p-4">
+                  <p className="text-sm font-bold">Public preview</p>
+                  <div className="mt-4 rounded-2xl border border-base-300 bg-base-100 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Sparkles size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold">{user?.first_name || user?.username || "Creator"}</p>
+                        <p className="text-xs font-medium text-base-content/60">@{user?.username || "creator"}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {opportunityModes.length === 0 ? (
+                        <span className="rounded-full bg-base-200 px-2.5 py-1 text-[11px] font-bold text-base-content/60">No modes yet</span>
+                      ) : opportunityModes.map((mode) => (
+                        <span key={mode} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">{mode}</span>
+                      ))}
+                    </div>
+                    <p className="mt-4 line-clamp-3 text-sm font-medium leading-6 text-base-content/70">
+                      {opportunityForm.bio || "Add a creator pitch so people know what to contact you for."}
+                    </p>
+                    <button type="button" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-content">
+                      <MessageCircle size={16} />
+                      Start conversation
+                    </button>
+                  </div>
+                </aside>
+              </div>
+            </section>
 
             <section className="mt-6 rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -603,8 +791,8 @@ export default function CreatorHubPage() {
             <section className="mt-6 rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-bold">Top clips</h2>
-                  <p className="mt-1 text-sm font-medium text-base-content/70">Your strongest videos are the best place to send new supporters.</p>
+                  <h2 className="text-lg font-bold">Top posts</h2>
+                  <p className="mt-1 text-sm font-medium text-base-content/70">Your strongest posts are the best place to send new supporters.</p>
                 </div>
                 <button type="button" onClick={() => router.push("/analytics")} className="text-sm font-bold text-primary">
                   Analytics
@@ -613,7 +801,7 @@ export default function CreatorHubPage() {
 
               {topVideos.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-base-300 px-6 py-10 text-center text-sm font-medium text-base-content/70">
-                  Upload your first clips and your best performers will appear here.
+                  Upload your first posts and your best performers will appear here.
                 </div>
               ) : (
                 <div className="divide-y divide-base-300">
@@ -635,7 +823,7 @@ export default function CreatorHubPage() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold">{video.title || "Untitled clip"}</p>
+                        <p className="truncate font-semibold">{video.title || "Untitled post"}</p>
                         <div className="mt-1 flex flex-wrap gap-3 text-xs text-base-content/65">
                           <span>{formatMetric(video.views)} views</span>
                           <span>{formatMetric(video.likes)} likes</span>

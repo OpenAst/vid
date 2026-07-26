@@ -44,14 +44,16 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { title, description, file_url, music_url, skill_category } = await req.json();
+  const { title, description, file_url, music_url, skill_category, media_type, file_type } = await req.json();
 
   const body = JSON.stringify({
     title,
     description,
     skill_category: skill_category || "general",
+    media_type: media_type || "video",
     file_url,
-    music_url
+    music_url,
+    file_type,
   });
 
   

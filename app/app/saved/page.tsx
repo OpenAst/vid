@@ -2,7 +2,7 @@
 
 import { RootState } from "@/app/store/store";
 import type { Video } from "@/app/store/videoSlice";
-import { Bookmark, Folder, FolderPlus, Play, Plus, Trash2, VideoIcon } from "lucide-react";
+import { Bookmark, Folder, FolderPlus, ImageIcon, Play, Plus, Trash2, VideoIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -60,12 +60,12 @@ export default function SavedPage() {
       const response = await fetch(url, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.detail || data?.error || "Unable to load saved videos");
+        throw new Error(data?.detail || data?.error || "Unable to load saved posts");
       }
       setVideos(Array.isArray(data.results) ? data.results : []);
     } catch (error) {
-      console.error("Failed to load saved videos", error);
-      toast.error(error instanceof Error ? error.message : "Unable to load saved videos");
+      console.error("Failed to load saved posts", error);
+      toast.error(error instanceof Error ? error.message : "Unable to load saved posts");
       setVideos([]);
     } finally {
       setIsLoading(false);
@@ -167,7 +167,7 @@ export default function SavedPage() {
               <Bookmark size={16} fill="currentColor" />
               Saved
             </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">Your saved clips</h1>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Your saved posts</h1>
           </div>
         </div>
 
@@ -236,11 +236,11 @@ export default function SavedPage() {
           <div className="flex min-h-[48vh] items-center justify-center rounded-2xl border border-dashed border-base-300 px-6 text-center">
             <div>
               <VideoIcon className="mx-auto mb-3 text-base-content/35" size={38} />
-              <p className="font-semibold">No saved clips yet</p>
+              <p className="font-semibold">No saved posts yet</p>
               <p className="mt-2 max-w-sm text-sm font-medium leading-6 text-base-content/70">
                 {activeCollectionId === "all"
-                  ? "Save videos from the feed and they will stay here for later."
-                  : "Add saved clips to this collection from the All saved view."}
+                  ? "Save posts from the feed and they will stay here for later."
+                  : "Add saved posts to this collection from the All saved view."}
               </p>
               <button type="button" onClick={() => router.push("/")} className="btn btn-primary btn-sm mt-5">
                 Browse feed
@@ -258,14 +258,14 @@ export default function SavedPage() {
                   onClick={() => router.push(`/video/${video.id}`)}
                   className="relative block aspect-[9/16] w-full overflow-hidden bg-black text-left"
                 >
-                  {video.thumbnail_url ? (
-                    <Image src={video.thumbnail_url} alt="" fill sizes="(min-width: 1280px) 18vw, (min-width: 768px) 25vw, 50vw" className="object-cover transition duration-300 group-hover:scale-105" />
+                  {video.media_type === "image" || video.thumbnail_url ? (
+                    <Image src={video.media_type === "image" ? video.file_url : video.thumbnail_url || video.file_url} alt="" fill sizes="(min-width: 1280px) 18vw, (min-width: 768px) 25vw, 50vw" className="object-cover transition duration-300 group-hover:scale-105" />
                   ) : (
                     <video src={video.file_url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                   <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-                    <Play size={12} fill="currentColor" />
+                    {video.media_type === "image" ? <ImageIcon size={12} /> : <Play size={12} fill="currentColor" />}
                     {video.views || 0}
                   </span>
                   <div className="absolute bottom-2 left-2 right-2 text-white">

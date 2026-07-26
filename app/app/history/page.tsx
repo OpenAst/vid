@@ -2,7 +2,7 @@
 
 import { RootState } from "@/app/store/store";
 import type { Video } from "@/app/store/videoSlice";
-import { Clock, Play, Trash2, VideoIcon } from "lucide-react";
+import { Clock, ImageIcon, Play, Trash2, VideoIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -126,7 +126,7 @@ export default function HistoryPage() {
               <VideoIcon className="mx-auto mb-3 text-base-content/35" size={38} />
               <p className="font-semibold">No watch history yet</p>
               <p className="mt-2 max-w-sm text-sm font-medium leading-6 text-base-content/70">
-                Videos you start watching will appear here so you can pick up where you left off.
+                Posts you view will appear here so you can pick up where you left off.
               </p>
               <button type="button" onClick={() => router.push("/")} className="btn btn-primary btn-sm mt-5">
                 Browse feed
@@ -144,14 +144,14 @@ export default function HistoryPage() {
                   onClick={() => router.push(`/video/${item.video.id}`)}
                   className="relative block aspect-[9/16] w-full overflow-hidden bg-black text-left"
                 >
-                  {item.video.thumbnail_url ? (
-                    <Image src={item.video.thumbnail_url} alt="" fill sizes="(min-width: 1280px) 18vw, (min-width: 768px) 25vw, 50vw" className="object-cover transition duration-300 group-hover:scale-105" />
+                  {item.video.media_type === "image" || item.video.thumbnail_url ? (
+                    <Image src={item.video.media_type === "image" ? item.video.file_url : item.video.thumbnail_url || item.video.file_url} alt="" fill sizes="(min-width: 1280px) 18vw, (min-width: 768px) 25vw, 50vw" className="object-cover transition duration-300 group-hover:scale-105" />
                   ) : (
                     <video src={item.video.file_url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
                   <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-                    <Play size={12} fill="currentColor" />
+                    {item.video.media_type === "image" ? <ImageIcon size={12} /> : <Play size={12} fill="currentColor" />}
                     {item.completed ? "Watched" : "Resume"}
                   </span>
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">

@@ -5,8 +5,14 @@ from accounts.models import UserAccount
 from uuid import uuid4
 
 class Video(models.Model):
+  MEDIA_TYPES = (
+    ("video", "Video"),
+    ("image", "Image"),
+  )
+
   id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
   uploader = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="videos")
+  media_type = models.CharField(max_length=16, choices=MEDIA_TYPES, default="video", db_index=True)
   title = models.CharField(max_length=255)
   description = models.TextField(blank=True)
   skill_category = models.CharField(max_length=100, default="general")

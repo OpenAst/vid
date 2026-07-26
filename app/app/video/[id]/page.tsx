@@ -5,7 +5,7 @@ import UserAvatar from "@/app/components/common/UserAvatar";
 import SupportCreatorButton from "@/app/components/creator/SupportCreatorButton";
 import { RootState } from "@/app/store/store";
 import type { MembershipTier } from "@/app/store/authSlice";
-import { Bookmark, Check, Copy, Heart, MessageCircle, Play, Share2, UserPlus, VideoIcon } from "lucide-react";
+import { Bookmark, Briefcase, Check, Copy, Heart, MessageCircle, Play, Share2, UserPlus, VideoIcon } from "lucide-react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,6 +17,7 @@ type VideoDetail = {
   title: string;
   description?: string;
   file_url: string;
+  media_type?: "video" | "image";
   thumbnail_url?: string | null;
   timestamp?: string;
   views?: number;
@@ -51,6 +52,9 @@ type CreatorProfile = {
     bio?: string | null;
     skill_tags?: string;
     availability_status?: string;
+    open_to_collab?: boolean;
+    open_to_hire?: boolean;
+    open_to_mentor?: boolean;
     membership_tiers?: MembershipTier[];
   };
 };
@@ -115,10 +119,35 @@ export default function VideoDetailPage() {
   const shareUrl = typeof window !== "undefined" && videoId ? `${window.location.origin}/video/${videoId}` : "";
   const creatorName = getCreatorName(creator || video?.uploader);
   const creatorAvailability = creator?.profile?.availability_status || "available";
+  const creatorHasOpportunityMode = Boolean(
+    creator?.profile?.open_to_collab || creator?.profile?.open_to_hire || creator?.profile?.open_to_mentor
+  );
+  const creatorPrimaryOpportunityMode = creator?.profile?.open_to_hire
+    ? "hire"
+    : creator?.profile?.open_to_mentor
+      ? "mentor"
+      : "collab";
   const isOwnVideo = Boolean(user?.id && video?.uploader?.id === user.id);
+  const isImagePost = video?.media_type === "image";
 
   const shareBrandedVideo = async () => {
     if (!video) return;
+
+    if (video.media_type === "image") {
+      const shareData = {
+        title: video.title,
+        text: `View ${video.title} on OneClyq`,
+        url: shareUrl,
+      };
+
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success("Photo link copied");
+      }
+      return;
+    }
 
     setIsSharing(true);
     let exportToast: string | undefined;
@@ -157,7 +186,7 @@ export default function VideoDetailPage() {
 
   const copyPageLink = async () => {
     await navigator.clipboard.writeText(shareUrl);
-    toast.success("Video page link copied");
+    toast.success(isImagePost ? "Photo page link copied" : "Video page link copied");
   };
 
   const toggleSavedVideo = async () => {
@@ -179,12 +208,12 @@ export default function VideoDetailPage() {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.detail || data?.error || "Unable to update saved videos");
+        throw new Error(data?.detail || data?.error || "Unable to update saved posts");
       }
-      toast.success(nextSaved ? "Saved to your clips" : "Removed from saved");
+      toast.success(nextSaved ? "Saved to your posts" : "Removed from saved");
     } catch (error) {
       setIsSaved(previousSaved);
-      toast.error(error instanceof Error ? error.message : "Unable to update saved videos");
+      toast.error(error instanceof Error ? error.message : "Unable to update saved posts");
     } finally {
       setIsSaving(false);
     }
@@ -217,7 +246,7 @@ export default function VideoDetailPage() {
 
   const syncWatchProgress = (completed = false) => {
     const currentVideo = detailVideoRef.current;
-    if (!video || !currentVideo || !isAuthenticated) return;
+    if (!video || video.media_type === "image" || !currentVideo || !isAuthenticated) return;
 
     const durationSeconds = Number.isFinite(currentVideo.duration) ? currentVideo.duration : 0;
     const progressSeconds = completed ? durationSeconds : currentVideo.currentTime;
@@ -254,9 +283,9 @@ export default function VideoDetailPage() {
       <main className="flex min-h-[100dvh] items-center justify-center bg-base-100 px-6 text-center text-base-content">
         <div>
           <VideoIcon className="mx-auto mb-3 text-base-content/35" size={36} />
-          <p className="font-semibold">Video not found</p>
+          <p className="font-semibold">Post not found</p>
           <button type="button" onClick={() => router.push("/discover")} className="mt-4 btn btn-primary btn-sm">
-            Explore videos
+            Explore posts
           </button>
         </div>
       </main>
@@ -267,35 +296,41 @@ export default function VideoDetailPage() {
     <main className="min-h-[100dvh] bg-base-100 px-4 pb-10 pt-[calc(var(--app-header-height)+18px)] text-base-content md:pl-[124px] md:pr-8">
       <div className="mx-auto grid w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <section className="relative mx-auto w-full max-w-[420px] overflow-hidden rounded-3xl bg-black shadow-xl">
-          <video
-            ref={detailVideoRef}
-            src={video.file_url}
-            poster={video.thumbnail_url || undefined}
-            controls
-            playsInline
-            onLoadedMetadata={(event) => {
-              const progress = video.watch_progress;
-              if (
-                progress &&
-                !progress.completed &&
-                progress.progress_seconds > 2 &&
-                Number.isFinite(event.currentTarget.duration) &&
-                progress.progress_seconds < event.currentTarget.duration - 2
-              ) {
-                event.currentTarget.currentTime = progress.progress_seconds;
-              }
-            }}
-            onTimeUpdate={(event) => {
-              const now = Date.now();
-              if (now - lastProgressSyncRef.current > 5000) {
-                lastProgressSyncRef.current = now;
-                syncWatchProgress(false);
-              }
-            }}
-            onPause={() => syncWatchProgress(false)}
-            onEnded={() => syncWatchProgress(true)}
-            className="aspect-[9/16] h-full w-full object-contain"
-          />
+          {isImagePost ? (
+            <div className="relative aspect-[9/16] h-full w-full">
+              <Image src={video.file_url} alt={video.title || ""} fill sizes="420px" className="object-contain" priority />
+            </div>
+          ) : (
+            <video
+              ref={detailVideoRef}
+              src={video.file_url}
+              poster={video.thumbnail_url || undefined}
+              controls
+              playsInline
+              onLoadedMetadata={(event) => {
+                const progress = video.watch_progress;
+                if (
+                  progress &&
+                  !progress.completed &&
+                  progress.progress_seconds > 2 &&
+                  Number.isFinite(event.currentTarget.duration) &&
+                  progress.progress_seconds < event.currentTarget.duration - 2
+                ) {
+                  event.currentTarget.currentTime = progress.progress_seconds;
+                }
+              }}
+              onTimeUpdate={() => {
+                const now = Date.now();
+                if (now - lastProgressSyncRef.current > 5000) {
+                  lastProgressSyncRef.current = now;
+                  syncWatchProgress(false);
+                }
+              }}
+              onPause={() => syncWatchProgress(false)}
+              onEnded={() => syncWatchProgress(true)}
+              className="aspect-[9/16] h-full w-full object-contain"
+            />
+          )}
           <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/35 px-2.5 py-1.5 text-white shadow-lg backdrop-blur-md">
             <Image src="/oneclyq.png" alt="" width={18} height={18} className="rounded-full" />
             <span className="text-[11px] font-bold tracking-wide">OneClyq</span>
@@ -336,7 +371,7 @@ export default function VideoDetailPage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-content transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Share2 size={16} />
-                {isSharing ? "Preparing..." : "Share branded"}
+                {isSharing ? "Preparing..." : isImagePost ? "Share photo" : "Share branded"}
               </button>
               <button
                 type="button"
@@ -410,6 +445,16 @@ export default function VideoDetailPage() {
                     <MessageCircle size={16} />
                     Message
                   </button>
+                  {creatorHasOpportunityMode && (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/collabs?creator=${encodeURIComponent(creator.username || video.uploader.username || "")}&mode=${creatorPrimaryOpportunityMode}`)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-content transition hover:opacity-90"
+                    >
+                      <Briefcase size={16} />
+                      Work with me
+                    </button>
+                  )}
                   <SupportCreatorButton creatorId={video.uploader.id} creatorName={creatorName} tiers={creator.profile?.membership_tiers} />
                   <CallButton peer={video.uploader} type="audio" availabilityStatus={creatorAvailability} />
                   <CallButton peer={video.uploader} type="video" availabilityStatus={creatorAvailability} />

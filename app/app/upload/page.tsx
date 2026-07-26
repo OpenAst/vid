@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Camera, Music2, Video, X, Square } from "lucide-react";
+import { Camera, ImageIcon, Music2, Video, X, Square } from "lucide-react";
 import { useUploadManager } from "@/app/components/upload/UploadProvider";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUser } from "@/app/store/authSlice";
@@ -48,7 +48,9 @@ const UploadVideo = () => {
   const { hasActiveUploads, startUpload } = useUploadManager();
 
 
+  const [mediaType, setMediaType] = useState<"video" | "image">("video");
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [musicFile, setMusicFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null);
@@ -138,9 +140,23 @@ const UploadVideo = () => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith("video/")) {
       setVideoFile(file);
+      setImageFile(null);
       setPreviewUrl(URL.createObjectURL(file));
     } else {
       toast.error("Selected file is not a valid video");
+    }
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setImageFile(file);
+      setVideoFile(null);
+      setPreviewUrl(URL.createObjectURL(file));
+      setMusicFile(null);
+      setMusicPreviewUrl(null);
+    } else {
+      toast.error("Selected file is not a valid image");
     }
   };
 
@@ -226,7 +242,8 @@ const UploadVideo = () => {
     }
   }, [didRestoreDraft, formData]);
 
-  const hasSelectedMedia = Boolean(videoFile || musicFile || recordedChunks.length > 0);
+  const selectedMediaFile = mediaType === "image" ? imageFile : videoFile;
+  const hasSelectedMedia = Boolean(selectedMediaFile || musicFile || recordedChunks.length > 0);
 
   useEffect(() => {
     if (!hasSelectedMedia || hasActiveUploads) return;
@@ -243,6 +260,7 @@ const UploadVideo = () => {
     window.localStorage.removeItem(UPLOAD_DRAFT_STORAGE_KEY);
     setFormData(emptyFormData);
     setVideoFile(null);
+    setImageFile(null);
     setMusicFile(null);
     setPreviewUrl(null);
     setMusicPreviewUrl(null);
@@ -253,8 +271,8 @@ const UploadVideo = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!videoFile) {
-      toast.error("Please select or record a video file");
+    if (!selectedMediaFile) {
+      toast.error(mediaType === "image" ? "Please select a photo" : "Please select or record a video file");
       return;
     }
 
@@ -264,8 +282,9 @@ const UploadVideo = () => {
     }
 
     startUpload({
-      videoFile,
-      musicFile,
+      mediaFile: selectedMediaFile,
+      mediaType,
+      musicFile: mediaType === "video" ? musicFile : null,
       title: formData.title,
       description: formData.description,
       skillCategory: formData.skill_category,
@@ -273,6 +292,7 @@ const UploadVideo = () => {
     window.localStorage.removeItem(UPLOAD_DRAFT_STORAGE_KEY);
     setFormData(emptyFormData);
     setVideoFile(null);
+    setImageFile(null);
     setMusicFile(null);
     setPreviewUrl(null);
     setMusicPreviewUrl(null);
@@ -319,9 +339,9 @@ const UploadVideo = () => {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Creator studio</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">Upload clip</h1>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">Create post</h1>
             <p className="mt-2 text-sm font-medium text-base-content/70">
-              Post a video, add context, and keep moving while upload runs.
+              Post a video or photo, add context, and keep moving while upload runs.
             </p>
           </div>
             {(hasDraftContent || hasSelectedMedia) && (
@@ -351,8 +371,44 @@ const UploadVideo = () => {
 
             {/* Title Input */}
             <div>
+              <span className="mb-2 block text-sm font-bold text-base-content">Post type</span>
+              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[rgba(68,13,156,0.18)] bg-base-200 p-1">
+                {[
+                  { value: "video" as const, label: "Video", icon: Video },
+                  { value: "image" as const, label: "Photo", icon: ImageIcon },
+                ].map((option) => {
+                  const Icon = option.icon;
+                  const active = mediaType === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        if (mediaType === option.value) return;
+                        setMediaType(option.value);
+                        setVideoFile(null);
+                        setImageFile(null);
+                        setMusicFile(null);
+                        setPreviewUrl(null);
+                        setMusicPreviewUrl(null);
+                        setRecordedChunks([]);
+                        stopCamera();
+                      }}
+                      className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                        active ? "bg-base-content text-base-100 shadow-sm" : "text-base-content/65 hover:bg-base-100"
+                      }`}
+                    >
+                      <Icon size={16} />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
               <label htmlFor="title" className="mb-2 block text-sm font-bold text-base-content">
-                Video Title *
+                {mediaType === "image" ? "Photo title *" : "Video title *"}
               </label>
               <input
                 type="text"
@@ -401,40 +457,42 @@ const UploadVideo = () => {
 
             <div>
               <label className="mb-2 block text-sm font-bold text-base-content">
-                Video Content *
+                {mediaType === "image" ? "Photo *" : "Video content *"}
               </label>
 
               {!isCameraActive ? (
                 <div className="space-y-4">
                   <div className="flex gap-4">
                     <label
-                      htmlFor="video-upload"
+                      htmlFor={mediaType === "image" ? "image-upload" : "video-upload"}
                       className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 px-4 py-3 text-center text-sm font-medium text-base-content shadow-sm transition-all hover:bg-base-300"
                     >
-                      <Video size={20} />
-                      <span>Choose Media</span>
+                      {mediaType === "image" ? <ImageIcon size={20} /> : <Video size={20} />}
+                      <span>{mediaType === "image" ? "Choose Photo" : "Choose Video"}</span>
                       <input
-                        id="video-upload"
-                        name="video"
+                        id={mediaType === "image" ? "image-upload" : "video-upload"}
+                        name={mediaType}
                         type="file"
-                        accept="video/*"
-                        onChange={handleFileChange}
+                        accept={mediaType === "image" ? "image/*" : "video/*"}
+                        onChange={mediaType === "image" ? handleImageFileChange : handleFileChange}
                         className="sr-only"
                       />
                     </label>
 
-                    <button
-                      type="button"
-                      onClick={startCamera}
-                      className="flex-1 bg-primary/10 py-3 px-4 border border-primary/20 rounded-xl shadow-sm text-center text-sm font-medium text-primary hover:bg-primary/20 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Camera size={20} />
-                      Record Now
-                    </button>
+                    {mediaType === "video" && (
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        className="flex-1 bg-primary/10 py-3 px-4 border border-primary/20 rounded-xl shadow-sm text-center text-sm font-medium text-primary hover:bg-primary/20 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Camera size={20} />
+                        Record Now
+                      </button>
+                    )}
                   </div>
 
                   <span className="block text-center text-xs font-medium text-base-content/70">
-                    {videoFile ? `Selected: ${videoFile.name}` : "No file selected"}
+                    {selectedMediaFile ? `Selected: ${selectedMediaFile.name}` : "No file selected"}
                   </span>
                 </div>
               ) : (
@@ -486,21 +544,31 @@ const UploadVideo = () => {
                 </div>
               )}
 
-              {/* Show the recorded/selected video preview if camera is not active */}
+              {/* Show the recorded/selected media preview if camera is not active */}
               {!isCameraActive && previewUrl && (
                 <div className="mt-4 flex justify-center">
                   <div className="w-full max-w-xs relative group">
-                    <video
-                      key={previewUrl}
-                      src={previewUrl}
-                      controls
-                      className="w-full aspect-[9/16] object-cover rounded-2xl border-2 border-primary/20 shadow-xl"
-                    />
+                    {mediaType === "image" ? (
+                      <img
+                        key={previewUrl}
+                        src={previewUrl}
+                        alt=""
+                        className="w-full aspect-[9/16] object-cover rounded-2xl border-2 border-primary/20 shadow-xl"
+                      />
+                    ) : (
+                      <video
+                        key={previewUrl}
+                        src={previewUrl}
+                        controls
+                        className="w-full aspect-[9/16] object-cover rounded-2xl border-2 border-primary/20 shadow-xl"
+                      />
+                    )}
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         type="button"
                         onClick={() => {
                           setVideoFile(null);
+                          setImageFile(null);
                           setPreviewUrl(null);
                         }}
                         className="p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
@@ -526,54 +594,56 @@ const UploadVideo = () => {
               )}
             </div>
 
-            <div>
-              <label htmlFor="music-upload" className="mb-2 block text-sm font-bold text-base-content">
-                Background Music
-              </label>
-              <label
-                htmlFor="music-upload"
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 px-4 py-3 text-center text-sm font-medium text-base-content shadow-sm transition-all hover:bg-base-300"
-              >
-                <Music2 size={20} />
-                <span>{musicFile ? "Change Music" : "Choose Music"}</span>
-                <input
-                  id="music-upload"
-                  name="music"
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleMusicFileChange}
-                  className="sr-only"
-                />
-              </label>
-              {musicFile && (
-                <div className="mt-3 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="min-w-0 truncate text-sm text-base-content/80">{musicFile.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMusicFile(null);
-                        setMusicPreviewUrl(null);
-                      }}
-                      className="p-1.5 rounded-full bg-base-300 text-base-content hover:bg-red-500 hover:text-white transition-colors"
-                      aria-label="Remove background music"  
-                    >
-                      <X size={16} />
-                    </button>
+            {mediaType === "video" && (
+              <div>
+                <label htmlFor="music-upload" className="mb-2 block text-sm font-bold text-base-content">
+                  Background Music
+                </label>
+                <label
+                  htmlFor="music-upload"
+                  className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 px-4 py-3 text-center text-sm font-medium text-base-content shadow-sm transition-all hover:bg-base-300"
+                >
+                  <Music2 size={20} />
+                  <span>{musicFile ? "Change Music" : "Choose Music"}</span>
+                  <input
+                    id="music-upload"
+                    name="music"
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleMusicFileChange}
+                    className="sr-only"
+                  />
+                </label>
+                {musicFile && (
+                  <div className="mt-3 rounded-xl border border-[rgba(68,13,156,0.18)] bg-base-200 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="min-w-0 truncate text-sm text-base-content/80">{musicFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMusicFile(null);
+                          setMusicPreviewUrl(null);
+                        }}
+                        className="p-1.5 rounded-full bg-base-300 text-base-content hover:bg-red-500 hover:text-white transition-colors"
+                        aria-label="Remove background music"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    {musicPreviewUrl && (
+                      <audio src={musicPreviewUrl} controls className="mt-3 w-full" />
+                    )}
                   </div>
-                  {musicPreviewUrl && (
-                    <audio src={musicPreviewUrl} controls className="mt-3 w-full" />
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <div className="sticky bottom-0 z-10 -mx-4 border-t border-base-300 bg-base-100/95 px-4 pb-2 pt-4 backdrop-blur sm:-mx-6 sm:px-6">
               <button
                 type="submit"
-                disabled={hasActiveUploads || isRecording || (!videoFile && !isCameraActive)}
+                disabled={hasActiveUploads || isRecording || (!selectedMediaFile && !isCameraActive)}
                 className={`flex w-full items-center justify-center rounded-xl border border-transparent bg-[rgb(68,13,156)] px-4 py-4 text-base font-bold text-white shadow-lg transition-all hover:scale-[1.01] hover:bg-[rgb(57,10,132)] active:scale-[0.99]
-                ${(hasActiveUploads || isRecording || (!videoFile && !isCameraActive)) ? 'cursor-not-allowed bg-[rgb(68,13,156)]/60 text-white/95 hover:scale-100 hover:bg-[rgb(68,13,156)]/60' : ''}`}
+                ${(hasActiveUploads || isRecording || (!selectedMediaFile && !isCameraActive)) ? 'cursor-not-allowed bg-[rgb(68,13,156)]/60 text-white/95 hover:scale-100 hover:bg-[rgb(68,13,156)]/60' : ''}`}
               >
                 {hasActiveUploads ? (
                   <>
@@ -583,7 +653,7 @@ const UploadVideo = () => {
                     </svg>
                     Upload running...
                   </>
-                ) : 'Post clip'}
+                ) : mediaType === "image" ? 'Post photo' : 'Post video'}
               </button>
             </div>
           </form>

@@ -138,6 +138,23 @@ const Feed = ({
   const handleShare = useCallback(async (video: Video) => {
     let exportToast: string | undefined;
     try {
+      if (video.media_type === "image") {
+        const pageUrl = typeof window !== "undefined" ? window.location.origin + `/video/${video.id}` : "";
+        const shareData = {
+          title: video.title,
+          text: `View ${video.title} on OneClyq`,
+          url: pageUrl,
+        };
+
+        if (navigator.share) {
+          await navigator.share(shareData);
+        } else if (pageUrl) {
+          await navigator.clipboard.writeText(pageUrl);
+          toast.success("Photo link copied");
+        }
+        return;
+      }
+
       exportToast = toast.loading("Preparing branded share...");
       const response = await fetch(`/api/video/${video.id}/watermark`, { method: "POST" });
       const data = await response.json().catch(() => null);
@@ -170,14 +187,14 @@ const Feed = ({
         if (fallbackUrl) {
           await navigator.clipboard.writeText(fallbackUrl).catch(() => undefined);
         }
-        toast.error("Branded export failed. Clip link copied instead.");
+        toast.error(video.media_type === "image" ? "Unable to share photo. Link copied instead." : "Branded export failed. Clip link copied instead.");
       }
     }
   }, []);
 
   const handleBookmarkToggle = useCallback(async (video: Video) => {
     if (!user) {
-      toast.error("Sign in to save videos");
+      toast.error("Sign in to save posts");
       router.push("/login");
       return;
     }
@@ -202,9 +219,9 @@ const Feed = ({
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.detail || data?.error || "Unable to update saved videos");
+        throw new Error(data?.detail || data?.error || "Unable to update saved posts");
       }
-      toast.success(nextSaved ? "Saved to your clips" : "Removed from saved");
+      toast.success(nextSaved ? "Saved to your posts" : "Removed from saved");
     } catch (error) {
       setBookmarkedVideoIds((prev) => {
         const nextBookmarks = new Set(prev);
@@ -216,7 +233,7 @@ const Feed = ({
         return nextBookmarks;
       });
       dispatch(updateSaveState({ videoId: video.id, isSaved: wasSaved }));
-      toast.error(error instanceof Error ? error.message : "Unable to update saved videos");
+      toast.error(error instanceof Error ? error.message : "Unable to update saved posts");
     }
   }, [bookmarkedVideoIds, dispatch, router, user]);
 
@@ -389,11 +406,11 @@ const Feed = ({
         <div className="flex h-[calc(var(--feed-shell-height)-96px)] snap-start items-center justify-center px-6 text-center">
           <div>
             <p className="text-lg font-semibold text-base-content">
-              {feedMode === "following" ? "No videos from people you follow yet" : "No videos found"}
+              {feedMode === "following" ? "No posts from people you follow yet" : "No posts found"}
             </p>
             <p className="mt-2 max-w-xs text-sm leading-6 text-base-content/60">
               {feedMode === "following"
-                ? "Follow a few creators from their profiles, then their videos will show up here."
+                ? "Follow a few creators from their profiles, then their posts will show up here."
                 : "Try another search or category."}
             </p>
           </div>
@@ -417,6 +434,7 @@ const Feed = ({
                 }}
                 id={video.id}
                 file_url={video.file_url || ""}
+                mediaType={video.media_type || "video"}
                 thumbnail_url={video.thumbnail_url || null}
                 isActive={idx === activeIndex}
                 resumeAt={video.watch_progress?.completed ? 0 : video.watch_progress?.progress_seconds || 0}
@@ -494,7 +512,7 @@ const Feed = ({
                 <button
                   onClick={() => handleBookmarkToggle(video)}
                   className="flex flex-col items-center hover:scale-110 active:scale-95 transition"
-                  title={bookmarkedVideoIds.has(video.id) ? "Remove bookmark" : "Save video"}
+                  title={bookmarkedVideoIds.has(video.id) ? "Remove bookmark" : "Save post"}
                 >
                   <div className="p-2 rounded-full bg-black/40 backdrop-blur-md shadow-lg border border-white/10">
                     <Bookmark

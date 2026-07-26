@@ -112,6 +112,20 @@ export default function CollabsPage() {
   const [showRequestForm, setShowRequestForm] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const creatorParam = searchParams.get("creator") || "";
+    const modeParam = searchParams.get("mode") || "";
+
+    if (creatorParam) {
+      setQuery(creatorParam);
+    }
+    if (["all", "collab", "hire", "mentor"].includes(modeParam)) {
+      setMode(modeParam as CollabMode);
+    }
+  }, []);
+
+  useEffect(() => {
     if (isBootstrapped && !isAuthenticated) {
       router.replace("/login");
     }
@@ -457,7 +471,7 @@ export default function CollabsPage() {
                 <input
                   value={requestForm.title}
                   onChange={(event) => setRequestForm((current) => ({ ...current, title: event.target.value }))}
-                  placeholder="Need a dancer for a music clip"
+                  placeholder="Need a dancer for a music post"
                   className="rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm outline-none focus:border-primary"
                 />
                 <input

@@ -275,6 +275,7 @@ export const updateUser = createAsyncThunk(
       skipped_profile_setup?: boolean;
       skipped_interests?: boolean;
       skipped_follow_suggestions?: boolean;
+      membership_tiers?: MembershipTier[];
     }, { rejectWithValue }) => {
     try {
       const res = await fetch("/api/auth/profile_update", {

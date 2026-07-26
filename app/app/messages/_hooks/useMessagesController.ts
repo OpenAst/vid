@@ -297,7 +297,9 @@ export function useMessagesController() {
       });
     } catch (error) {
       console.error("Failed to load conversations", error);
-      setConversationError(error instanceof Error ? error.message : "Unable to load conversations");
+      if (!silent) {
+        setConversationError(error instanceof Error ? error.message : "Unable to load conversations");
+      }
     } finally {
       if (!silent) {
         setIsLoadingConversations(false);
