@@ -6,6 +6,7 @@ export interface Video {
   title: string;
   description: string;
   file_url: string;
+  hls_url?: string | null;
   media_type?: "video" | "image";
   music_url?: string | null;
   processing_status?: string;

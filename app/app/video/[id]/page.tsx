@@ -7,6 +7,7 @@ import { RootState } from "@/app/store/store";
 import type { MembershipTier } from "@/app/store/authSlice";
 import { Bookmark, Briefcase, Check, Copy, Heart, MessageCircle, Play, Share2, UserPlus, VideoIcon } from "lucide-react";
 import Image from "next/image";
+import Hls from "hls.js";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -17,6 +18,7 @@ type VideoDetail = {
   title: string;
   description?: string;
   file_url: string;
+  hls_url?: string | null;
   media_type?: "video" | "image";
   thumbnail_url?: string | null;
   timestamp?: string;
@@ -115,6 +117,38 @@ export default function VideoDetailPage() {
     if (!videoId) return;
     void fetch(`/api/video/${videoId}/view`, { method: "POST" });
   }, [videoId]);
+
+  useEffect(() => {
+    const player = detailVideoRef.current;
+    if (!player || !video?.hls_url || video.media_type === "image") return;
+
+    const useMp4Fallback = () => {
+      player.src = video.file_url;
+      player.load();
+    };
+
+    if (player.canPlayType("application/vnd.apple.mpegurl")) {
+      player.src = video.hls_url;
+      player.load();
+      return;
+    }
+
+    if (!Hls.isSupported()) {
+      useMp4Fallback();
+      return;
+    }
+
+    const hls = new Hls({ capLevelToPlayerSize: true, enableWorker: true, maxBufferLength: 20 });
+    hls.loadSource(video.hls_url);
+    hls.attachMedia(player);
+    hls.on(Hls.Events.ERROR, (_event, data) => {
+      if (data.fatal) {
+        hls.destroy();
+        useMp4Fallback();
+      }
+    });
+    return () => hls.destroy();
+  }, [video]);
 
   const shareUrl = typeof window !== "undefined" && videoId ? `${window.location.origin}/video/${videoId}` : "";
   const creatorName = getCreatorName(creator || video?.uploader);
@@ -303,7 +337,7 @@ export default function VideoDetailPage() {
           ) : (
             <video
               ref={detailVideoRef}
-              src={video.file_url}
+              src={video.hls_url ? undefined : video.file_url}
               poster={video.thumbnail_url || undefined}
               controls
               playsInline

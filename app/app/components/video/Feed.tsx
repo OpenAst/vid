@@ -46,6 +46,7 @@ const Feed = ({
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [hasAudioPermission, setHasAudioPermission] = useState(false);
   const next = useSelector((state: RootState) => state.video.next);
   const isLoading = useSelector((state: RootState) => state.video.isLoading);
   const { isCalling } = useCall();
@@ -63,6 +64,18 @@ const Feed = ({
   const socketRef = useRef<RealtimeSocket | null>(null);
   const currentIndexRef = useRef(0);
   const rafPlaybackRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Browsers prohibit audible autoplay before a real user gesture. The first
+    // tap, key press, or swipe unlocks sound for the active post.
+    const unlockAudio = () => setHasAudioPermission(true);
+    window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -261,6 +274,8 @@ const Feed = ({
           feed: apiFeed,
           category: selectedCategory,
           shuffleSeed: forYouShuffleSeed,
+
+
           cacheScope: viewerCacheScope,
           append: false,
           background: false,
@@ -306,7 +321,7 @@ const Feed = ({
       }
 
       if (idx === nextIndex) {
-        video.muted = false;
+        video.muted = !hasAudioPermission;
         if (!card.isUserPaused) {
           void video.play().catch((error) => {
             if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
@@ -320,7 +335,7 @@ const Feed = ({
         video.muted = true;
       }
     });
-  }, [isCalling]);
+  }, [hasAudioPermission, isCalling]);
 
   useEffect(() => {
     videoRefs.current = videoRefs.current.slice(0, videoCount);
@@ -434,9 +449,14 @@ const Feed = ({
                 }}
                 id={video.id}
                 file_url={video.file_url || ""}
+                hls_url={video.hls_url || null}
                 mediaType={video.media_type || "video"}
                 thumbnail_url={video.thumbnail_url || null}
                 isActive={idx === activeIndex}
+                allowSound={hasAudioPermission}
+                // Keep network capacity for the post the person is watching. The
+                // next card gets just enough data to start promptly after a swipe.
+                preload={idx === activeIndex ? "auto" : idx === activeIndex + 1 ? "metadata" : "none"}
                 resumeAt={video.watch_progress?.completed ? 0 : video.watch_progress?.progress_seconds || 0}
                 isCommentsOpen={openCommentsFor === video.id}
                 onCloseComments={() => setOpenCommentsFor(null)}

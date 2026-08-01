@@ -36,7 +36,7 @@ class VideoSerializer(serializers.ModelSerializer):
     model = Video
     fields = [
       'id', 'title', 'description', 'skill_category', 'media_type', 'thumbnail_url',
-       'timestamp', 'file_url', 'music_url', 'processing_status', 'uploader',
+       'timestamp', 'file_url', 'hls_url', 'music_url', 'processing_status', 'uploader',
        "likes", "dislikes", "comments_count", "user_vote", "is_saved", "watch_progress", "views", "created_at"
     ]
     read_only_fields = ['id', 'views', 'timestamp', 'uploader', 'created_at', 'processing_status', 'is_saved', 'watch_progress']

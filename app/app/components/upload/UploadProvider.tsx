@@ -89,6 +89,46 @@ function sanitizeFileName(fileName: string) {
   return fileName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+async function createVideoPoster(file: File): Promise<File | null> {
+  if (!file.type.startsWith("video/")) return null;
+
+  const objectUrl = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  video.src = objectUrl;
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error("Could not read video for poster"));
+    });
+
+    // A frame just after the opening avoids common black first frames.
+    if (Number.isFinite(video.duration) && video.duration > 0.2) {
+      video.currentTime = Math.min(0.5, video.duration * 0.1);
+      await new Promise<void>((resolve) => {
+        video.onseeked = () => resolve();
+      });
+    }
+
+    if (!video.videoWidth || !video.videoHeight) return null;
+    const scale = Math.min(1, 1280 / video.videoWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
+    return blob ? new File([blob], `${file.name}.jpg`, { type: "image/jpeg" }) : null;
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 async function uploadFile(file: File, onProgress: (progress: number) => void): Promise<UploadedFile> {
   const initRes = await fetch("/api/video/initiate", {
     method: "POST",
@@ -189,9 +229,18 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           startedAt: Date.now(),
         });
 
+        const posterPromise = input.mediaType === "video"
+          ? createVideoPoster(input.mediaFile).catch(() => null)
+          : Promise.resolve(null);
+
         const uploadedMedia = await uploadFile(input.mediaFile, (progress) => {
           updateJob(jobId, { progress });
         });
+
+        const poster = await posterPromise;
+        const uploadedPoster = poster
+          ? await uploadFile(poster, () => undefined)
+          : null;
 
         const uploadedMusic = input.mediaType === "video" && input.musicFile
           ? await uploadFile(input.musicFile, (progress) => {
@@ -212,6 +261,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             media_type: input.mediaType,
             file_url: uploadedMedia.publicUrl,
             music_url: uploadedMusic?.publicUrl || null,
+            thumbnail_url: uploadedPoster?.publicUrl || null,
             file_key: uploadedMedia.objectKey,
             file_size: input.mediaFile.size,
             file_type: input.mediaFile.type,

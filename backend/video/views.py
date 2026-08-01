@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import threading
 import requests
+import shutil
 from datetime import timedelta
 from hashlib import sha1
 from urllib.parse import urljoin
@@ -136,24 +137,25 @@ class VideoUploadView(generics.CreateAPIView):
 
             self.perform_create(serializer)
             video_instance = serializer.instance
+
+            # The client creates a frame before publication, so a feed card always
+            # has a visual fallback while the stream is opening.
+            supplied_thumbnail = request.data.get("thumbnail_url")
+            if supplied_thumbnail:
+                video_instance.thumbnail = supplied_thumbnail
+                video_instance.save(update_fields=["thumbnail"])
             
             if video_instance.media_type == "image":
                 video_instance.thumbnail = video_instance.file_url
                 video_instance.processing_status = "ready"
                 video_instance.save(update_fields=["thumbnail", "processing_status"])
             else:
-                # Trigger thumbnail extraction in the background
-                threading.Thread(
-                    target=extract_and_upload_thumbnail,
-                    args=(video_instance.file_url, video_instance)
-                ).start()
-
-            if video_instance.media_type == "video" and video_instance.music_url:
                 video_instance.processing_status = "processing"
                 video_instance.save(update_fields=["processing_status"])
                 threading.Thread(
-                    target=mix_music_and_upload_video,
-                    args=(video_instance.id,)
+                    target=transcode_video_and_upload,
+                    args=(video_instance.id,),
+                    daemon=True,
                 ).start()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -1151,7 +1153,9 @@ def initiate_multipart_upload(request):
         Bucket=settings.AWS_STORAGE_BUCKET_NAME,
         Key=object_key,
         ACL='public-read',
-        ContentType=file_type
+        ContentType=file_type,
+        CacheControl='public, max-age=31536000, immutable',
+        ContentDisposition='inline',
     )
     public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{object_key}"
 
@@ -1403,21 +1407,110 @@ def video_has_audio_stream(video_path):
         return False
 
 
-def mix_music_and_upload_video(video_id):
+def video_height(video_path):
+    """Return the source height so we don't create wasteful upscaled variants."""
+    result = subprocess.run(
+        [
+            'ffprobe', '-v', 'error', '-select_streams', 'v:0',
+            '-show_entries', 'stream=height', '-of', 'json', video_path,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    streams = json.loads(result.stdout or '{}').get('streams', [])
+    return int(streams[0]['height']) if streams else 360
+
+
+def upload_hls_variants(source_path, video_instance, s3):
+    """Generate a VOD HLS master playlist and adaptive quality variants."""
+    source_height = video_height(source_path)
+    rendition_heights = [height for height in (360, 540, 720) if height <= source_height]
+    if not rendition_heights:
+        rendition_heights = [min(360, source_height)]
+
+    hls_dir = tempfile.mkdtemp(prefix=f"hls-{video_instance.id}-")
+    has_audio = video_has_audio_stream(source_path)
+    try:
+        for index in range(len(rendition_heights)):
+            os.makedirs(os.path.join(hls_dir, f"v{index}"), exist_ok=True)
+
+        split_outputs = ''.join(f'[v{index}]' for index in range(len(rendition_heights)))
+        filters = [f'[0:v]split={len(rendition_heights)}{split_outputs}']
+        for index, height in enumerate(rendition_heights):
+            filters.append(f'[v{index}]scale=-2:{height}:force_original_aspect_ratio=decrease[v{index}out]')
+
+        command = ['ffmpeg', '-y', '-i', source_path, '-filter_complex', ';'.join(filters)]
+        for index in range(len(rendition_heights)):
+            command.extend(['-map', f'[v{index}out]'])
+            if has_audio:
+                command.extend(['-map', '0:a:0'])
+
+        variant_map = ' '.join(
+            f'v:{index},a:{index}' if has_audio else f'v:{index}'
+            for index in range(len(rendition_heights))
+        )
+        command.extend([
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p',
+            '-g', '48', '-keyint_min', '48', '-sc_threshold', '0',
+            '-c:a', 'aac', '-b:a', '128k',
+            '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod',
+            '-hls_flags', 'independent_segments',
+            '-hls_segment_filename', os.path.join(hls_dir, 'v%v', 'segment_%03d.ts'),
+            '-master_pl_name', 'master.m3u8', '-var_stream_map', variant_map,
+            os.path.join(hls_dir, 'v%v', 'index.m3u8'),
+        ])
+        subprocess.run(command, check=True, capture_output=True, text=True)
+
+        hls_key_prefix = f"hls/{video_instance.uploader_id}/{video_instance.id}"
+        for root, _, filenames in os.walk(hls_dir):
+            for filename in filenames:
+                local_path = os.path.join(root, filename)
+                relative_path = os.path.relpath(local_path, hls_dir).replace(os.sep, '/')
+                content_type = 'application/vnd.apple.mpegurl' if filename.endswith('.m3u8') else 'video/mp2t'
+                with open(local_path, 'rb') as media_file:
+                    s3.put_object(
+                        Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                        Key=f"{hls_key_prefix}/{relative_path}",
+                        Body=media_file,
+                        ACL='public-read',
+                        ContentType=content_type,
+                        CacheControl='public, max-age=31536000, immutable',
+                        ContentDisposition='inline',
+                    )
+
+        return f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{hls_key_prefix}/master.m3u8"
+    finally:
+        shutil.rmtree(hls_dir, ignore_errors=True)
+
+
+def transcode_video_and_upload(video_id):
     temp_video = None
     temp_music = None
     temp_output = None
 
     try:
         video_instance = Video.objects.get(id=video_id)
-        if not video_instance.music_url:
-            return
-
         temp_video = download_to_temp_file(video_instance.file_url, ".mp4")
-        temp_music = download_to_temp_file(video_instance.music_url, ".audio")
         temp_output = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
 
-        if video_has_audio_stream(temp_video):
+        if video_instance.music_url:
+            temp_music = download_to_temp_file(video_instance.music_url, ".audio")
+
+        # Produce a universally playable progressive MP4. `faststart` moves the
+        # MP4 index to the beginning, allowing playback before the whole file is
+        # downloaded; H.264/AAC also avoids browser-specific source codecs.
+        encode_options = [
+            '-c:v', 'libx264',
+            '-preset', 'veryfast',
+            '-crf', '23',
+            '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-movflags', '+faststart',
+        ]
+
+        if video_instance.music_url and video_has_audio_stream(temp_video):
             ffmpeg_command = [
                 'ffmpeg',
                 '-y',
@@ -1433,14 +1526,11 @@ def mix_music_and_upload_video(video_id):
                 '0:v:0',
                 '-map',
                 '[aout]',
-                '-c:v',
-                'copy',
-                '-c:a',
-                'aac',
+                *encode_options,
                 '-shortest',
                 temp_output,
             ]
-        else:
+        elif video_instance.music_url:
             ffmpeg_command = [
                 'ffmpeg',
                 '-y',
@@ -1454,11 +1544,15 @@ def mix_music_and_upload_video(video_id):
                 '0:v:0',
                 '-map',
                 '1:a:0',
-                '-c:v',
-                'copy',
-                '-c:a',
-                'aac',
+                *encode_options,
                 '-shortest',
+                temp_output,
+            ]
+        else:
+            ffmpeg_command = [
+                'ffmpeg', '-y', '-i', temp_video,
+                '-map', '0:v:0', '-map', '0:a?',
+                *encode_options,
                 temp_output,
             ]
 
@@ -1476,28 +1570,39 @@ def mix_music_and_upload_video(video_id):
             )
         )
 
-        key = f"processed/{video_instance.uploader_id}/{video_instance.id}_with_music.mp4"
+        key = f"processed/{video_instance.uploader_id}/{video_instance.id}.mp4"
         with open(temp_output, 'rb') as f:
             s3.put_object(
                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
                 Key=key,
                 Body=f,
                 ACL='public-read',
-                ContentType='video/mp4'
+                ContentType='video/mp4',
+                CacheControl='public, max-age=31536000, immutable',
+                ContentDisposition='inline',
             )
 
         video_instance.file_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{key}"
+        try:
+            video_instance.hls_url = upload_hls_variants(temp_output, video_instance, s3)
+        except Exception:
+            # A progressive MP4 is still a usable fallback if HLS generation or
+            # upload is interrupted; retain it instead of making the post fail.
+            logger.exception("Failed to create HLS variants for video %s", video_instance.id)
+            video_instance.hls_url = None
         video_instance.processing_status = "ready"
-        video_instance.save(update_fields=["file_url", "processing_status"])
+        video_instance.save(update_fields=["file_url", "hls_url", "processing_status"])
 
-        threading.Thread(
-            target=extract_and_upload_thumbnail,
-            args=(video_instance.file_url, video_instance)
-        ).start()
-        logger.info("Successfully mixed music into video %s", video_instance.id)
+        if not video_instance.thumbnail:
+            threading.Thread(
+                target=extract_and_upload_thumbnail,
+                args=(video_instance.file_url, video_instance),
+                daemon=True,
+            ).start()
+        logger.info("Successfully transcoded video %s", video_instance.id)
 
     except Exception:
-        logger.exception("Failed to mix music into video %s", video_id)
+        logger.exception("Failed to transcode video %s", video_id)
         Video.objects.filter(id=video_id).update(processing_status="failed")
     finally:
         for temp_path in (temp_video, temp_music, temp_output):

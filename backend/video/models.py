@@ -17,6 +17,7 @@ class Video(models.Model):
   description = models.TextField(blank=True)
   skill_category = models.CharField(max_length=100, default="general")
   file_url = models.URLField(max_length=1000)
+  hls_url = models.URLField(max_length=1000, blank=True, null=True)
   music_url = models.URLField(max_length=1000, blank=True, null=True)
   processing_status = models.CharField(max_length=32, default="ready")
   thumbnail = models.URLField(blank=True, null=True)

@@ -4,14 +4,18 @@ import React, { memo, forwardRef, useImperativeHandle, useRef, useState, useEffe
 import { motion, AnimatePresence } from "framer-motion";
 import { VolumeX, Volume2, Play, Pause } from "lucide-react";
 import Image from "next/image";
+import Hls from "hls.js";
 
 
 interface VideoCardProps {
   id: string;
   file_url: string;
+  hls_url?: string | null;
   mediaType?: "video" | "image";
   thumbnail_url: string | null;
   isActive: boolean;
+  preload?: "none" | "metadata" | "auto";
+  allowSound?: boolean;
   resumeAt?: number;
   isCommentsOpen: boolean;
   onCloseComments: () => void;
@@ -31,9 +35,12 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
     {
       id,
       file_url,
+      hls_url = null,
       mediaType = "video",
       thumbnail_url,
       isActive,
+      preload = "none",
+      allowSound = false,
       resumeAt = 0,
       isCommentsOpen,
       onLike,
@@ -57,6 +64,8 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
     const onViewRecordedRef = useRef(onViewRecorded);
     const lastProgressSyncRef = useRef(0);
     const hasAppliedResumeRef = useRef(false);
+    const hasUserMutePreferenceRef = useRef(false);
+    const hlsRef = useRef<Hls | null>(null);
 
     useImperativeHandle(ref, () => ({
       video: videoRef.current,
@@ -67,6 +76,50 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
     useEffect(() => {
       onViewRecordedRef.current = onViewRecorded;
     }, [onViewRecorded]);
+
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video || isImagePost || !hls_url || (!isActive && preload === "none")) return;
+
+      const useMp4Fallback = () => {
+        hlsRef.current?.destroy();
+        hlsRef.current = null;
+        video.src = file_url;
+        video.load();
+      };
+
+      // Safari has native HLS. Other current browsers use Media Source via
+      // hls.js, which selects the rendition that fits the network and viewport.
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = hls_url;
+        video.load();
+        return;
+      }
+
+      if (!Hls.isSupported()) {
+        useMp4Fallback();
+        return;
+      }
+
+      const hls = new Hls({
+        autoStartLoad: isActive,
+        capLevelToPlayerSize: true,
+        enableWorker: true,
+        maxBufferLength: 15,
+        maxMaxBufferLength: 30,
+      });
+      hlsRef.current = hls;
+      hls.loadSource(hls_url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) useMp4Fallback();
+      });
+
+      return () => {
+        hls.destroy();
+        if (hlsRef.current === hls) hlsRef.current = null;
+      };
+    }, [file_url, hls_url, isActive, isImagePost, preload]);
 
     const clickTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -87,6 +140,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
       if (!videoRef.current) return;
 
       videoRef.current.muted = !videoRef.current.muted;
+      hasUserMutePreferenceRef.current = true;
       setIsMuted(videoRef.current.muted);
       setOverlayIcon(videoRef.current.muted ? "mute" : "unmute");
     }
@@ -333,7 +387,11 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
         return;
       }
 
-      video.muted = false;
+      // Autoplay must begin muted. Once the viewer has interacted with the
+      // page, the active post can continue with sound unless they muted it.
+      const shouldMute = !allowSound || (hasUserMutePreferenceRef.current && isMuted);
+      video.muted = shouldMute;
+      setIsMuted(shouldMute);
       if (!isUserPaused) {
         void video.play().catch((error) => {
           if (!["AbortError", "NotAllowedError"].includes((error as Error).name)) {
@@ -341,7 +399,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
           }
         });
       }
-    }, [isActive, isUserPaused, id, file_url, isImagePost]);
+    }, [allowSound, isActive, isMuted, isUserPaused, id, file_url, isImagePost]);
 
     useEffect(() => {
       if (overlayIcon) {
@@ -418,7 +476,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
         <motion.video
           id={id}
           ref={videoRef}
-          src={file_url}
+          src={hls_url ? undefined : file_url}
           poster={thumbnail_url || undefined}
           animate={{ scale: zoomScale }}
           drag={zoomScale > 1}
@@ -428,7 +486,7 @@ const VideoCardBase = forwardRef<VideoCardHandle, VideoCardProps>(
             }`}
           playsInline
           loop
-          preload="auto"
+          preload={preload}
           muted={isMuted}
           onClick={handleVideoClick}
           onTimeUpdate={handleTimeUpdate}
